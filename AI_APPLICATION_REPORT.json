@@ -1,0 +1,492 @@
+{
+  "project": {
+    "name": "Safe Research Browser (SRB)",
+    "version": "0.0.0",
+    "year": 2026,
+    "institution": "TECBA",
+    "type": "SPA",
+    "description": "Entorno académico blindado con control de tráfico de red para estudiantes",
+    "language": "TypeScript",
+    "languageVersion": "5.9.3"
+  },
+  "technology_stack": {
+    "runtime": {
+      "framework": "React",
+      "version": "19.2.6"
+    },
+    "build_tool": {
+      "tool": "Vite",
+      "version": "7.3.2",
+      "plugins": [
+        "@vitejs/plugin-react@5.1.1",
+        "@tailwindcss/vite@4.1.17",
+        "vite-plugin-singlefile@2.3.0"
+      ]
+    },
+    "styling": {
+      "framework": "Tailwind CSS",
+      "version": "4.1.17",
+      "utilities": [
+        "clsx@2.1.1",
+        "tailwind-merge@3.4.0"
+      ]
+    },
+    "animations": {
+      "library": "framer-motion",
+      "version": "^12.40.0"
+    },
+    "ui_components": {
+      "icons": "lucide-react@^1.18.0",
+      "charts": "recharts@^3.8.1"
+    }
+  },
+  "architecture": {
+    "pattern": "Context API + useReducer",
+    "state_management": "Redux-like",
+    "rendering": "CSR",
+    "type": "SPA"
+  },
+  "application_phases": [
+    {
+      "name": "login",
+      "order": 1,
+      "component": "LoginPhase",
+      "purpose": "Autenticación de usuario",
+      "actions": [
+        "signIn(user)",
+        "signInAnonymous()"
+      ],
+      "next_phase": "dropzone"
+    },
+    {
+      "name": "dropzone",
+      "order": 2,
+      "component": "DropzonePhase",
+      "purpose": "Carga de archivos locales",
+      "actions": [
+        "addFiles()"
+      ],
+      "state_modified": "uploadedFiles[]",
+      "next_phase": "timer-select"
+    },
+    {
+      "name": "timer-select",
+      "order": 3,
+      "component": "TimerSelectPhase",
+      "purpose": "Seleccionar duración de sesión",
+      "actions": [
+        "SET_SESSION_DURATION"
+      ],
+      "state_modified": "sessionDuration",
+      "next_phase": "kiosk"
+    },
+    {
+      "name": "kiosk",
+      "order": 4,
+      "component": "KioskLayout",
+      "purpose": "Modo de trabajo con timer activo",
+      "features": [
+        "Timer countdown",
+        "Bloqueo de navegación del SO",
+        "Panel de pestañas",
+        "Sidebar con acceso a 9 paneles",
+        "TopBar para búsqueda y navegación",
+        "BottomBar con información de sesión"
+      ],
+      "actions": [
+        "openTab()",
+        "closeTab()",
+        "SET_ACTIVE_TAB",
+        "TICK_TIMER",
+        "END_SESSION"
+      ]
+    }
+  ],
+  "state_structure": {
+    "AppState": {
+      "phase": "AppPhase",
+      "session": "UserSession",
+      "uploadedFiles": "UploadedFile[]",
+      "sessionDuration": "number (segundos)",
+      "timeRemaining": "number (segundos)",
+      "kioskActive": "boolean",
+      "tabs": "Tab[]",
+      "activeTabId": "string",
+      "theme": "ThemeSettings",
+      "activityHistory": "ActivityRecord[]",
+      "activeSidePanel": "string | null"
+    }
+  },
+  "actions": [
+    {
+      "name": "SET_PHASE",
+      "payload": "AppPhase",
+      "effect": "Cambia la fase actual de la aplicación",
+      "associated_with": "Navegación entre fases"
+    },
+    {
+      "name": "SET_SESSION",
+      "payload": "UserSession",
+      "effect": "Actualiza datos del usuario autenticado",
+      "associated_with": "Login"
+    },
+    {
+      "name": "ADD_FILES",
+      "payload": "UploadedFile[]",
+      "effect": "Agrega archivos al sistema",
+      "associated_with": "Dropzone"
+    },
+    {
+      "name": "REMOVE_FILE",
+      "payload": "string (fileId)",
+      "effect": "Elimina un archivo del sistema",
+      "associated_with": "Gestión de archivos"
+    },
+    {
+      "name": "SET_SESSION_DURATION",
+      "payload": "number (segundos)",
+      "effect": "Establece la duración total de la sesión",
+      "associated_with": "Timer Select"
+    },
+    {
+      "name": "START_KIOSK",
+      "payload": "void",
+      "effect": "Inicia modo kiosk y comienza el timer",
+      "associated_with": "Transición a kiosk"
+    },
+    {
+      "name": "TICK_TIMER",
+      "payload": "void",
+      "effect": "Decrementa timeRemaining en 1 segundo",
+      "associated_with": "Timer activo"
+    },
+    {
+      "name": "END_SESSION",
+      "payload": "void",
+      "effect": "Termina sesión y vuelve a login",
+      "associated_with": "Expiración de tiempo"
+    },
+    {
+      "name": "ADD_TAB",
+      "payload": "Tab",
+      "effect": "Crea nueva pestaña en workspace",
+      "associated_with": "Kiosk workspace"
+    },
+    {
+      "name": "CLOSE_TAB",
+      "payload": "string (tabId)",
+      "effect": "Cierra pestaña (excepto dashboard)",
+      "associated_with": "Navegación"
+    },
+    {
+      "name": "SET_ACTIVE_TAB",
+      "payload": "string (tabId)",
+      "effect": "Cambia la pestaña visible actualmente",
+      "associated_with": "Navegación dentro de kiosk"
+    },
+    {
+      "name": "UPDATE_THEME",
+      "payload": "Partial<ThemeSettings>",
+      "effect": "Personaliza la interfaz de usuario",
+      "associated_with": "Settings Panel"
+    },
+    {
+      "name": "ADD_ACTIVITY",
+      "payload": "ActivityRecord",
+      "effect": "Registra una acción en el historial",
+      "associated_with": "History Panel"
+    },
+    {
+      "name": "SET_SIDE_PANEL",
+      "payload": "string | null",
+      "effect": "Expande o contrae panel lateral",
+      "associated_with": "Sidebar"
+    }
+  ],
+  "tab_types": [
+    {
+      "id": 1,
+      "type": "dashboard",
+      "title": "Inicio",
+      "component": "Dashboard",
+      "features": ["Resumen de sesión", "Acceso rápido a paneles"],
+      "closeable": false
+    },
+    {
+      "id": 2,
+      "type": "workspace-url",
+      "title": "Sitio Web",
+      "component": "WebViewPanel",
+      "features": ["iFrame", "Navegación web", "Filtrado de contenido"],
+      "closeable": true
+    },
+    {
+      "id": 3,
+      "type": "offline-editor",
+      "title": "Editor",
+      "component": "OfflineEditorPanel",
+      "features": ["Docs", "Sheets", "Slides"],
+      "closeable": true
+    },
+    {
+      "id": 4,
+      "type": "encarta",
+      "title": "Enciclopedia",
+      "component": "EncartaPanel",
+      "features": ["Contenido offline", "Categorización"],
+      "closeable": true
+    },
+    {
+      "id": 5,
+      "type": "ai-work",
+      "title": "IA Asistente",
+      "component": "AIWorkPanel",
+      "features": ["Chat", "Análisis"],
+      "closeable": true
+    },
+    {
+      "id": 6,
+      "type": "history",
+      "title": "Historial",
+      "component": "HistoryPanel",
+      "features": ["Registro de actividades", "Timeline"],
+      "closeable": true
+    },
+    {
+      "id": 7,
+      "type": "pomodoro",
+      "title": "Pomodoro",
+      "component": "PomodoroPanel",
+      "features": ["Timer secundario", "Descansos"],
+      "closeable": true
+    },
+    {
+      "id": 8,
+      "type": "downloads",
+      "title": "Descargas",
+      "component": "DownloadsPanel",
+      "features": ["Gestor de archivos", "Descargas activas"],
+      "closeable": true
+    },
+    {
+      "id": 9,
+      "type": "stats",
+      "title": "Estadísticas",
+      "component": "StatsPanel",
+      "features": ["Gráficos", "Resumen de sesión", "Recharts"],
+      "closeable": true
+    }
+  ],
+  "predefined_sites": [
+    {
+      "name": "Wikipedia",
+      "url": "https://es.wikipedia.org",
+      "icon": "🌐"
+    },
+    {
+      "name": "Google Scholar",
+      "url": "https://scholar.google.com",
+      "icon": "🔬"
+    },
+    {
+      "name": "Khan Academy",
+      "url": "https://www.khanacademy.org",
+      "icon": "📐"
+    },
+    {
+      "name": "Coursera",
+      "url": "https://www.coursera.org",
+      "icon": "🎓"
+    },
+    {
+      "name": "SciELO",
+      "url": "https://www.scielo.org",
+      "icon": "📄"
+    },
+    {
+      "name": "TED Talks",
+      "url": "https://www.ted.com",
+      "icon": "🎤"
+    },
+    {
+      "name": "Duolingo",
+      "url": "https://www.duolingo.com",
+      "icon": "🦉"
+    },
+    {
+      "name": "Moodle",
+      "url": "https://moodle.org",
+      "icon": "🏫"
+    },
+    {
+      "name": "NotebookLM",
+      "url": "https://notebooklm.google.com",
+      "icon": "📓"
+    },
+    {
+      "name": "Pexels",
+      "url": "https://www.pexels.com",
+      "icon": "📷"
+    }
+  ],
+  "data_types": {
+    "UserSession": {
+      "isAuthenticated": "boolean",
+      "isAnonymous": "boolean",
+      "displayName": "string (optional)",
+      "email": "string (optional)",
+      "avatar": "string (optional URL)",
+      "initials": "string (optional)"
+    },
+    "Tab": {
+      "id": "string (unique ID)",
+      "type": "TabType",
+      "title": "string",
+      "url": "string (optional)",
+      "icon": "string (optional)",
+      "editorType": "'docs' | 'sheets' | 'slides' (optional)",
+      "encartaCategory": "string (optional)"
+    },
+    "UploadedFile": {
+      "id": "string (unique ID)",
+      "name": "string",
+      "size": "number (bytes)",
+      "type": "string (MIME type)",
+      "uploadedAt": "Date",
+      "dataUrl": "string (optional)"
+    },
+    "ActivityRecord": {
+      "id": "string",
+      "type": "'file' | 'tool' | 'site' | 'search'",
+      "label": "string",
+      "detail": "string (optional)",
+      "timestamp": "Date",
+      "icon": "string (optional emoji)"
+    },
+    "ThemeSettings": {
+      "accentColor": "string (hex)",
+      "fontSize": "'sm' | 'md' | 'lg'",
+      "sidebarCollapsed": "boolean",
+      "darkMode": "boolean"
+    }
+  },
+  "component_hierarchy": {
+    "root": "App",
+    "provider": "AppProvider",
+    "content": "AppContent",
+    "phases": {
+      "login": "LoginPhase",
+      "dropzone": "DropzonePhase",
+      "timer-select": "TimerSelectPhase",
+      "kiosk": {
+        "layout": "KioskLayout",
+        "children": [
+          "TopBar",
+          "SideBar",
+          "TabContent (dynamic)",
+          "BottomBar"
+        ]
+      }
+    },
+    "layout_components": [
+      "TopBar",
+      "SideBar",
+      "BottomBar",
+      "KioskLayout"
+    ],
+    "panel_components": [
+      "Dashboard",
+      "WebViewPanel",
+      "OfflineEditorPanel",
+      "EncartaPanel",
+      "AIWorkPanel",
+      "HistoryPanel",
+      "PomodoroPanel",
+      "DownloadsPanel",
+      "StatsPanel",
+      "SettingsPanel"
+    ]
+  },
+  "context_and_hooks": {
+    "provider": "AppProvider",
+    "hook": "useApp()",
+    "context_type": "AppContextValue",
+    "methods": [
+      "openTab(config)",
+      "closeTab(id)",
+      "logActivity(record)",
+      "signIn(user)",
+      "signInAnonymous()",
+      "updateTheme(settings)",
+      "addFiles(files)",
+      "removeFile(id)"
+    ]
+  },
+  "npm_scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "known_limitations": [
+    "TypeScript 7.0: baseUrl es deprecated, requiere migración",
+    "SPA State Loss: Recarga de página pierde estado (no persiste)",
+    "iFrame CORS: WebViewPanel puede tener limitaciones de origen cruzado",
+    "OS Lock Simulation: El bloqueo del SO es simulado en web",
+    "No Offline Storage: uploadedFiles no persisten entre sesiones"
+  ],
+  "future_extensions": [
+    "Persistencia: localStorage/IndexedDB",
+    "Service Worker: Soporte real offline",
+    "PWA: Installable con manifest",
+    "Analytics: Integración telemetría",
+    "Backend Auth: API REST para autenticación",
+    "Desktop App: Electron/Tauri para lock real",
+    "Real-time Collaboration: WebSockets",
+    "Database: Supabase/Firebase para sesiones"
+  ],
+  "file_structure": {
+    "root": {
+      "public": ["cards/"],
+      "src": [
+        "App.tsx",
+        "main.tsx",
+        "index.css",
+        "context/AppContext.tsx",
+        "store/appStore.ts",
+        "utils/cn.ts",
+        "kiosk/TopBar.tsx",
+        "kiosk/SideBar.tsx",
+        "kiosk/BottomBar.tsx",
+        "kiosk/KioskLayout.tsx",
+        "phases/LoginPhase.tsx",
+        "phases/DropzonePhase.tsx",
+        "phases/TimerSelectPhase.tsx",
+        "panels/Dashboard.tsx",
+        "panels/WebViewPanel.tsx",
+        "panels/OfflineEditorPanel.tsx",
+        "panels/EncartaPanel.tsx",
+        "panels/AIWorkPanel.tsx",
+        "panels/HistoryPanel.tsx",
+        "panels/PomodoroPanel.tsx",
+        "panels/DownloadsPanel.tsx",
+        "panels/StatsPanel.tsx",
+        "panels/SettingsPanel.tsx"
+      ],
+      "config": [
+        "package.json",
+        "tsconfig.json",
+        "vite.config.ts",
+        "index.html"
+      ]
+    }
+  },
+  "metrics": {
+    "estimated_loc_jsx_tsx": "500-1000",
+    "estimated_loc_config": "300-500",
+    "number_of_components": 23,
+    "number_of_phases": 4,
+    "number_of_tabs": 9,
+    "number_of_dependencies": 8,
+    "dev_dependencies": 11
+  }
+}
