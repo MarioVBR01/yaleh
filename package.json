@@ -5,15 +5,18 @@
   "description": "YALEH: entorno de estudio con bloqueo del sistema operativo e IA para estudiantes del TECBA",
   "author": "Mario Víctor Brañez Rodriguez",
   "type": "module",
-  "main": "main.js",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run build:electron",
+    "build:electron": "node scripts/build-electron.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\""
+    "electron:dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron . --dev-server\"",
+    "electron:preview": "npm run build && electron .",
+    "smoke:electron": "npm run build && node scripts/smoke-electron.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
@@ -35,11 +38,11 @@
     "@vitejs/plugin-react": "5.1.1",
     "concurrently": "^10.0.3",
     "electron": "^42.4.1",
+    "esbuild": "^0.28.2",
     "jsdom": "^28.1.0",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "vite": "7.3.6",
-    "vite-plugin-singlefile": "2.3.0",
     "vitest": "^5.0.2",
     "wait-on": "^9.0.10"
   }

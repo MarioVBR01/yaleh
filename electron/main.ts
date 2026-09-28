@@ -1,0 +1,359 @@
+/**
+ * @file main.ts
+ * @description Proceso principal de YALEH. Todo el bloqueo vive aquí
+ * (brief, sección 9): la interfaz nunca decide si el kiosko se abre o se cierra.
+ */
+
+import {
+  app,
+  BrowserWindow,
+  globalShortcut,
+  ipcMain,
+  Menu,
+  session,
+  shell,
+  type IpcMainInvokeEvent,
+  type WebContents,
+} from 'electron';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { DEV_SERVER_ORIGIN, LIMITS } from '../shared/config';
+import { IPC_EVENT, IPC_INVOKE } from '../shared/ipc-types';
+import { describeDeepLinkForLog, findDeepLinkInArgv, parseDeepLink, PROTOCOL_SCHEME } from './deeplink';
+import { isAllowedExternalUrl, isTrustedSenderUrl, parseDurationSeconds, type SenderTrust } from './ipc/validate';
+import { lockWindow, reclaimFocus, unlockWindow } from './kiosk/window';
+import { DEV_ESCAPE_ACCELERATOR, isBlockedInput, isDevEscapeInput } from './kiosk/shortcuts';
+import { isFrameUrlAllowed, isMainWindowNavigationAllowed, type NavigationContext } from './navigation-policy';
+import { SessionController } from './session/controller';
+import { JsonSessionStore } from './session/store';
+
+const isPackaged = app.isPackaged;
+/** `electron . --dev-server` carga el servidor de Vite; sin la bandera, carga dist/. */
+const useDevServer = !isPackaged && process.argv.includes('--dev-server');
+/** Prueba de humo sin ventana visible (scripts/smoke-electron.mjs). Solo sin empaquetar. */
+const isSmokeTest = !isPackaged && process.env.YALEH_SMOKE === '1';
+
+// Se empaqueta como CommonJS (dist-electron/main.cjs): __dirname es dist-electron/.
+const PRELOAD_PATH = path.join(__dirname, 'preload.cjs');
+const INDEX_HTML = path.join(__dirname, '..', 'dist', 'index.html');
+const APP_INDEX_URL = pathToFileURL(INDEX_HTML).href;
+
+const senderTrust: SenderTrust = {
+  appIndexUrl: APP_INDEX_URL,
+  devServerOrigin: useDevServer ? DEV_SERVER_ORIGIN : null,
+  // Fase 4: aceptar mensajes de la web de YALEH cargada en el kiosko.
+  trustedWebOrigins: [],
+};
+
+const navigationContext: NavigationContext = {
+  isAppUrl: url => isTrustedSenderUrl(url, senderTrust),
+  allowDevServer: useDevServer,
+};
+
+let mainWindow: BrowserWindow | null = null;
+let rendererReady = false;
+let osSessionEnding = false;
+const pendingDeepLinks: string[] = [];
+
+// ─── Sesión ──────────────────────────────────────────────────────────────────
+
+let store: JsonSessionStore;
+let controller: SessionController;
+
+function send(channel: string, payload: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
+}
+
+function createController(): SessionController {
+  return new SessionController({
+    store,
+    minSeconds: LIMITS.minSessionMinutes * 60,
+    maxSeconds: LIMITS.maxSessionMinutes * 60,
+    lock: () => mainWindow && lockWindow(mainWindow),
+    unlock: () => mainWindow && unlockWindow(mainWindow),
+    onTick: remainingSeconds => send(IPC_EVENT.sessionTick, { remainingSeconds }),
+    onEnded: reason => send(IPC_EVENT.sessionEnded, { reason }),
+  });
+}
+
+// ─── IPC ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Registra un handler que solo acepta mensajes del marco principal de la
+ * ventana de YALEH con la interfaz propia cargada.
+ */
+function handle(channel: string, listener: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown): void {
+  ipcMain.handle(channel, (event, ...args) => {
+    const frame = event.senderFrame;
+    const trusted =
+      mainWindow !== null &&
+      event.sender === mainWindow.webContents &&
+      frame !== null &&
+      frame.parent === null &&
+      isTrustedSenderUrl(frame.url, senderTrust);
+    if (!trusted) {
+      console.warn(`[ipc] Mensaje rechazado en ${channel} desde ${frame?.url ?? 'origen desconocido'}`);
+      throw new Error('Origen no autorizado.');
+    }
+    return listener(event, ...args);
+  });
+}
+
+function registerIpcHandlers(): void {
+  handle(IPC_INVOKE.sessionStart, (_event, durationSeconds) =>
+    controller.start(
+      parseDurationSeconds(durationSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60)
+    )
+  );
+  handle(IPC_INVOKE.sessionGetState, () => controller.getSnapshot());
+  handle(IPC_INVOKE.sessionResume, () => controller.resume());
+  handle(IPC_INVOKE.sessionDiscardResume, () => controller.discardResume());
+
+  handle(IPC_INVOKE.appClose, () => {
+    if (controller.isActive()) {
+      throw new Error('No puedes cerrar YALEH mientras la sesión está activa.');
+    }
+    app.quit();
+  });
+
+  handle(IPC_INVOKE.appOpenExternal, async (_event, url) => {
+    if (!isAllowedExternalUrl(url)) {
+      console.warn('[ipc] openExternal rechazado');
+      return false;
+    }
+    await shell.openExternal(url);
+    return true;
+  });
+}
+
+// ─── Enlaces yaleh:// ────────────────────────────────────────────────────────
+
+function handleDeepLink(raw: string): void {
+  if (!rendererReady) {
+    pendingDeepLinks.push(raw);
+    return;
+  }
+  const link = parseDeepLink(raw);
+  if (!link) {
+    const detail = describeDeepLinkForLog(raw);
+    store.appendEvent({ type: 'invalid-deeplink', at: new Date().toISOString(), detail });
+    console.warn(`[deeplink] Enlace ignorado: ${detail}`);
+    return;
+  }
+  if (link.kind === 'auth') {
+    // Fase 4: validar link.state antes de aceptar el token.
+    send(IPC_EVENT.authToken, link.token);
+  } else {
+    send(IPC_EVENT.sessionLink, { sessionId: link.sessionId });
+  }
+}
+
+function registerProtocol(): void {
+  if (isPackaged) {
+    app.setAsDefaultProtocolClient(PROTOCOL_SCHEME);
+  } else {
+    // En desarrollo, Windows debe lanzar electron.exe con la carpeta del proyecto.
+    app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [path.resolve(process.argv[1] ?? '.')]);
+  }
+}
+
+// ─── Seguridad de red y navegación ───────────────────────────────────────────
+
+function installSessionGuards(): void {
+  const ses = session.defaultSession;
+
+  ses.webRequest.onBeforeRequest((details, callback) => {
+    const isFrame = details.resourceType === 'mainFrame' || details.resourceType === 'subFrame';
+    if (isFrame && !isFrameUrlAllowed(details.url, navigationContext)) {
+      console.warn(`[red] Bloqueado (${details.resourceType}): ${details.url.slice(0, 120)}`);
+      callback({ cancel: true });
+      return;
+    }
+    callback({});
+  });
+
+  const allowedPermissions = new Set(['fullscreen', 'clipboard-sanitized-write']);
+  ses.setPermissionRequestHandler((_wc, permission, callback) => callback(allowedPermissions.has(permission)));
+  ses.setPermissionCheckHandler((_wc, permission) => allowedPermissions.has(permission));
+}
+
+function guardWebContents(contents: WebContents): void {
+  contents.on('will-navigate', (event, url) => {
+    const isMain = mainWindow !== null && contents === mainWindow.webContents;
+    const allowed = isMain
+      ? isMainWindowNavigationAllowed(url, navigationContext)
+      : isFrameUrlAllowed(url, navigationContext);
+    if (!allowed) {
+      event.preventDefault();
+      console.warn(`[navegación] Bloqueada: ${url.slice(0, 120)}`);
+    }
+  });
+
+  // Fase 8: las ventanas nuevas se abrirán como pestañas internas. Por ahora se deniegan.
+  contents.setWindowOpenHandler(({ url }) => {
+    console.warn(`[navegación] Ventana nueva denegada: ${url.slice(0, 120)}`);
+    return { action: 'deny' };
+  });
+
+  contents.on('will-attach-webview', event => event.preventDefault());
+
+  contents.on('before-input-event', (event, input) => {
+    if (!isPackaged && isDevEscapeInput(input)) {
+      event.preventDefault();
+      controller.forceRelease();
+      return;
+    }
+    if (controller.isActive() && isBlockedInput(input)) {
+      event.preventDefault();
+    }
+  });
+}
+
+// ─── Ventana ─────────────────────────────────────────────────────────────────
+
+function createWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 720,
+    show: !isSmokeTest,
+    backgroundColor: '#020617',
+    webPreferences: {
+      preload: PRELOAD_PATH,
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      webSecurity: true,
+      devTools: !isPackaged,
+      spellcheck: false,
+    },
+  });
+
+  win.on('close', event => {
+    if (controller.isActive() && !osSessionEnding) event.preventDefault();
+  });
+
+  // Al apagar o cerrar la sesión de Windows se permite cerrar; la sesión quedará
+  // como "interrumpida" y se ofrecerá retomarla al volver a abrir la app.
+  win.on('query-session-end', () => {
+    osSessionEnding = true;
+  });
+  win.on('session-end', () => {
+    osSessionEnding = true;
+  });
+
+  win.on('blur', () => {
+    if (!controller.isActive()) return;
+    controller.recordFocusLost();
+    setTimeout(() => {
+      if (controller.isActive()) reclaimFocus(win);
+    }, 150);
+  });
+  win.on('minimize', () => {
+    if (controller.isActive()) reclaimFocus(win);
+  });
+  win.on('leave-full-screen', () => {
+    if (controller.isActive()) reclaimFocus(win);
+  });
+
+  win.webContents.on('did-finish-load', () => {
+    rendererReady = true;
+    const pending = pendingDeepLinks.splice(0);
+    pending.forEach(handleDeepLink);
+  });
+
+  if (useDevServer) {
+    void win.loadURL(DEV_SERVER_ORIGIN);
+  } else {
+    void win.loadFile(INDEX_HTML);
+  }
+  return win;
+}
+
+// ─── Prueba de humo (solo desarrollo) ────────────────────────────────────────
+
+function runSmokeTest(win: BrowserWindow): void {
+  const errors: string[] = [];
+  win.webContents.on('console-message', details => {
+    if (details.level === 'error') errors.push(details.message);
+  });
+  win.webContents.on('preload-error', (_event, _path, error) => errors.push(`preload: ${error.message}`));
+  win.webContents.once('did-finish-load', () => {
+    setTimeout(async () => {
+      try {
+        const result = await win.webContents.executeJavaScript(
+          `(async () => ({
+            rootChildren: document.getElementById('root')?.childElementCount ?? 0,
+            hasApi: typeof window.electronAPI === 'object',
+            version: window.electronAPI?.version ?? null,
+            state: window.electronAPI ? await window.electronAPI.getSessionState() : null,
+          }))()`
+        );
+        const ok = result.rootChildren > 0 && result.hasApi && result.state !== null && errors.length === 0;
+        console.log(`[smoke] ${JSON.stringify({ ok, ...result, errors })}`);
+        app.exit(ok ? 0 : 1);
+      } catch (error) {
+        console.log(`[smoke] ${JSON.stringify({ ok: false, error: String(error), errors })}`);
+        app.exit(1);
+      }
+    }, 2000);
+  });
+}
+
+// ─── Arranque ────────────────────────────────────────────────────────────────
+
+function bootstrap(): void {
+  store = new JsonSessionStore(path.join(app.getPath('userData'), 'session'));
+  controller = createController();
+  registerProtocol();
+  if (isPackaged) Menu.setApplicationMenu(null);
+
+  installSessionGuards();
+  app.on('web-contents-created', (_event, contents) => guardWebContents(contents));
+  registerIpcHandlers();
+
+  if (!isPackaged) {
+    globalShortcut.register(DEV_ESCAPE_ACCELERATOR, () => controller.forceRelease());
+  }
+
+  // Sesión interrumpida por apagado, reinicio o cierre forzado.
+  controller.recover();
+
+  mainWindow = createWindow();
+  if (isSmokeTest) runSmokeTest(mainWindow);
+
+  const initialLink = findDeepLinkInArgv(process.argv);
+  if (initialLink) handleDeepLink(initialLink);
+}
+
+// Debe ejecutarse antes de whenReady: una segunda instancia entrega su enlace y termina.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, argv) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+    const link = findDeepLinkInArgv(argv);
+    if (link) handleDeepLink(link);
+  });
+
+  // macOS entrega los enlaces con open-url.
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    handleDeepLink(url);
+  });
+
+  app.whenReady().then(bootstrap);
+
+  app.on('window-all-closed', () => {
+    app.quit();
+  });
+
+  app.on('will-quit', () => {
+    controller?.dispose();
+    globalShortcut.unregisterAll();
+  });
+}

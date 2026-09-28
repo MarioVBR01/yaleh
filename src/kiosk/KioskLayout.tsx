@@ -3,11 +3,15 @@
  * @description Layout principal del Modo Kiosko de YALEH.
  * Orquesta la Barra Lateral, el Workspace Central y la Barra Inferior.
  * Gestiona el renderizado de pestañas y la persistencia de estado entre ellas.
- * Aplica el bloqueo de teclas del sistema operativo (simulado en web).
+ *
+ * El bloqueo y el tiempo los controla el proceso principal de Electron: aquí
+ * solo se muestra el tiempo que envía. En el navegador (sin bloqueo) queda un
+ * temporizador local como vista previa.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { TOOL_LINKS } from '@shared/config';
 import SideBar from './SideBar';
 import BottomBar from './BottomBar';
 import Dashboard from '../panels/Dashboard';
@@ -19,17 +23,8 @@ import PomodoroPanel from '../panels/PomodoroPanel';
 import DownloadsPanel from '../panels/DownloadsPanel';
 import StatsPanel from '../panels/StatsPanel';
 import { useApp } from '../context/AppContext';
-import { isElectron, deactivateKiosk } from '../lib/electron';
+import { getElectronAPI } from '../lib/electron';
 import type { Tab } from '../store/appStore';
-
-/** Interfaz del diálogo de nueva pestaña */
-const NEW_TAB_SITES = [
-  { name: 'Google Classroom', url: 'https://classroom.google.com', icon: '🖥️' },
-  // TODO(fase 2): reemplazar por la URL del Moodle del TECBA (pendiente en el brief).
-  { name: 'Moodle', url: 'https://moodle.org', icon: '🏫' },
-  { name: 'Canva', url: 'https://www.canva.com', icon: '🎨' },
-  { name: 'Gamma', url: 'https://gamma.app', icon: '📊' },
-];
 
 /**
  * Renderiza el contenido correcto según el tipo de la pestaña activa.
@@ -63,69 +58,41 @@ export default function KioskLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showNewTabDialog, setShowNewTabDialog] = useState(false);
 
+  const api = getElectronAPI();
+
   /**
-   * Intercepta combinaciones de teclado del sistema en modo kiosko.
-   * En Electron real, esto se implementa con globalShortcut.register() en main.js.
-   * En entorno web, bloqueamos lo que el navegador permite interceptar.
+   * Escritorio: el proceso principal envía el tiempo restante cada segundo y
+   * avisa cuando la sesión termina (ya con el equipo liberado).
    */
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!state.kioskActive) return;
-
-      // Bloquear Alt+Tab (parcial en web)
-      if (e.altKey && e.key === 'Tab') {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      // Bloquear F11 (pantalla completa)
-      if (e.key === 'F11') {
-        e.preventDefault();
-      }
-      // Bloquear Escape en modo kiosko
-      if (e.key === 'Escape' && state.kioskActive) {
-        e.preventDefault();
-      }
+    if (!api) return;
+    const offTick = api.onSessionTick(({ remainingSeconds }) => {
+      dispatch({ type: 'SYNC_TIME', payload: remainingSeconds });
+    });
+    const offEnded = api.onSessionEnded(() => {
+      dispatch({ type: 'END_SESSION' });
+    });
+    return () => {
+      offTick();
+      offEnded();
     };
+  }, [api, dispatch]);
 
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [state.kioskActive]);
-
-  /**
-   * Maneja el temporizador de la sesión de estudio.
-   * - Decrementa timeRemaining cada segundo si kioskActive y timeRemaining > 0
-   * - Dispara END_SESSION cuando timeRemaining llega a cero
-   * - Desactiva el modo kiosko en Electron cuando la sesión termina
-   */
+  /** Navegador: temporizador local solo como vista previa (no bloquea nada). */
   useEffect(() => {
-    if (!state.kioskActive || state.timeRemaining <= 0) {
-      return;
-    }
-
+    if (api || !state.kioskActive || state.timeRemaining <= 0) return;
     const interval = setInterval(() => {
       dispatch({ type: 'TICK_TIMER' });
     }, 1000);
-
     return () => clearInterval(interval);
-  }, [state.kioskActive, state.timeRemaining, dispatch]);
+  }, [api, state.kioskActive, state.timeRemaining, dispatch]);
 
-  /**
-   * Cuando el tiempo llega a cero, muestra la pantalla de resumen.
-   * Primero desactiva el modo kiosko en Electron, luego cambia de fase.
-   * IMPORTANTE: No depender de kioskActive, solo de timeRemaining === 0
-   */
+  /** Navegador: al llegar a cero se muestra el resumen. */
   useEffect(() => {
-    if (state.timeRemaining === 0 && state.phase === 'kiosk') {
-      (async () => {
-        // Desactivar modo kiosko en Electron primero
-        if (isElectron()) {
-          await deactivateKiosk();
-        }
-        // DESPUÉS, terminar la sesión y mostrar el resumen
-        dispatch({ type: 'END_SESSION' });
-      })();
+    if (!api && state.timeRemaining === 0 && state.phase === 'kiosk') {
+      dispatch({ type: 'END_SESSION' });
     }
-  }, [state.timeRemaining, state.phase, dispatch]);
+  }, [api, state.timeRemaining, state.phase, dispatch]);
 
   /**
    * Abre el diálogo de nueva pestaña.
@@ -203,7 +170,7 @@ export default function KioskLayout() {
               <p className="text-slate-400 text-sm mb-5">Herramientas autorizadas</p>
 
               <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto mb-4">
-                {NEW_TAB_SITES.map(site => (
+                {TOOL_LINKS.map(site => (
                   <motion.button
                     key={site.url}
                     onClick={() => {

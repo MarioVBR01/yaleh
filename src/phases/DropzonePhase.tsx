@@ -12,6 +12,7 @@ import {
   Upload, FileText, FileSpreadsheet, Film, X, ArrowRight,
   CheckCircle, AlertTriangle, Shield, File
 } from 'lucide-react';
+import { LIMITS } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import { generateId, type UploadedFile } from '../store/appStore';
 
@@ -25,8 +26,9 @@ const ALLOWED_TYPES: Record<string, { label: string; icon: React.ReactNode; colo
   'video/mp4': { label: 'MP4', icon: <Film size={14} />, color: 'text-purple-400' },
 };
 
-/** Tamaño máximo total permitido: 500MB en bytes */
-const MAX_TOTAL_SIZE = 500 * 1024 * 1024;
+/** Tamaño máximo total permitido (shared/config.ts) */
+const MAX_TOTAL_SIZE = LIMITS.maxUploadBytes;
+const MAX_TOTAL_LABEL = formatBytes(MAX_TOTAL_SIZE);
 
 /**
  * Formatea bytes a una unidad legible (KB, MB, GB).
@@ -74,7 +76,7 @@ export default function DropzonePhase() {
         }
         // Validar tamaño acumulado
         if (currentTotal + valid.reduce((a, f) => a + f.size, 0) + file.size > MAX_TOTAL_SIZE) {
-          errors.push(`"${file.name}" — supera el límite de 500 MB.`);
+          errors.push(`"${file.name}" — supera el límite de ${MAX_TOTAL_LABEL}.`);
           continue;
         }
 
@@ -233,7 +235,7 @@ export default function DropzonePhase() {
                 {/* Barra de uso */}
                 <div className="flex justify-between text-xs text-slate-400 mb-2">
                   <span>{state.uploadedFiles.length} archivo(s) cargado(s)</span>
-                  <span>{formatBytes(totalSize)} / 500 MB</span>
+                  <span>{formatBytes(totalSize)} / {MAX_TOTAL_LABEL}</span>
                 </div>
                 <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden mb-4">
                   <motion.div

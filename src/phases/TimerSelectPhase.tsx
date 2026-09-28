@@ -2,15 +2,15 @@
  * @file TimerSelectPhase.tsx
  * @description Fase 3: Selector de tiempo de sesión de estudio.
  * Opciones rápidas: 25, 50 y 90 minutos.
- * Entrada manual personalizada.
- * Al confirmar, activa el Modo Kiosko (bloqueando Alt+Tab, Ctrl+Esc, tecla Win).
+ * Entrada manual personalizada (máximo definido en shared/config.ts).
+ * Al continuar pasa a la pantalla de confirmación; el kiosko lo activa el proceso principal.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Lock, ChevronRight, Shield, Brain } from 'lucide-react';
+import { LIMITS } from '@shared/config';
 import { useApp } from '../context/AppContext';
-import { activateKiosk, isElectron } from '../lib/electron';
 
 /** Opciones rápidas de tiempo de sesión en minutos */
 const QUICK_OPTIONS = [
@@ -20,48 +20,33 @@ const QUICK_OPTIONS = [
 ];
 
 export default function TimerSelectPhase() {
-  const { dispatch, logActivity } = useApp();
+  const { dispatch } = useApp();
   const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
   const [customMinutes, setCustomMinutes] = useState('');
-  const [isActivating, setIsActivating] = useState(false);
 
   /**
    * Devuelve los minutos finales a usar para la sesión.
    * Prioriza la entrada manual si está disponible.
    */
   const getEffectiveMinutes = (): number => {
-    if (customMinutes && parseInt(customMinutes) > 0) {
-      return parseInt(customMinutes);
-    }
+    // Number() rechaza entradas como "10abc" (parseInt las aceptaba como 10).
+    if (customMinutes.trim() !== '') return Number(customMinutes);
     return selectedMinutes ?? 0;
   };
 
   const effectiveMinutes = getEffectiveMinutes();
-  const isValid = effectiveMinutes >= 1 && effectiveMinutes <= 480;
+  const isValid =
+    Number.isInteger(effectiveMinutes) &&
+    effectiveMinutes >= LIMITS.minSessionMinutes &&
+    effectiveMinutes <= LIMITS.maxSessionMinutes;
 
   /**
-   * Activa el Modo Kiosko en Electron al confirmar la duración de la sesión.
+   * Guarda la duración elegida y pasa a la pantalla de confirmación.
    */
-  const handleActivate = async () => {
+  const handleContinue = () => {
     if (!isValid) return;
-    setIsActivating(true);
-
-    const seconds = effectiveMinutes * 60;
-
-    if (isElectron()) {
-      await activateKiosk(seconds);
-    } else {
-      await new Promise(r => setTimeout(r, 1200));
-    }
-
-    dispatch({ type: 'SET_SESSION_DURATION', payload: seconds });
-    dispatch({ type: 'START_KIOSK' });
-
-    logActivity({
-      type: 'tool',
-      label: `Sesión de estudio iniciada: ${effectiveMinutes} minutos`,
-      icon: '🔒',
-    });
+    dispatch({ type: 'SET_SESSION_DURATION', payload: effectiveMinutes * 60 });
+    dispatch({ type: 'SET_PHASE', payload: 'confirm-session' });
   };
 
   /** Formatea minutos a texto legible */
@@ -141,13 +126,13 @@ export default function TimerSelectPhase() {
           {/* Entrada manual */}
           <div className="mb-6">
             <label className="text-slate-400 text-xs font-medium block mb-2">
-              Minutos personalizados (1–480)
+              Minutos personalizados ({LIMITS.minSessionMinutes}–{LIMITS.maxSessionMinutes})
             </label>
             <div className="flex items-center gap-3">
               <input
                 type="number"
-                min={1}
-                max={480}
+                min={LIMITS.minSessionMinutes}
+                max={LIMITS.maxSessionMinutes}
                 placeholder="Ej: 45"
                 value={customMinutes}
                 onChange={e => {
@@ -170,7 +155,7 @@ export default function TimerSelectPhase() {
               <Brain size={20} className="text-blue-400 flex-shrink-0" />
               <div>
                 <p className="text-blue-300 font-medium text-sm">Sesión: {formatDuration(effectiveMinutes)}</p>
-                <p className="text-slate-500 text-xs">El modo kiosko se activará al confirmar</p>
+                <p className="text-slate-500 text-xs">Confirmarás en el siguiente paso</p>
               </div>
             </motion.div>
           )}
@@ -179,41 +164,28 @@ export default function TimerSelectPhase() {
           <div className="mb-6 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
             <Lock size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-amber-300/80">
-              <strong className="text-amber-300">Modo Kiosko:</strong> Se bloquearán Alt+Tab,
-              Ctrl+Esc y la tecla Windows. Solo podrás salir cuando el temporizador llegue a cero.
+              <strong className="text-amber-300">Modo Kiosko:</strong> El equipo quedará bloqueado
+              en YALEH y no podrás salir hasta que el temporizador llegue a cero.
             </div>
           </div>
 
           {/* Botón de activación */}
           <motion.button
-            onClick={handleActivate}
-            disabled={!isValid || isActivating}
+            onClick={handleContinue}
+            disabled={!isValid}
             className={`w-full py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 transition-all ${
-              isValid && !isActivating
+              isValid
                 ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/20'
                 : 'bg-slate-800 text-slate-600 cursor-not-allowed'
             }`}
-            whileHover={isValid && !isActivating ? { scale: 1.02 } : {}}
-            whileTap={isValid && !isActivating ? { scale: 0.98 } : {}}
+            whileHover={isValid ? { scale: 1.02 } : {}}
+            whileTap={isValid ? { scale: 0.98 } : {}}
           >
-            {isActivating ? (
-              <>
-                <motion.div
-                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-                />
-                Activando Modo Kiosko...
-              </>
-            ) : (
-              <>
-                <Shield size={18} />
-                {isValid
-                  ? `Iniciar Sesión de ${formatDuration(effectiveMinutes)}`
-                  : 'Selecciona una duración'}
-                {isValid && <ChevronRight size={16} />}
-              </>
-            )}
+            <Shield size={18} />
+            {isValid
+              ? `Continuar con ${formatDuration(effectiveMinutes)}`
+              : 'Selecciona una duración'}
+            {isValid && <ChevronRight size={16} />}
           </motion.button>
 
           {/* Tips de productividad */}

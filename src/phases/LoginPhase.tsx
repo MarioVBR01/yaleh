@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wifi, WifiOff, Shield, BookOpen, Lock, User } from 'lucide-react';
+import { YALEH_WEB_ORIGINS } from '@shared/config';
 import { useApp } from '../context/AppContext';
 
 /**
@@ -72,7 +73,7 @@ export default function LoginPhase() {
     setLoading(true);
     
     // TODO(fase 4): página de inicio de sesión para el escritorio, versionada en este repositorio.
-    const firebaseUrl = 'https://yaleh-fbe1c.web.app/';
+    const firebaseUrl = `${YALEH_WEB_ORIGINS[0]}/`;
     
     try {
       // Abrir la URL de Firebase Hosting en el navegador externo

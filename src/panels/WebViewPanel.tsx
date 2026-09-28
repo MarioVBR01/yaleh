@@ -9,42 +9,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, ExternalLink, Shield, AlertTriangle, Lock } from 'lucide-react';
-
-/**
- * Lista blanca de dominios permitidos.
- * Se valida antes de cargar cualquier URL en el panel.
- */
-// TODO(fase 2): mover a shared/config.ts y aplicar en el proceso principal.
-const WHITELIST_DOMAINS = [
-  'classroom.google.com', 'workspace.google.com', 'docs.google.com',
-  'sheets.google.com', 'slides.google.com', 'drive.google.com',
-  'moodle.org', 'canva.com', 'gamma.app', 'youtube-nocookie.com',
-];
-
-/**
- * Verifica si una URL pertenece a la lista blanca de dominios permitidos.
- * @param url URL a validar
- * @returns true si el dominio está permitido
- */
-function isUrlAllowed(url: string): boolean {
-  try {
-    const hostname = new URL(url).hostname.replace(/^www\./, '');
-    return WHITELIST_DOMAINS.some(domain => hostname === domain || hostname.endsWith('.' + domain));
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Obtiene el nombre limpio del dominio para mostrar en la UI.
- */
-function getDomainName(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
+import { displayHost, isUrlAllowed } from '@shared/allowlist';
 
 interface WebViewPanelProps {
   url: string;
@@ -86,7 +51,7 @@ export default function WebViewPanel({ url, title }: WebViewPanelProps) {
     }
 
     if (!isUrlAllowed(processedUrl)) {
-      alert(`⛔ Acceso bloqueado: "${getDomainName(processedUrl)}" no está en la lista de sitios académicos permitidos.`);
+      alert(`⛔ Acceso bloqueado: "${displayHost(processedUrl)}" no está en la lista de sitios académicos permitidos.`);
       return;
     }
 
@@ -170,7 +135,7 @@ export default function WebViewPanel({ url, title }: WebViewPanelProps) {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
               />
-              <p className="text-slate-400 text-sm">Cargando {getDomainName(currentUrl)}...</p>
+              <p className="text-slate-400 text-sm">Cargando {displayHost(currentUrl)}...</p>
               <p className="text-slate-600 text-xs mt-1">Verificando lista blanca de sitios académicos</p>
             </motion.div>
           )}
@@ -185,7 +150,7 @@ export default function WebViewPanel({ url, title }: WebViewPanelProps) {
               </div>
               <h2 className="text-white font-bold text-lg mb-2">Vista previa no disponible</h2>
               <p className="text-slate-400 text-sm mb-4">
-                El sitio <strong className="text-white">{getDomainName(currentUrl)}</strong> bloquea
+                El sitio <strong className="text-white">{displayHost(currentUrl)}</strong> bloquea
                 la carga en marcos embebidos (política X-Frame-Options). Esto es normal en modo web.
               </p>
               <p className="text-slate-500 text-xs mb-6">
@@ -221,7 +186,7 @@ export default function WebViewPanel({ url, title }: WebViewPanelProps) {
               </div>
               <h2 className="text-white font-bold text-lg mb-2">⛔ Acceso Bloqueado</h2>
               <p className="text-slate-400 text-sm mb-2">
-                <strong className="text-red-400">{getDomainName(currentUrl)}</strong> no está
+                <strong className="text-red-400">{displayHost(currentUrl)}</strong> no está
                 en la lista de sitios permitidos por YALEH.
               </p>
               <p className="text-slate-500 text-xs">

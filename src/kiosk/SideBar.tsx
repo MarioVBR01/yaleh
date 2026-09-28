@@ -12,35 +12,15 @@ import {
   Home, FileEdit, History, Clock, Download,
   BarChart2, ChevronRight, ChevronDown, Settings
 } from 'lucide-react';
+import { WORKSPACE_LINKS, type ToolLink } from '@shared/config';
 import { useApp } from '../context/AppContext';
 
-/** Configuración de ítems del Google Workspace App Drawer */
-const WORKSPACE_APPS = [
-  {
-    id: 'docs',
-    label: 'Google Docs',
-    icon: '📝',
-    url: 'https://docs.google.com',
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/10',
-  },
-  {
-    id: 'sheets',
-    label: 'Google Sheets',
-    icon: '📊',
-    url: 'https://sheets.google.com',
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-  },
-  {
-    id: 'slides',
-    label: 'Google Slides',
-    icon: '🖥️',
-    url: 'https://slides.google.com',
-    color: 'text-orange-400',
-    bg: 'bg-orange-500/10',
-  },
-];
+/** Estilo de cada app de Google Workspace; la lista viene de shared/config.ts. */
+const WORKSPACE_STYLES: Record<string, string> = {
+  docs: 'text-blue-400',
+  sheets: 'text-emerald-400',
+  slides: 'text-orange-400',
+};
 
 /** Configuración de editores Offline (Quill/Luckysheet embebidos) */
 const OFFLINE_EDITORS = [
@@ -146,18 +126,18 @@ export default function SideBar({ collapsed }: SideBarProps) {
    * Abre un servicio de Google Workspace en nueva pestaña.
    * Verifica que el usuario esté autenticado antes de proceder.
    */
-  const handleWorkspaceOpen = (app: typeof WORKSPACE_APPS[0]) => {
+  const handleWorkspaceOpen = (app: ToolLink) => {
     if (!state.session.isAuthenticated) {
       dispatch({ type: 'SET_PHASE', payload: 'login' });
       return;
     }
     openTab({
       type: 'workspace-url',
-      title: app.label,
+      title: app.name,
       url: app.url,
       icon: app.icon,
     });
-    logActivity({ type: 'tool', label: `${app.label} abierto`, icon: app.icon });
+    logActivity({ type: 'tool', label: `${app.name} abierto`, icon: app.icon });
   };
 
   /**
@@ -254,14 +234,14 @@ export default function SideBar({ collapsed }: SideBarProps) {
                 exit={{ opacity: 0, height: 0 }}
                 className="ml-3 mt-1 space-y-1 overflow-hidden border-l border-slate-700/50 pl-3"
               >
-                {WORKSPACE_APPS.map(app => (
+                {WORKSPACE_LINKS.map(app => (
                   <button
                     key={app.id}
                     onClick={() => handleWorkspaceOpen(app)}
-                    className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-all hover:bg-slate-800 ${app.color}`}
+                    className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-all hover:bg-slate-800 ${WORKSPACE_STYLES[app.id] ?? ''}`}
                   >
                     <span>{app.icon}</span>
-                    <span className="text-slate-300 hover:text-white">{app.label}</span>
+                    <span className="text-slate-300 hover:text-white">{app.name}</span>
                   </button>
                 ))}
                 {!state.session.isAuthenticated && (

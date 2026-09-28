@@ -1,7 +1,7 @@
 # Brief — YALEH v1
 
 > Especificación de la versión 1. Autor: Mario Víctor Brañez Rodriguez (TECBA, Cochabamba).
-> Fecha: 28 de septiembre de 2026. **Revisión 1.1** (28/09/2026): incorpora las decisiones de la revisión del plan de trabajo (sección 16).
+> Fecha: 28 de septiembre de 2026. **Revisión 1.2** (28/09/2026): elimina la salida de emergencia y agrega la confirmación previa, la duración máxima y las sesiones interrumpidas. La revisión 1.1 incorporó las decisiones del plan de trabajo (sección 16).
 > Documento complementario: `INFORME_ANALISIS_SRB.md` (análisis del MVP actual).
 > El diseño visual se define **después**; en esta versión no se rediseña la interfaz.
 > Este documento es la **fuente de verdad** del proyecto: si el código lo contradice, gana el brief.
@@ -43,7 +43,10 @@ El proyecto parte del MVP existente ("Safe Research Browser"), que se **reorgani
 | Ofimática | Editores propios en el escritorio con exportación a `.docx`, `.xlsx` y `.pptx` |
 | Google Workspace | Solo en modo online |
 | Reproductor de YouTube | Embebido, solo en el escritorio online |
-| Salida de emergencia | Código definido por el propio estudiante; mismo código en ambos modos; guardado como hash en SQLite; cada uso se registra y se muestra en las estadísticas |
+| Salida anticipada | **No existe.** No hay salida de emergencia ni código: la sesión solo termina al cumplirse el tiempo (o apagando o reiniciando el equipo) |
+| Duración de la sesión | Entre 1 y **180 minutos** (`shared/config.ts`) |
+| Confirmación | Antes de entrar al kiosko, pantalla de confirmación con los archivos cargados, la duración y el aviso de que no se puede salir (sección 4.3) |
+| Sesión interrumpida | Si la app se cierra durante una sesión (apagado, reinicio o cierre forzado), al volver a abrirla se registra como interrumpida y, si aún queda tiempo, se ofrece retomarla |
 | Nombre | YALEH (reemplaza a "SRB" y "Safe Research Browser" en todo el código y la interfaz) |
 
 ---
@@ -94,30 +97,36 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 
 1. El estudiante inicia sesión en la web con Google (Firebase Authentication).
 2. Carga sus archivos en la dropzone.
-3. Configura el tiempo de concentración (25, 50 o 90 minutos, o manual).
-4. La sesión se guarda en Firestore y la web abre el escritorio con `yaleh://sesion?id=<id>`.
-5. El escritorio **se bloquea en cuanto recibe el enlace** (kiosko activo, sin temporizador todavía) y muestra una pantalla de carga.
-6. El escritorio genera un `state` aleatorio y abre el inicio de sesión de Google en el navegador del sistema (sección 4.5). Como el estudiante ya inició sesión en la web, el paso es casi automático.
-7. La web cargada en el kiosko inicia sesión, lee la sesión de Firestore y confirma la duración al proceso principal.
-8. **El tiempo empieza a contar cuando se confirma la duración.** Antes de ese momento se permite cancelar; después, solo la salida de emergencia.
+3. Configura el tiempo de concentración (25, 50 o 90 minutos, o manual hasta 180).
+4. Confirma la sesión en la pantalla de confirmación (sección 4.3).
+5. La sesión se guarda en Firestore y la web abre el escritorio con `yaleh://sesion?id=<id>`.
+6. El escritorio **se bloquea en cuanto recibe el enlace** (kiosko activo, sin temporizador todavía) y muestra una pantalla de carga.
+7. El escritorio genera un `state` aleatorio y abre el inicio de sesión de Google en el navegador del sistema (sección 4.5). Como el estudiante ya inició sesión en la web, el paso es casi automático.
+8. La web cargada en el kiosko inicia sesión, lee la sesión de Firestore y confirma la duración al proceso principal.
+9. **El tiempo empieza a contar cuando se confirma la duración.** Antes de ese momento se permite cancelar; después, la sesión solo termina al cumplirse el tiempo.
 
 ### 4.2 Sesión offline (empieza en el escritorio)
 
 1. El escritorio no muestra login. Muestra: **"No estás conectado. ¿Quieres iniciar sesión offline?"**
 2. El estudiante carga archivos locales en la dropzone.
 3. Configura el tiempo.
-4. Se activa el kiosko con los módulos locales.
+4. Confirma la sesión en la pantalla de confirmación.
+5. Se activa el kiosko con los módulos locales.
 
 **Escritorio abierto con internet sin venir de la web:** muestra **"Inicia tu sesión desde la web"**, con un botón que abre la web en el navegador del sistema, y también la opción de iniciar una sesión offline.
 
 ### 4.3 Durante la sesión (ambos modos)
 
 - El proceso principal cuenta el tiempo. No se puede romper desde la aplicación.
-- La única salida anticipada es la **salida de emergencia con código**:
-  - El código lo define el propio estudiante.
-  - Es el mismo en modo online y offline.
-  - Se guarda como hash en SQLite, de modo que se puede comprobar sin conexión.
-  - Cada uso queda registrado y se muestra en las estadísticas.
+- **No hay salida anticipada.** No existe salida de emergencia ni código: la sesión solo termina al cumplirse el tiempo. La única forma de salir antes es apagar o reiniciar el equipo (o forzar el cierre con Ctrl+Alt+Supr, que Windows no permite bloquear).
+- **Confirmación previa.** Antes de entrar al kiosko, una pantalla muestra:
+  - Los archivos cargados y la pregunta "¿Cargaste todos los archivos que necesitas?", con la opción de volver a la dropzone.
+  - La duración elegida (máximo 180 minutos).
+  - El aviso: "No podrás salir hasta que termine el tiempo. Solo apagando o reiniciando el equipo."
+  - El estudiante confirma con un botón explícito.
+- **Sesión interrumpida.** Al iniciar la sesión, el proceso principal guarda su estado (inicio y `sessionEndsAt`). Si la app se abre y encuentra una sesión activa sin terminar, la registra como "interrumpida" y, si todavía queda tiempo, ofrece retomarla con el tiempo restante (el tiempo sigue corriendo mientras el equipo está apagado).
+- **Registro.** Las pérdidas de foco de la ventana y las interrupciones se registran con fecha y hora.
+- **Salida para desarrollo.** Solo cuando la app no está empaquetada existe un atajo (Ctrl+Shift+F12) que libera el kiosko y queda registrado. En la versión empaquetada no existe.
 - Si se corta internet a mitad de sesión, el kiosko sigue cerrado y el tiempo sigue corriendo. Las pestañas online dejan de responder y la aplicación ofrece pasar a los módulos locales. **El resto de la sesión se guarda en SQLite con el mismo identificador de sesión y se sube a Firestore al reconectar.**
 
 ### 4.4 Al terminar
@@ -145,7 +154,7 @@ La web se usa en el navegador y también dentro del kiosko en modo online. En el
 
 ### 5.1 Flujo de entrada
 
-Inicio de sesión con Google → dropzone → configuración del tiempo → iniciar sesión (abre el escritorio).
+Inicio de sesión con Google → dropzone → configuración del tiempo → confirmación → iniciar sesión (abre el escritorio).
 
 ### 5.2 Vista principal (estilo NotebookLM)
 
@@ -275,7 +284,7 @@ Desde el 3 de febrero de 2026, Cloud Storage for Firebase exige el plan Blaze. *
 | Notas | Firestore | SQLite |
 | Resultados de la IA | Firestore | — |
 | Historial de sesiones y métricas | Firestore | SQLite, se sube al reconectar |
-| Hash del código de emergencia y registro de usos | SQLite (los usos también se suben a Firestore con la sesión) | SQLite |
+| Registro de eventos de la sesión (pérdidas de foco, interrupciones) | SQLite (se sube a Firestore con la sesión) | SQLite |
 | Documentos de ofimática | `Documentos/YALEH` | `Documentos/YALEH` |
 
 Guardar el texto extraído en Firestore resuelve que los archivos cargados en el navegador no son visibles para la web que corre dentro del kiosko (son navegadores distintos).
@@ -284,7 +293,7 @@ Guardar el texto extraído en Firestore resuelve que los archivos cargados en el
 
 ```
 users/{uid}
-users/{uid}/sessions/{sessionId}        # duración, inicio, fin, estado, modo, salidas de emergencia
+users/{uid}/sessions/{sessionId}        # duración, inicio, fin, estado, modo, eventos (pérdidas de foco, interrupción)
 users/{uid}/sessions/{sessionId}/sources/{sourceId}          # nombre, tipo, tamaño
 users/{uid}/sessions/{sessionId}/sources/{sourceId}/chunks/{n}  # texto extraído
 users/{uid}/sessions/{sessionId}/notes/{noteId}
@@ -310,17 +319,17 @@ PDF con texto, DOCX y TXT. Los PDF escaneados quedan fuera. La extracción se ha
 
 Todo el bloqueo se aplica en el **proceso principal**, nunca en la interfaz. Ver `INFORME_ANALISIS_SRB.md`, sección 9, para los problemas del MVP.
 
-- [ ] Pantalla completa en modo kiosko, sin marco y siempre al frente durante la sesión.
-- [ ] Atajos del sistema bloqueados con `globalShortcut` donde Windows lo permite (Alt+F4, F11, Ctrl+W y similares). **Windows no permite capturar Alt+Tab ni la tecla Windows** con `globalShortcut`; se mitiga con la ventana siempre al frente al máximo nivel, recuperando el foco si se pierde y registrando cada pérdida de foco. Estas limitaciones y Ctrl+Alt+Supr se documentan.
-- [ ] Lista de sitios permitidos con `session.webRequest.onBeforeRequest`, filtrando solo `mainFrame` y `subFrame`, para no bloquear los recursos que cargan Google o Canva (ni las llamadas a la API de Wikipedia).
-- [ ] `will-navigate` y `setWindowOpenHandler` controlados en todas las vistas: toda ventana o página nueva se abre como pestaña interna o se bloquea.
-- [ ] `shell.openExternal` restringido al inicio de sesión de Google y a la web de YALEH.
-- [ ] DevTools deshabilitadas en la versión empaquetada.
-- [ ] `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false` y `contextBridge` con canales IPC definidos y validados. El proceso principal comprueba el origen de cada mensaje IPC.
-- [ ] El temporizador vive en el proceso principal (`sessionEndsAt`); la interfaz solo lo muestra.
-- [ ] La interfaz no puede salir del kiosko antes de tiempo, salvo con la salida de emergencia con código, que queda registrada.
-- [ ] Content-Security-Policy en la web.
-- [ ] El enlace directo de autenticación valida un `state` aleatorio.
+- [x] Pantalla completa en modo kiosko, sin menú y siempre al frente (nivel `screen-saver`) durante la sesión; si la ventana pierde el foco, lo recupera y registra la pérdida. *(fase 2)*
+- [x] Atajos del sistema bloqueados con `before-input-event` y `globalShortcut` donde Windows lo permite (Alt+F4, F5, F11, F12, Ctrl+W, Ctrl+R, Ctrl+Shift+I y similares). *(fase 2)* **Windows no permite capturar Alt+Tab ni la tecla Windows** con `globalShortcut`; se mitiga con la ventana siempre al frente al máximo nivel, recuperando el foco si se pierde y registrando cada pérdida de foco. Estas limitaciones y Ctrl+Alt+Supr se documentan.
+- [x] Lista de sitios permitidos con `session.webRequest.onBeforeRequest`, filtrando solo `mainFrame` y `subFrame`, para no bloquear los recursos que cargan Google o Canva (ni las llamadas a la API de Wikipedia). *(fase 2)*
+- [x] `will-navigate` y `setWindowOpenHandler` controlados en todas las vistas: toda ventana o página nueva se abre como pestaña interna o se bloquea. *(fase 2: por ahora se deniegan; en la fase 8 se abren como pestañas)*
+- [x] `shell.openExternal` restringido a la web de YALEH (`yaleh-fbe1c.web.app` y `yaleh-fbe1c.firebaseapp.com`), desde la que se inicia sesión con Google. *(fase 2)*
+- [x] DevTools deshabilitadas en la versión empaquetada. *(fase 2)*
+- [x] `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, `webSecurity: true` y `contextBridge` con canales IPC definidos y validados. El proceso principal comprueba el origen de cada mensaje IPC. *(fase 2)*
+- [x] El temporizador vive en el proceso principal (`sessionEndsAt`); la interfaz solo lo muestra. *(fase 2)*
+- [x] La interfaz no puede salir del kiosko antes de tiempo: se rechazan el cierre de la app y de la ventana mientras la sesión está activa. No hay salida de emergencia. *(fase 2)*
+- [x] Content-Security-Policy en la web, sin `'unsafe-inline'` para scripts. *(fase 2)*
+- [ ] El enlace directo de autenticación valida un `state` aleatorio. *(fase 4; en la fase 2 solo se aceptan `yaleh://auth` y `yaleh://sesion` con parámetros válidos)*
 
 **Sitios permitidos en modo online:** el dominio de la web de YALEH, Google Workspace y sus dominios de inicio de sesión, Canva, Gamma, el Moodle del TECBA, Google Classroom y `youtube-nocookie.com` (solo para el reproductor). Todo lo demás se bloquea. La lista vive en **un único módulo de configuración** (`shared/config.ts`) compartido por el proceso principal y la interfaz.
 
@@ -363,7 +372,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | Editores de documento, hoja y presentación con exportación | Función del botón de configuración |
 | Reproductor de YouTube embebido | PDF escaneados (OCR) |
 | Firestore, SQLite y sincronización | Bloqueo más profundo del sistema (Ctrl+Alt+Supr, Alt+Tab, tecla Windows) |
-| Salida de emergencia con código | Plan de pago de Gemini si se supera el límite |
+| Confirmación previa y recuperación de sesiones interrumpidas | Plan de pago de Gemini si se supera el límite |
 | | Rediseño visual completo |
 
 ---
@@ -380,6 +389,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | La API de Wikipedia limita o rechaza las solicitudes | Cabecera `Api-User-Agent`, pocas solicitudes por pregunta y mensaje claro si falla |
 | El reproductor de YouTube muestra "Error 153" | Página propia de YALEH que inserta el reproductor con `referrerpolicy` (sección 6.2) |
 | Ctrl+Alt+Supr, Alt+Tab y la tecla Windows no se pueden bloquear | Limitación documentada; mitigación con ventana al frente y registro de pérdidas de foco |
+| El estudiante queda bloqueado sin salida (por ejemplo, un fallo durante la sesión) | Apagar o reiniciar el equipo; al reabrir, la sesión aparece como interrumpida. Durante el desarrollo existe la salida Ctrl+Shift+F12 (solo sin empaquetar) |
 
 ---
 
@@ -428,7 +438,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 5 | App Check (4.2) | Fraud Defense con `ReCaptchaEnterpriseProvider`, proveedor en `shared/config.ts`; clave del sitio en la fase 4 |
 | 6 | Paso de la web al escritorio (4.3) | Opción A: el escritorio se bloquea al recibir el enlace, inicia sesión por el navegador del sistema con `state`, y el tiempo cuenta desde que se confirma la duración |
 | 7 | Login de Google en herramientas (4.4) | Riesgo aceptado (sección 13) |
-| 8 | Código de emergencia (4.5) | Lo define el estudiante; mismo código en ambos modos; hash en SQLite; usos registrados y visibles en estadísticas |
+| 8 | Código de emergencia (4.5) | ~~Lo define el estudiante; mismo código en ambos modos; hash en SQLite~~. **Reemplazada en la revisión 1.2:** no hay salida de emergencia |
 | 9 | Escritorio abierto sin venir de la web | "Inicia tu sesión desde la web" (botón que abre el navegador) + opción de modo offline |
 | 10 | Cuenta de las sesiones offline | La última cuenta que inició sesión en el equipo; si no hay, quedan locales |
 | 11 | Vista offline | "Disponible próximamente" en el chat y en las funciones de IA de estudio; las notas funcionan |
@@ -437,3 +447,15 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 14 | Colores | Tokens en la fase 1 y migración gradual |
 | 15 | Archivos antiguos | Se eliminan `AI_APPLICATION_REPORT.md` y `.json`; `dist/` se ignora en git |
 | 16 | Editor de presentaciones | Se parte del editor básico del MVP (no es nuevo) |
+
+### Revisión 1.2 — 28/09/2026 (inicio de la fase 2)
+
+| # | Tema | Decisión |
+| --- | --- | --- |
+| 17 | Salida de emergencia | **Se elimina.** No hay código ni salida anticipada: la sesión solo termina al cumplirse el tiempo, o apagando o reiniciando el equipo |
+| 18 | Confirmación previa | Pantalla antes del kiosko con los archivos cargados ("¿Cargaste todos los archivos que necesitas?", con opción de volver a la dropzone), la duración y el aviso "No podrás salir hasta que termine el tiempo. Solo apagando o reiniciando el equipo." Confirmación con botón explícito |
+| 19 | Duración máxima | 180 minutos (`shared/config.ts`) |
+| 20 | Sesión interrumpida | El proceso principal guarda el estado de la sesión al iniciarla (JSON en `userData` hasta la fase 3, luego SQLite). Si al abrir encuentra una sesión activa sin terminar, la registra como interrumpida y, si queda tiempo, ofrece retomarla con el tiempo restante |
+| 21 | Registro de foco | Las pérdidas de foco se registran con fecha y hora |
+| 22 | Salida para desarrollo | Ctrl+Shift+F12 libera el kiosko y queda registrado, solo cuando la app no está empaquetada |
+| 23 | Bloqueo tras intentos fallidos | No aplica: solo tenía sentido con el código de emergencia |

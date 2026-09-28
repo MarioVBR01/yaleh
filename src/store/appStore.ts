@@ -9,6 +9,8 @@ export type AppPhase =
   | 'login'
   | 'dropzone'
   | 'timer-select'
+  | 'confirm-session'
+  | 'resume-offer'
   | 'kiosk'
   | 'session-complete';
 
@@ -89,6 +91,8 @@ export type AppAction =
   | { type: 'SET_SESSION_DURATION'; payload: number }
   | { type: 'START_KIOSK' }
   | { type: 'TICK_TIMER' }
+  | { type: 'SYNC_TIME'; payload: number }
+  | { type: 'RESUME_SESSION'; payload: { durationSeconds: number; remainingSeconds: number } }
   | { type: 'END_SESSION' }
   | { type: 'ADD_TAB'; payload: Tab }
   | { type: 'CLOSE_TAB'; payload: string }
@@ -170,6 +174,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         kioskActive: newTime > 0,
       };
     }
+
+    case 'SYNC_TIME': {
+      // Tiempo restante informado por el proceso principal (escritorio).
+      const remaining = Math.max(0, Math.floor(action.payload));
+      return { ...state, timeRemaining: remaining, kioskActive: remaining > 0 };
+    }
+
+    case 'RESUME_SESSION':
+      return {
+        ...state,
+        sessionDuration: action.payload.durationSeconds,
+        timeRemaining: action.payload.remainingSeconds,
+        kioskActive: true,
+        phase: 'kiosk',
+      };
 
     case 'END_SESSION':
       return {

@@ -8,18 +8,19 @@
  */
 
 import { motion } from 'framer-motion';
+import { TOOL_LINKS } from '@shared/config';
 import { useApp } from '../context/AppContext';
 
 // ─── DATOS DE SECCIONES ───────────────────────────────────────────────────────
 
-/** Herramientas autorizadas (brief, sección 9) */
-const TOOL_SITES = [
-  { name: 'G. Classroom', url: 'https://classroom.google.com', icon: '🖥️', color: 'from-green-400 to-teal-500', bg: 'bg-green-400/10', border: 'border-green-400/20' },
-  // TODO(fase 2): reemplazar por la URL del Moodle del TECBA (pendiente en el brief).
-  { name: 'Moodle', url: 'https://moodle.org', icon: '🏫', color: 'from-orange-500 to-amber-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
-  { name: 'Canva', url: 'https://www.canva.com', icon: '🎨', color: 'from-cyan-500 to-blue-600', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
-  { name: 'Gamma', url: 'https://gamma.app', icon: '📊', color: 'from-purple-500 to-violet-600', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-];
+/** Estilo de cada herramienta; la lista viene de shared/config.ts. */
+const TOOL_STYLES: Record<string, { color: string; bg: string; border: string }> = {
+  classroom: { color: 'from-green-400 to-teal-500', bg: 'bg-green-400/10', border: 'border-green-400/20' },
+  moodle: { color: 'from-orange-500 to-amber-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
+  canva: { color: 'from-cyan-500 to-blue-600', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
+  gamma: { color: 'from-purple-500 to-violet-600', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+};
+const DEFAULT_TOOL_STYLE = { color: 'from-slate-500 to-slate-600', bg: 'bg-slate-500/10', border: 'border-slate-500/20' };
 
 // ─── ANIMACIONES ──────────────────────────────────────────────────────────────
 
@@ -109,22 +110,25 @@ export default function Dashboard() {
             subtitle="Plataformas autorizadas"
           />
           <div className="grid grid-cols-4 gap-3">
-            {TOOL_SITES.map(site => (
+            {TOOL_LINKS.map(site => {
+              const style = TOOL_STYLES[site.id] ?? DEFAULT_TOOL_STYLE;
+              return (
               <motion.button
                 key={site.name}
                 onClick={() => handleOpenSite(site.name, site.url, site.icon)}
-                className={`flex flex-col items-center gap-2 p-3 rounded-2xl border ${site.bg} ${site.border} hover:scale-105 transition-all group`}
+                className={`flex flex-col items-center gap-2 p-3 rounded-2xl border ${style.bg} ${style.border} hover:scale-105 transition-all group`}
                 whileHover={{ scale: 1.08, y: -2 }}
                 whileTap={{ scale: 0.96 }}
               >
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${site.color} flex items-center justify-center text-xl shadow-lg group-hover:shadow-xl transition-shadow`}>
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.color} flex items-center justify-center text-xl shadow-lg group-hover:shadow-xl transition-shadow`}>
                   {site.icon}
                 </div>
                 <span className="text-slate-300 text-[10px] font-medium text-center leading-tight group-hover:text-white transition-colors">
                   {site.name}
                 </span>
               </motion.button>
-            ))}
+              );
+            })}
           </div>
         </motion.section>
 
