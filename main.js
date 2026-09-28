@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 const DEV_SERVER_URL = "http://localhost:5173";
 const PRELOAD_PATH = path.join(__dirname, "preload.cjs");
-const PROTOCOL_SCHEME = "project-grade-planb";
+const PROTOCOL_SCHEME = "yaleh";
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
@@ -62,7 +62,7 @@ function deactivateKioskMode() {
 
 /**
  * Procesa el deep link y extrae el token del query string.
- * @param {string} urlString - La URL del deep link (ej: project-grade-planb://auth?token=XXX)
+ * @param {string} urlString - La URL del deep link (ej: yaleh://auth?token=XXX)
  */
 function handleDeepLink(urlString) {
   if (!urlString.startsWith(`${PROTOCOL_SCHEME}://`)) return;
@@ -158,5 +158,3 @@ if (!gotTheLock) {
     }
   });
 }
-
-/***************************  */

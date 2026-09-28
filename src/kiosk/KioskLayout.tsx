@@ -1,42 +1,34 @@
 /**
  * @file KioskLayout.tsx
- * @description Layout principal del Modo Kiosko del SRB.
- * Orquesta la Barra Superior, Barra Lateral, Workspace Central y Barra Inferior.
+ * @description Layout principal del Modo Kiosko de YALEH.
+ * Orquesta la Barra Lateral, el Workspace Central y la Barra Inferior.
  * Gestiona el renderizado de pestañas y la persistencia de estado entre ellas.
  * Aplica el bloqueo de teclas del sistema operativo (simulado en web).
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import TopBar from './TopBar';
 import SideBar from './SideBar';
 import BottomBar from './BottomBar';
 import Dashboard from '../panels/Dashboard';
 import WebViewPanel from '../panels/WebViewPanel';
 import OfflineEditorPanel from '../panels/OfflineEditorPanel';
-import EncartaPanel from '../panels/EncartaPanel';
 import AIWorkPanel from '../panels/AIWorkPanel';
 import HistoryPanel from '../panels/HistoryPanel';
 import PomodoroPanel from '../panels/PomodoroPanel';
 import DownloadsPanel from '../panels/DownloadsPanel';
 import StatsPanel from '../panels/StatsPanel';
-import SettingsPanel from '../panels/SettingsPanel';
 import { useApp } from '../context/AppContext';
 import { isElectron, deactivateKiosk } from '../lib/electron';
 import type { Tab } from '../store/appStore';
 
 /** Interfaz del diálogo de nueva pestaña */
 const NEW_TAB_SITES = [
-  { name: 'Wikipedia', url: 'https://es.wikipedia.org', icon: '🌐' },
-  { name: 'Google Scholar', url: 'https://scholar.google.com', icon: '🔬' },
-  { name: 'Khan Academy', url: 'https://www.khanacademy.org', icon: '📐' },
-  { name: 'Coursera', url: 'https://www.coursera.org', icon: '🎓' },
-  { name: 'SciELO', url: 'https://www.scielo.org', icon: '📄' },
-  { name: 'TED Talks', url: 'https://www.ted.com', icon: '🎤' },
-  { name: 'Duolingo', url: 'https://www.duolingo.com', icon: '🦉' },
+  { name: 'Google Classroom', url: 'https://classroom.google.com', icon: '🖥️' },
+  // TODO(fase 2): reemplazar por la URL del Moodle del TECBA (pendiente en el brief).
   { name: 'Moodle', url: 'https://moodle.org', icon: '🏫' },
-  { name: 'NotebookLM', url: 'https://notebooklm.google.com', icon: '📓' },
-  { name: 'Pexels', url: 'https://www.pexels.com', icon: '📷' },
+  { name: 'Canva', url: 'https://www.canva.com', icon: '🎨' },
+  { name: 'Gamma', url: 'https://gamma.app', icon: '📊' },
 ];
 
 /**
@@ -48,11 +40,9 @@ function TabContent({ tab }: { tab: Tab }) {
     case 'dashboard':
       return <Dashboard />;
     case 'workspace-url':
-      return <WebViewPanel url={tab.url || 'https://es.wikipedia.org'} title={tab.title} />;
+      return <WebViewPanel url={tab.url ?? ''} title={tab.title} />;
     case 'offline-editor':
       return <OfflineEditorPanel editorType={tab.editorType || 'docs'} />;
-    case 'encarta':
-      return <EncartaPanel />;
     case 'ai-work':
       return <AIWorkPanel />;
     case 'history':
@@ -71,9 +61,7 @@ function TabContent({ tab }: { tab: Tab }) {
 export default function KioskLayout() {
   const { state, openTab, dispatch } = useApp();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [showNewTabDialog, setShowNewTabDialog] = useState(false);
-  const [refKey, setRefKey] = useState(0);
 
   /**
    * Intercepta combinaciones de teclado del sistema en modo kiosko.
@@ -133,18 +121,11 @@ export default function KioskLayout() {
         if (isElectron()) {
           await deactivateKiosk();
         }
-        // DESPUÉS, cambiar a la fase de sesión completada
-        dispatch({ type: 'SET_PHASE', payload: 'session-complete' });
+        // DESPUÉS, terminar la sesión y mostrar el resumen
+        dispatch({ type: 'END_SESSION' });
       })();
     }
   }, [state.timeRemaining, state.phase, dispatch]);
-
-  /**
-   * Recarga el contenido de la pestaña activa forzando re-render.
-   */
-  const handleRefresh = useCallback(() => {
-    setRefKey(prev => prev + 1);
-  }, []);
 
   /**
    * Abre el diálogo de nueva pestaña.
@@ -153,16 +134,8 @@ export default function KioskLayout() {
     setShowNewTabDialog(true);
   }, []);
 
-
-
   return (
-    <div className="h-screen flex flex-col bg-slate-950 overflow-hidden select-none">
-
-      {/* ── BARRA SUPERIOR ─────────────────────────────────────────────── */}
-      <TopBar
-        onOpenSettings={() => setShowSettings(true)}
-        onRefresh={handleRefresh}
-      />
+    <div className="h-screen flex flex-col bg-canvas overflow-hidden select-none">
 
       {/* ── ZONA CENTRAL: Sidebar + Workspace ──────────────────────────── */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -193,7 +166,7 @@ export default function KioskLayout() {
               className={`absolute inset-0 ${tab.id === state.activeTabId ? 'z-10' : 'z-0 pointer-events-none'}`}
               style={{ display: tab.id === state.activeTabId ? 'block' : 'none' }}
             >
-              <TabContent key={`${tab.id}-${refKey}`} tab={tab} />
+              <TabContent tab={tab} />
             </div>
           ))}
 
@@ -208,13 +181,6 @@ export default function KioskLayout() {
 
       {/* ── BARRA INFERIOR ──────────────────────────────────────────────── */}
       <BottomBar onNewTab={handleNewTab} />
-
-      {/* ── PANEL DE CONFIGURACIÓN ──────────────────────────────────────── */}
-      <AnimatePresence>
-        {showSettings && (
-          <SettingsPanel onClose={() => setShowSettings(false)} />
-        )}
-      </AnimatePresence>
 
       {/* ── DIÁLOGO DE NUEVA PESTAÑA ────────────────────────────────────── */}
       <AnimatePresence>
@@ -234,7 +200,7 @@ export default function KioskLayout() {
               onClick={e => e.stopPropagation()}
             >
               <h2 className="text-white font-bold text-lg mb-1">Nueva Pestaña</h2>
-              <p className="text-slate-400 text-sm mb-5">Sitios académicos disponibles</p>
+              <p className="text-slate-400 text-sm mb-5">Herramientas autorizadas</p>
 
               <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto mb-4">
                 {NEW_TAB_SITES.map(site => (
@@ -255,17 +221,7 @@ export default function KioskLayout() {
               </div>
 
               {/* Opciones especiales */}
-              <div className="border-t border-slate-800 pt-4 grid grid-cols-2 gap-2">
-                <motion.button
-                  onClick={() => {
-                    openTab({ type: 'encarta', title: 'Enciclopedia Offline', icon: '📖' });
-                    setShowNewTabDialog(false);
-                  }}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm font-medium hover:bg-blue-500/20 transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                >
-                  📖 Enciclopedia
-                </motion.button>
+              <div className="border-t border-slate-800 pt-4 grid grid-cols-1 gap-2">
                 <motion.button
                   onClick={() => {
                     openTab({ type: 'ai-work', title: 'Trabajo con IA', icon: '🤖' });

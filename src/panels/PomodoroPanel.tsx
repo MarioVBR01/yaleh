@@ -154,7 +154,7 @@ const Moon = ({ size = 16, className }: IconProps) => (
 /** Modos del temporizador Pomodoro */
 type PomodoroMode = 'work' | 'short-break' | 'long-break';
 
-const MODES: Record<PomodoroMode, { label: string; minutes: number; color: string; icon: React.ReactNode; bg: string }> = {
+const MODES: Record<PomodoroMode, { label: string; minutes: number; color: string; icon: ReactNode; bg: string }> = {
   'work': {
     label: 'Trabajo',
     minutes: 25,

@@ -8,6 +8,7 @@
 import { motion } from 'framer-motion';
 import { CheckCircle2, Calendar } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { closeApp } from '../lib/electron';
 
 /**
  * Formatea la fecha/hora actual en español.
@@ -32,15 +33,6 @@ function formatSessionDateTime(): string {
  */
 function formatMinutes(seconds: number): number {
   return Math.round(seconds / 60);
-}
-
-/**
- * Cierra la aplicación via IPC en Electron.
- */
-async function closeApp() {
-  if (typeof window !== 'undefined' && (window as any).electronAPI?.closeApp) {
-    await (window as any).electronAPI.closeApp();
-  }
 }
 
 export default function SessionCompletePhase() {
@@ -177,7 +169,7 @@ export default function SessionCompletePhase() {
             transition={{ delay: 0.5 }}
           >
             <p className="text-slate-400 text-sm leading-relaxed">
-              Tu participación en el Entorno de Estudio Blindado (SRB) ha sido
+              Tu participación en el entorno de estudio YALEH ha sido
               registrada. No es posible abrir nuevas sesiones desde este punto.
             </p>
           </motion.div>
@@ -203,7 +195,7 @@ export default function SessionCompletePhase() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          <p>Safe Research Browser (SRB) v1.0</p>
+          <p>YALEH v0.1</p>
         </motion.div>
       </motion.div>
     </div>

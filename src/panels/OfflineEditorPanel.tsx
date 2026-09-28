@@ -1,13 +1,13 @@
 /**
  * @file OfflineEditorPanel.tsx
- * @description Editor de Ofimática Offline del SRB.
- * Soporta tres modos: TextMaker (DOCX), PlanMaker (XLSX), Presentations (PPTX).
+ * @description Editor de Ofimática Offline de YALEH.
+ * Soporta tres modos: Documento (DOCX), Hoja de cálculo (XLSX) y Presentación (PPTX).
  * Implementado con React — sin dependencias externas de internet.
  * Permite exportar a TXT/CSV con botón de descarga.
  */
 
 import { useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
   List, ListOrdered, Download, FileDown, Type, Palette,
@@ -73,7 +73,7 @@ function TextEditor() {
    */
   const exportHtml = () => {
     const html = editorRef.current?.innerHTML || '';
-    const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Documento SRB</title></head><body>${html}</body></html>`], { type: 'text/html' });
+    const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Documento YALEH</title></head><body>${html}</body></html>`], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -461,8 +461,8 @@ function Divider() {
 
 export default function OfflineEditorPanel({ editorType }: OfflineEditorProps) {
   const EDITOR_LABELS = {
-    docs: { title: 'TextMaker', subtitle: 'Editor de documentos DOCX', icon: '📄' },
-    sheets: { title: 'PlanMaker', subtitle: 'Editor de hojas de cálculo XLSX', icon: '📊' },
+    docs: { title: 'Documento', subtitle: 'Editor de documentos DOCX', icon: '📄' },
+    sheets: { title: 'Hoja de cálculo', subtitle: 'Editor de hojas de cálculo XLSX', icon: '📊' },
     slides: { title: 'Presentations', subtitle: 'Editor de presentaciones PPTX', icon: '🎭' },
   };
 

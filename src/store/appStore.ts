@@ -1,8 +1,8 @@
 /**
  * @file appStore.ts
- * @description Store global de la aplicación SRB utilizando Context + useReducer.
+ * @description Store global de YALEH utilizando Context + useReducer.
  * Gestiona el estado completo: fase actual, sesión de usuario, pestañas,
- * archivos cargados, tiempo de sesión y preferencias de configuración.
+ * archivos cargados y tiempo de sesión.
  */
 
 export type AppPhase =
@@ -16,7 +16,6 @@ export type TabType =
   | 'dashboard'
   | 'workspace-url'
   | 'offline-editor'
-  | 'encarta'
   | 'ai-work'
   | 'history'
   | 'pomodoro'
@@ -30,7 +29,6 @@ export interface Tab {
   url?: string;
   icon?: string;
   editorType?: 'docs' | 'sheets' | 'slides';
-  encartaCategory?: string;
 }
 
 export interface UploadedFile {
@@ -51,13 +49,6 @@ export interface UserSession {
   initials?: string;
 }
 
-export interface ThemeSettings {
-  accentColor: string;
-  fontSize: 'sm' | 'md' | 'lg';
-  sidebarCollapsed: boolean;
-  darkMode: boolean;
-}
-
 export interface AppState {
   /** Fase actual de la aplicación */
   phase: AppPhase;
@@ -75,8 +66,6 @@ export interface AppState {
   tabs: Tab[];
   /** ID de la pestaña activa */
   activeTabId: string;
-  /** Configuración de tema */
-  theme: ThemeSettings;
   /** Historial de actividad */
   activityHistory: ActivityRecord[];
   /** Panel lateral activo */
@@ -104,7 +93,6 @@ export type AppAction =
   | { type: 'ADD_TAB'; payload: Tab }
   | { type: 'CLOSE_TAB'; payload: string }
   | { type: 'SET_ACTIVE_TAB'; payload: string }
-  | { type: 'UPDATE_THEME'; payload: Partial<ThemeSettings> }
   | { type: 'ADD_ACTIVITY'; payload: ActivityRecord }
   | { type: 'SET_SIDE_PANEL'; payload: string | null };
 
@@ -112,7 +100,7 @@ export type AppAction =
  * Genera un ID único para pestañas y registros.
  */
 export const generateId = (): string =>
-  `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
 /**
  * Estado inicial de la aplicación.
@@ -136,18 +124,12 @@ export const initialState: AppState = {
     },
   ],
   activeTabId: 'dashboard',
-  theme: {
-    accentColor: '#3b82f6',
-    fontSize: 'md',
-    sidebarCollapsed: false,
-    darkMode: true,
-  },
   activityHistory: [],
   activeSidePanel: null,
 };
 
 /**
- * Reducer principal de la aplicación SRB.
+ * Reducer principal de YALEH.
  * Procesa todas las acciones del sistema de forma inmutable.
  */
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -180,13 +162,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'START_KIOSK':
       return { ...state, kioskActive: true, phase: 'kiosk' };
 
-    case 'TICK_TIMER':
+    case 'TICK_TIMER': {
       const newTime = Math.max(0, state.timeRemaining - 1);
       return {
         ...state,
         timeRemaining: newTime,
         kioskActive: newTime > 0,
       };
+    }
 
     case 'END_SESSION':
       return {
@@ -223,9 +206,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'SET_ACTIVE_TAB':
       return { ...state, activeTabId: action.payload };
-
-    case 'UPDATE_THEME':
-      return { ...state, theme: { ...state.theme, ...action.payload } };
 
     case 'ADD_ACTIVITY':
       return {

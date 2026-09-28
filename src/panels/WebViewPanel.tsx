@@ -1,7 +1,7 @@
 /**
  * @file WebViewPanel.tsx
  * @description Panel de visualización web para sitios de la Lista Blanca.
- * Simula el renderizado de una URL dentro del entorno SRB usando un iframe
+ * Simula el renderizado de una URL dentro de YALEH usando un iframe
  * con atributos de seguridad. En Electron real se usaría <webview> con
  * preload y sandbox. Incluye barra de navegación interna y estado de carga.
  */
@@ -14,13 +14,11 @@ import { RefreshCw, ExternalLink, Shield, AlertTriangle, Lock } from 'lucide-rea
  * Lista blanca de dominios permitidos.
  * Se valida antes de cargar cualquier URL en el panel.
  */
+// TODO(fase 2): mover a shared/config.ts y aplicar en el proceso principal.
 const WHITELIST_DOMAINS = [
-  'wikipedia.org', 'scholar.google.com', 'moodle.org', 'classroom.google.com',
-  'duolingo.com', 'khanacademy.org', 'coursera.org', 'scielo.org', 'educatina.com',
-  'ted.com', 'nibble.org', 'seekho.com', 'curiositystream.com', 'studytok.com',
-  'pexels.com', 'pixabay.com', 'freepik.com', 'pics4learning.com',
-  'workspace.google.com', 'notebooklm.google.com', 'docs.google.com',
+  'classroom.google.com', 'workspace.google.com', 'docs.google.com',
   'sheets.google.com', 'slides.google.com', 'drive.google.com',
+  'moodle.org', 'canva.com', 'gamma.app', 'youtube-nocookie.com',
 ];
 
 /**
@@ -224,7 +222,7 @@ export default function WebViewPanel({ url, title }: WebViewPanelProps) {
               <h2 className="text-white font-bold text-lg mb-2">⛔ Acceso Bloqueado</h2>
               <p className="text-slate-400 text-sm mb-2">
                 <strong className="text-red-400">{getDomainName(currentUrl)}</strong> no está
-                en la lista de sitios académicos permitidos por el SRB.
+                en la lista de sitios permitidos por YALEH.
               </p>
               <p className="text-slate-500 text-xs">
                 El control de tráfico de red del modo kiosko bloquea el acceso

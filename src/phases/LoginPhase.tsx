@@ -1,7 +1,7 @@
 /**
  * @file LoginPhase.tsx
- * @description Fase 1: Pantalla de Login/Registro del SRB.
- * Soporta autenticación con Google y Facebook (simulada con Firebase Auth).
+ * @description Fase 1: Pantalla de Login/Registro de YALEH.
+ * Soporta autenticación con Google (la integración real con Firebase llega en la fase 4).
  * Incluye detección de modo offline con botón para omitir el registro.
  */
 
@@ -59,27 +59,11 @@ export default function LoginPhase() {
     return () => unsubscribe?.();
   }, []);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   /**
    * Abre el navegador externo para autenticar con Google via Firebase.
    * El flujo: 
    * 1. Usuario presiona botón → abre Firebase Hosting en navegador externo
-   * 2. Firebase autentica y redirige a deep link: project-grade-planb://auth?token=IDTOKEN
+   * 2. Firebase autentica y redirige a deep link: yaleh://auth?token=IDTOKEN
    * 3. main.js captura el deep link y envía token via IPC
    * 4. useEffect arriba recibe el token y avanza a dropzone
    */
@@ -87,7 +71,8 @@ export default function LoginPhase() {
     setLoadingProvider('google');
     setLoading(true);
     
-    const firebaseUrl = 'https://project-grade-planb.firebaseapp.com/index.html';
+    // TODO(fase 4): página de inicio de sesión para el escritorio, versionada en este repositorio.
+    const firebaseUrl = 'https://yaleh-fbe1c.web.app/';
     
     try {
       // Abrir la URL de Firebase Hosting en el navegador externo
@@ -104,38 +89,6 @@ export default function LoginPhase() {
       setLoading(false);
       setLoadingProvider(null);
     }
-  };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /**
-   * Simula el flujo de autenticación OAuth con Facebook.
-   * En producción se integra firebase.auth().signInWithPopup(facebookProvider).
-   */
-  const handleFacebookLogin = async () => {
-    setLoadingProvider('facebook');
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 1500));
-    signIn({
-      isAuthenticated: true,
-      isAnonymous: false,
-      displayName: 'Estudiante Demo',
-      email: 'estudiante@facebook.com',
-      initials: 'ED',
-    });
-    dispatch({ type: 'SET_PHASE', payload: 'dropzone' });
-    setLoading(false);
   };
 
   /**
@@ -245,9 +198,9 @@ export default function LoginPhase() {
           >
             <Shield size={40} className="text-white" />
           </motion.div>
-          <h1 className="text-3xl font-bold text-white mb-1">SRB</h1>
-          <p className="text-blue-300 text-sm font-medium">Safe Research Browser</p>
-          <p className="text-slate-400 text-xs mt-1">TECBA 2026 — Entorno Académico Blindado</p>
+          <h1 className="text-3xl font-bold text-white mb-1">YALEH</h1>
+          <p className="text-blue-300 text-sm font-medium">Entorno de estudio</p>
+          <p className="text-slate-400 text-xs mt-1">TECBA 2026</p>
         </div>
 
         {/* Panel principal */}
@@ -363,27 +316,6 @@ export default function LoginPhase() {
               Continuar con Google
             </motion.button>
 
-            {/* Facebook */}
-            <motion.button
-              onClick={handleFacebookLogin}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-[#1877F2] hover:bg-[#166FE5] text-white font-medium text-sm transition-all shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {loadingProvider === 'facebook' && loading ? (
-                <motion.div
-                  className="w-5 h-5 border-2 border-blue-300 border-t-white rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-                />
-              ) : (
-                <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              )}
-              Continuar con Facebook
-            </motion.button>
           </div>
 
           {/* Separador */}
@@ -474,7 +406,7 @@ export default function LoginPhase() {
 
         {/* Footer */}
         <p className="text-center text-slate-600 text-xs mt-4">
-          SRB v1.0 · TECBA 2026 · Proyecto de Grado
+          YALEH v0.1 · TECBA 2026 · Proyecto de Grado
         </p>
       </motion.div>
     </div>

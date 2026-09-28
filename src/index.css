@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+/* ── Tokens de color de YALEH ───────────────────────────────────────────────
+ * Única fuente de los colores de la interfaz. Generan utilidades de Tailwind
+ * (bg-canvas, text-ink, border-line, bg-accent, ...).
+ * Por ahora conservan la paleta del MVP (slate + azul). El tema definitivo
+ * (amarillo dorado y negro, brief sección 14) se aplica cambiando solo estos
+ * valores. Los componentes migran a los tokens cuando se modifican en su fase.
+ */
+@theme {
+  --color-canvas: #020617;          /* fondo de la app        (slate-950) */
+  --color-surface: #0f172a;         /* paneles y barras       (slate-900) */
+  --color-surface-raised: #1e293b;  /* tarjetas, inputs       (slate-800) */
+  --color-line: #334155;            /* bordes                 (slate-700) */
+  --color-line-strong: #475569;     /* bordes en hover        (slate-600) */
+  --color-ink: #ffffff;             /* texto principal */
+  --color-ink-soft: #cbd5e1;        /* texto secundario       (slate-300) */
+  --color-ink-muted: #94a3b8;       /* texto de apoyo         (slate-400) */
+  --color-ink-subtle: #64748b;      /* texto terciario        (slate-500) */
+  --color-accent: #3b82f6;          /* acento principal       (blue-500) */
+  --color-accent-strong: #2563eb;   /* acento en botones      (blue-600) */
+  --color-accent-soft: #93c5fd;     /* acento sobre oscuro    (blue-300) */
+  --color-success: #10b981;         /* (emerald-500) */
+  --color-warning: #f59e0b;         /* (amber-500) */
+  --color-danger: #ef4444;          /* (red-500) */
+}
+
 /* ── Fuentes del sistema (sin CDN) ───────────────────────────────────────── */
 * {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
@@ -26,12 +51,12 @@ html, body, #root {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--color-line);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--color-line-strong);
 }
 
 /* ── Prevenir selección de texto en elementos de UI ─────────────────────── */

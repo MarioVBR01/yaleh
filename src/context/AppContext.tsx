@@ -1,6 +1,6 @@
 /**
  * @file AppContext.tsx
- * @description Contexto global de React para el estado de la aplicación SRB.
+ * @description Contexto global de React para el estado de YALEH.
  * Provee el estado y el dispatcher a todos los componentes hijos,
  * incluyendo el hook personalizado useApp para acceso simplificado.
  */
@@ -23,7 +23,6 @@ import {
   type UploadedFile,
   type ActivityRecord,
   type UserSession,
-  type ThemeSettings,
 } from '../store/appStore';
 
 interface AppContextValue {
@@ -36,7 +35,6 @@ interface AppContextValue {
     url?: string;
     icon?: string;
     editorType?: 'docs' | 'sheets' | 'slides';
-    encartaCategory?: string;
   }) => void;
   /** Cierra una pestaña por ID */
   closeTab: (id: string) => void;
@@ -46,8 +44,6 @@ interface AppContextValue {
   signIn: (user: UserSession) => void;
   /** Ingresar de forma anónima (offline) */
   signInAnonymous: () => void;
-  /** Actualiza la configuración de tema */
-  updateTheme: (settings: Partial<ThemeSettings>) => void;
   /** Añade archivos al sistema */
   addFiles: (files: UploadedFile[]) => void;
   /** Elimina un archivo del sistema */
@@ -57,11 +53,18 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 /**
- * Proveedor del contexto global de la aplicación SRB.
+ * Proveedor del contexto global de YALEH.
  * Envuelve toda la aplicación para proveer estado reactivo.
+ * `initial` permite arrancar desde otro estado (usado en las pruebas).
  */
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+export function AppProvider({
+  children,
+  initial = initialState,
+}: {
+  children: ReactNode;
+  initial?: AppState;
+}) {
+  const [state, dispatch] = useReducer(appReducer, initial);
 
   /**
    * Abre una nueva pestaña en el entorno kiosko.
@@ -74,8 +77,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       url?: string;
       icon?: string;
       editorType?: 'docs' | 'sheets' | 'slides';
-      encartaCategory?: string;
-    }) => {
+      }) => {
       const newTab: Tab = {
         id: generateId(),
         ...config,
@@ -132,13 +134,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Actualiza la configuración visual de la interfaz.
-   */
-  const updateTheme = useCallback((settings: Partial<ThemeSettings>) => {
-    dispatch({ type: 'UPDATE_THEME', payload: settings });
-  }, []);
-
-  /**
    * Añade archivos cargados al estado global.
    */
   const addFiles = useCallback((files: UploadedFile[]) => {
@@ -160,7 +155,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logActivity,
     signIn,
     signInAnonymous,
-    updateTheme,
     addFiles,
     removeFile,
   };
@@ -169,7 +163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Hook personalizado para consumir el contexto de la aplicación SRB.
+ * Hook personalizado para consumir el contexto de YALEH.
  * Lanza error si se usa fuera del proveedor.
  */
 export function useApp(): AppContextValue {

@@ -1,8 +1,8 @@
 /**
  * @file SideBar.tsx
- * @description Barra Lateral Izquierda del entorno Kiosko SRB.
+ * @description Barra Lateral Izquierda del entorno Kiosko de YALEH.
  * Contiene: Inicio, Google Workspace, Ofimática Offline, Historial,
- * Pomodoro, Descargas y Resumen/Estadísticas.
+ * Pomodoro, Descargas, Resumen/Estadísticas y Configuración.
  * Soporta menús desplegables internos (App Drawers).
  */
 
@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FileEdit, History, Clock, Download,
-  BarChart2, ChevronRight, ChevronDown
+  BarChart2, ChevronRight, ChevronDown, Settings
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -46,7 +46,7 @@ const WORKSPACE_APPS = [
 const OFFLINE_EDITORS = [
   {
     id: 'docs',
-    label: 'TextMaker (.docx)',
+    label: 'Documento (.docx)',
     icon: '📄',
     editorType: 'docs' as const,
     color: 'text-blue-400',
@@ -54,7 +54,7 @@ const OFFLINE_EDITORS = [
   },
   {
     id: 'sheets',
-    label: 'PlanMaker (.xlsx)',
+    label: 'Hoja de cálculo (.xlsx)',
     icon: '📋',
     editorType: 'sheets' as const,
     color: 'text-emerald-400',
@@ -62,7 +62,7 @@ const OFFLINE_EDITORS = [
   },
   {
     id: 'slides',
-    label: 'Presentations (.pptx)',
+    label: 'Presentación (.pptx)',
     icon: '🎭',
     editorType: 'slides' as const,
     color: 'text-purple-400',
@@ -214,12 +214,12 @@ export default function SideBar({ collapsed }: SideBarProps) {
       {/* Logo superior */}
       <div className={`p-3 border-b border-slate-800 flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-xs font-bold">SR</span>
+          <span className="text-white text-xs font-bold">YA</span>
         </div>
         {!collapsed && (
           <div>
-            <p className="text-white text-xs font-bold leading-tight">Safe Research</p>
-            <p className="text-slate-500 text-[10px]">Browser</p>
+            <p className="text-white text-xs font-bold leading-tight">YALEH</p>
+            <p className="text-slate-500 text-[10px]">Entorno de estudio</p>
           </div>
         )}
       </div>
@@ -345,6 +345,14 @@ export default function SideBar({ collapsed }: SideBarProps) {
           label="Resumen"
           active={activeTab?.type === 'stats'}
           onClick={handleStats}
+          collapsed={collapsed}
+        />
+
+        {/* Configuración: botón visible; su función se define después (brief 5.3) */}
+        <NavItem
+          icon={<Settings size={18} />}
+          label="Configuración (próximamente)"
+          onClick={() => {}}
           collapsed={collapsed}
         />
       </nav>

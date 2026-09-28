@@ -1,6 +1,6 @@
 /**
  * @file AIWorkPanel.tsx
- * @description Módulo de Trabajo con IA del SRB — Inspirado en NotebookLM.
+ * @description Módulo de Trabajo con IA de YALEH — Inspirado en NotebookLM.
  * Zona izquierda: AI GENERATE (Resumen, Flashcards, Quiz, Feedback).
  * Zona derecha: CHAT — Tutor académico adaptativo con IA.
  * Funciona con o sin archivos cargados.
@@ -42,7 +42,7 @@ const AI_RESPONSES: Record<string, string[]> = {
     "¡Perfecto! Ese es un tema muy relevante en el contexto académico actual. Permíteme desglosarlo paso a paso para que puedas asimilarlo mejor.",
   ],
   saludos: [
-    "¡Hola! Soy tu asistente académico del SRB 📚. Estoy aquí para ayudarte a estudiar de manera más efectiva. ¿En qué tema trabajamos hoy?",
+    "¡Hola! Soy tu asistente académico de YALEH 📚. Estoy aquí para ayudarte a estudiar de manera más efectiva. ¿En qué tema trabajamos hoy?",
     "¡Bienvenido de nuevo! Listo para continuar con tu sesión de aprendizaje. ¿Qué deseas explorar hoy?",
   ],
 };
@@ -143,7 +143,7 @@ export default function AIWorkPanel() {
       role: 'assistant',
       content: hasFiles
         ? `¡Hola! 👋 Tengo acceso a **${state.uploadedFiles.length} documento(s)** que cargaste. Puedo ayudarte a generar resúmenes, flashcards, cuestionarios de práctica, o simplemente conversar sobre el contenido.\n\n¿Con qué comenzamos?`
-        : `¡Hola! 👋 Soy tu asistente académico del **Safe Research Browser**. \n\nNo has cargado documentos aún, pero puedo:\n- 🔍 Investigar temas en fuentes académicas\n- 💡 Explicar conceptos científicos\n- 💻 Escribir y depurar código\n- 📝 Redactar textos académicos formateados\n- 🃏 Crear flashcards y cuestionarios\n\n*"Busca fuentes nuevas en la web"* — Sugerencia permanente disponible.\n\n¿Sobre qué tema trabajamos hoy?`,
+        : `¡Hola! 👋 Soy tu asistente académico de **YALEH**. \n\nNo has cargado documentos aún, pero puedo:\n- 🔍 Investigar temas en fuentes académicas\n- 💡 Explicar conceptos científicos\n- 💻 Escribir y depurar código\n- 📝 Redactar textos académicos formateados\n- 🃏 Crear flashcards y cuestionarios\n\n*"Busca fuentes nuevas en la web"* — Sugerencia permanente disponible.\n\n¿Sobre qué tema trabajamos hoy?`,
       timestamp: new Date(),
     },
   ]);

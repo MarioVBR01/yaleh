@@ -1,6 +1,6 @@
 /**
  * @file App.tsx
- * @description Componente raíz de la aplicación Safe Research Browser (SRB).
+ * @description Componente raíz de la aplicación YALEH.
  * Gestiona el flujo de fases: Login → Dropzone → Timer → Kiosko.
  */
 
@@ -24,7 +24,7 @@ function AppContent() {
   const { state } = useApp();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-canvas text-ink">
       <AnimatePresence mode="wait">
         {state.phase === 'login' && (
           <motion.div

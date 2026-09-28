@@ -1,13 +1,13 @@
 /**
  * @file HistoryPanel.tsx
- * @description Panel de Historial de actividad del usuario SRB.
+ * @description Panel de Historial de actividad del usuario de YALEH.
  * Muestra registros de: archivos importados, herramientas utilizadas,
  * sitios visitados y búsquedas realizadas durante la sesión.
  */
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Clock, Globe, File, Wrench, X } from 'lucide-react';
+import { Search, Clock, Globe, File, Wrench, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import type { ActivityRecord } from '../store/appStore';
 

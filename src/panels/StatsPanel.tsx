@@ -1,6 +1,6 @@
 /**
  * @file StatsPanel.tsx
- * @description Dashboard Analítico de Estadísticas de la sesión SRB.
+ * @description Dashboard Analítico de Estadísticas de la sesión de YALEH.
  * Muestra gráficas de uso de tiempo, actividades y herramientas utilizadas.
  * Utiliza Recharts para visualizaciones interactivas.
  */

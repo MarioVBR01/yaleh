@@ -1,17 +1,17 @@
 /**
  * @file BottomBar.tsx
- * @description Barra Inferior del entorno Kiosko SRB.
- * Contiene: Temporizador regresivo de sesión (HH:MM:SS) y
+ * @description Barra Inferior del entorno Kiosko de YALEH.
+ * Contiene: Temporizador regresivo de sesión (HH:MM:SS, solo lo muestra;
+ * la cuenta la lleva KioskLayout) y
  * Sistema de gestión de pestañas responsivas con botón "Nueva Pestaña".
  * Las pestañas reducen su ancho proporcionalmente al acumularse,
  * emulando el comportamiento nativo de Chrome/Firefox.
  */
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Clock, Home } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { closeApp } from '../lib/electron';
 import type { Tab } from '../store/appStore';
 
 /**
@@ -38,42 +38,7 @@ interface BottomBarProps {
 
 export default function BottomBar({ onNewTab }: BottomBarProps) {
   const { state, dispatch } = useApp();
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
-
-  /**
-   * Inicia el temporizador de cuenta regresiva del modo kiosko.
-   * Emite un TICK cada segundo hasta que el tiempo llegue a cero.
-   */
-  useEffect(() => {
-    if (state.phase !== 'kiosk' || state.timeRemaining <= 0) {
-      return;
-    }
-
-    timerRef.current = setInterval(() => {
-      dispatch({ type: 'TICK_TIMER' });
-    }, 1000);
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [state.phase, state.kioskActive, dispatch]);
-
-  /**
-   * Al expirar el tiempo seleccionado, cierra el entorno Electron.
-   */
-  useEffect(() => {
-    if (
-      state.phase === 'kiosk' &&
-      state.timeRemaining === 0 &&
-      state.sessionDuration > 0
-    ) {
-      void closeApp();
-    }
-  }, [state.phase, state.timeRemaining, state.sessionDuration]);
 
   const timePercent = calcTimePercent(state.timeRemaining, state.sessionDuration);
   const isLowTime = state.timeRemaining < 300; // Menos de 5 minutos
