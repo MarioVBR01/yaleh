@@ -21,6 +21,7 @@ export function lockWindow(win: BrowserWindow): void {
   win.focus();
 
   for (const accelerator of BLOCKED_ACCELERATORS) {
+    if (globalShortcut.isRegistered(accelerator)) continue;
     if (!globalShortcut.register(accelerator, () => {})) {
       console.warn(`[kiosk] Windows no permitió registrar ${accelerator}`);
     }

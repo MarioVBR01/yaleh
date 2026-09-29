@@ -10,6 +10,7 @@ import type { ConnectionMode, SessionMode } from '@shared/ipc-types';
 export type AppPhase =
   | 'login'
   | 'desktop-start'
+  | 'online-handoff'
   | 'dropzone'
   | 'timer-select'
   | 'confirm-session'
@@ -43,9 +44,17 @@ export interface UploadedFile {
   type: string;
   uploadedAt: Date;
   dataUrl?: string;
+  /** Extracción de texto (fase 6). */
+  status?: 'extracting' | 'ready' | 'error';
+  /** Caracteres de texto extraído. */
+  charCount?: number;
+  /** Mensaje si la extracción o el guardado fallaron. */
+  error?: string;
 }
 
 export interface UserSession {
+  /** uid de Firebase Auth (sesiones con Google). */
+  uid?: string;
   isAuthenticated: boolean;
   isAnonymous: boolean;
   displayName?: string;
@@ -79,6 +88,15 @@ export interface AppState {
   connection: ConnectionMode;
   /** Modo de la sesión de concentración (escritorio). null en la web. */
   sessionMode: SessionMode | null;
+  /**
+   * Espacio de trabajo actual: id de la sesión en Firestore (online) o id local (offline).
+   * Agrupa las fuentes, notas y resultados de la IA, y es el id de la sesión de concentración.
+   */
+  workspaceId: string | null;
+  /** Escritorio: sesión recibida por yaleh://sesion, pendiente de preparar. */
+  linkedSessionId: string | null;
+  /** Escritorio: la sesión online está preparada (equipo bloqueado, tiempo aún sin correr). */
+  onlineSessionHeld: boolean;
 }
 
 export interface ActivityRecord {
@@ -105,6 +123,11 @@ export type AppAction =
     }
   | { type: 'SET_CONNECTION'; payload: ConnectionMode }
   | { type: 'SET_SESSION_MODE'; payload: SessionMode | null }
+  | { type: 'SET_WORKSPACE'; payload: string | null }
+  | { type: 'SET_LINKED_SESSION'; payload: string | null }
+  | { type: 'SET_ONLINE_SESSION_HELD'; payload: boolean }
+  | { type: 'SET_FILES'; payload: UploadedFile[] }
+  | { type: 'UPDATE_FILE'; payload: { id: string } & Partial<UploadedFile> }
   | { type: 'END_SESSION' }
   | { type: 'ADD_TAB'; payload: Tab }
   | { type: 'CLOSE_TAB'; payload: string }
@@ -144,6 +167,9 @@ export const initialState: AppState = {
   activeSidePanel: null,
   connection: 'online',
   sessionMode: null,
+  workspaceId: null,
+  linkedSessionId: null,
+  onlineSessionHeld: false,
 };
 
 /**
@@ -210,6 +236,24 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'SET_SESSION_MODE':
       return { ...state, sessionMode: action.payload };
+
+    case 'SET_WORKSPACE':
+      return { ...state, workspaceId: action.payload };
+
+    case 'SET_LINKED_SESSION':
+      return { ...state, linkedSessionId: action.payload };
+
+    case 'SET_ONLINE_SESSION_HELD':
+      return { ...state, onlineSessionHeld: action.payload };
+
+    case 'SET_FILES':
+      return { ...state, uploadedFiles: action.payload };
+
+    case 'UPDATE_FILE':
+      return {
+        ...state,
+        uploadedFiles: state.uploadedFiles.map(f => (f.id === action.payload.id ? { ...f, ...action.payload } : f)),
+      };
 
     case 'END_SESSION':
       return {

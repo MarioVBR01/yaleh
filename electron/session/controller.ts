@@ -81,7 +81,7 @@ export class SessionController {
     return this.getSnapshot();
   }
 
-  start(durationSeconds: number, mode: SessionMode): SessionSnapshot {
+  start(durationSeconds: number, mode: SessionMode, sessionId?: string): SessionSnapshot {
     if (this.status === 'active') throw new Error('Ya hay una sesión activa.');
     if (this.status === 'resumable') {
       throw new Error('Hay una sesión interrumpida pendiente. Retómala o descártala primero.');
@@ -96,10 +96,13 @@ export class SessionController {
     if (mode !== 'online' && mode !== 'offline') {
       throw new Error('Modo de sesión no válido.');
     }
+    if (sessionId !== undefined && !/^[A-Za-z0-9_-]{1,128}$/.test(sessionId)) {
+      throw new Error('Identificador de sesión no válido.');
+    }
 
     const startedAt = this.now();
     this.current = {
-      id: this.newId(),
+      id: sessionId ?? this.newId(),
       mode,
       startedAt,
       endsAt: startedAt + durationSeconds * 1000,

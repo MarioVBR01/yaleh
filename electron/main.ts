@@ -21,18 +21,23 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
-import { CONNECTIVITY, DEV_SERVER_ORIGIN, LIMITS } from '../shared/config';
+import { CONNECTIVITY, DEV_SERVER_ORIGIN, LIMITS, YALEH_WEB_ORIGINS } from '../shared/config';
 import { IPC_EVENT, IPC_INVOKE, type AppInfo, type SessionMode } from '../shared/ipc-types';
+import { checkAuthState, createAuthState, type PendingAuth } from './auth-state';
 import { ConnectivityMonitor, createHttpProbe } from './connectivity';
 import { DATABASE_FILE_NAME, ensureLocalProfile, openDatabase } from './db/database';
 import { importLegacyJson } from './db/import-json';
 import { SqliteSessionStore } from './db/sqlite-session-store';
+import { WorkspaceRepository } from './db/workspace-repository';
 import { describeDeepLinkForLog, findDeepLinkInArgv, parseDeepLink, PROTOCOL_SCHEME } from './deeplink';
 import {
   isAllowedExternalUrl,
   isTrustedSenderUrl,
   parseDurationSeconds,
+  parseId,
+  parseNoteInput,
   parseSessionMode,
+  parseSourceInput,
   type SenderTrust,
 } from './ipc/validate';
 import { lockWindow, reclaimFocus, unlockWindow } from './kiosk/window';
@@ -78,8 +83,23 @@ const pendingDeepLinks: string[] = [];
 
 let db: DatabaseSync;
 let store: SqliteSessionStore;
+let workspace: WorkspaceRepository;
 let controller: SessionController;
 let connectivity: ConnectivityMonitor;
+
+// ─── Paso de la web al escritorio (brief, secciones 4.1 y 4.5) ───────────────
+
+/** Intento de inicio de sesión del escritorio en curso (state enviado a auth-desktop.html). */
+let pendingAuth: PendingAuth | null = null;
+/** Última sesión recibida por yaleh://sesion. */
+let linkedSessionId: string | null = null;
+/** Sesión online preparada: el equipo ya está bloqueado, pero el tiempo aún no corre. */
+let heldSessionId: string | null = null;
+
+/** El equipo está bloqueado: sesión activa o sesión online preparada. */
+function isLocked(): boolean {
+  return controller.isActive() || heldSessionId !== null;
+}
 
 function send(channel: string, payload: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -100,14 +120,24 @@ function createController(): SessionController {
 }
 
 /**
- * Solo se pueden iniciar sesiones online con conexión.
- * TODO(fase 4): en la versión empaquetada, las sesiones online llegan desde la web
- * (yaleh://sesion). Hasta entonces solo se permiten en desarrollo, para probar el modo.
+ * Las sesiones online solo se inician con conexión y a partir de la sesión preparada
+ * que llegó desde la web (yaleh://sesion). Sin empaquetar se permite además iniciar
+ * una sesión online de prueba sin id (botón "Probar sesión online").
  */
-function assertSessionModeAllowed(mode: SessionMode): void {
+function assertSessionModeAllowed(mode: SessionMode, sessionId: string | undefined): void {
   if (mode !== 'online') return;
-  if (isPackaged) throw new Error('Las sesiones online se inician desde la web de YALEH.');
   if (connectivity.getMode() !== 'online') throw new Error('No hay conexión para una sesión online.');
+  if (heldSessionId !== null && sessionId === heldSessionId) return;
+  if (!isPackaged && sessionId === undefined) return;
+  throw new Error('Las sesiones online se inician desde la web de YALEH.');
+}
+
+function parseOptionalSessionId(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
+    throw new Error('Identificador de sesión no válido.');
+  }
+  return value;
 }
 
 // ─── IPC ─────────────────────────────────────────────────────────────────────
@@ -136,11 +166,36 @@ function handle(channel: string, listener: (event: IpcMainInvokeEvent, ...args: 
 function registerIpcHandlers(): void {
   handle(IPC_INVOKE.appGetInfo, (): AppInfo => ({ version: app.getVersion(), isPackaged }));
 
-  handle(IPC_INVOKE.sessionStart, (_event, durationSeconds, mode) => {
+  handle(IPC_INVOKE.sessionStart, (_event, durationSeconds, mode, sessionId) => {
     const seconds = parseDurationSeconds(durationSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60);
     const sessionMode = parseSessionMode(mode);
-    assertSessionModeAllowed(sessionMode);
-    return controller.start(seconds, sessionMode);
+    const id = parseOptionalSessionId(sessionId);
+    assertSessionModeAllowed(sessionMode, id);
+    const snapshot = controller.start(seconds, sessionMode, id);
+    // A partir de aquí el bloqueo lo lleva el controlador.
+    heldSessionId = null;
+    linkedSessionId = null;
+    return snapshot;
+  });
+
+  handle(IPC_INVOKE.sessionPrepareOnline, (_event, sessionId) => {
+    const id = parseOptionalSessionId(sessionId);
+    if (controller.isActive()) throw new Error('Ya hay una sesión activa.');
+    if (!id || id !== linkedSessionId) throw new Error('La sesión no coincide con el enlace recibido.');
+    heldSessionId = id;
+    if (mainWindow) lockWindow(mainWindow);
+  });
+
+  handle(IPC_INVOKE.sessionCancelOnline, () => {
+    if (controller.isActive()) throw new Error('La sesión ya empezó: no se puede cancelar.');
+    if (heldSessionId !== null && mainWindow) unlockWindow(mainWindow);
+    heldSessionId = null;
+    linkedSessionId = null;
+  });
+
+  handle(IPC_INVOKE.authBeginDesktop, async () => {
+    pendingAuth = createAuthState();
+    await shell.openExternal(`${YALEH_WEB_ORIGINS[0]}/auth-desktop.html?state=${pendingAuth.state}`);
   });
   handle(IPC_INVOKE.sessionGetState, () => controller.getSnapshot());
   handle(IPC_INVOKE.sessionResume, () => controller.resume());
@@ -149,8 +204,28 @@ function registerIpcHandlers(): void {
   handle(IPC_INVOKE.connectionGet, () => connectivity.getMode());
   handle(IPC_INVOKE.connectionRecheck, () => connectivity.check());
 
+  // Espacio de trabajo offline (SQLite). La interfaz nunca abre la base.
+  handle(IPC_INVOKE.workspaceAddSource, (_event, workspaceId, source, text) => {
+    const input = parseSourceInput(source, text);
+    workspace.addSource(parseId(workspaceId, 'Sesión'), input.source, input.text);
+  });
+  handle(IPC_INVOKE.workspaceListSources, (_event, workspaceId) => workspace.listSources(parseId(workspaceId, 'Sesión')));
+  handle(IPC_INVOKE.workspaceSourceText, (_event, workspaceId, sourceId) =>
+    workspace.getSourceText(parseId(workspaceId, 'Sesión'), parseId(sourceId, 'Fuente'))
+  );
+  handle(IPC_INVOKE.workspaceRemoveSource, (_event, workspaceId, sourceId) =>
+    workspace.removeSource(parseId(workspaceId, 'Sesión'), parseId(sourceId, 'Fuente'))
+  );
+  handle(IPC_INVOKE.workspaceListNotes, (_event, workspaceId) => workspace.listNotes(parseId(workspaceId, 'Sesión')));
+  handle(IPC_INVOKE.workspaceSaveNote, (_event, workspaceId, note) =>
+    workspace.saveNote(parseId(workspaceId, 'Sesión'), parseNoteInput(note))
+  );
+  handle(IPC_INVOKE.workspaceDeleteNote, (_event, workspaceId, noteId) =>
+    workspace.deleteNote(parseId(workspaceId, 'Sesión'), parseId(noteId, 'Nota'))
+  );
+
   handle(IPC_INVOKE.appClose, () => {
-    if (controller.isActive()) {
+    if (isLocked()) {
       throw new Error('No puedes cerrar YALEH mientras la sesión está activa.');
     }
     app.quit();
@@ -181,9 +256,20 @@ function handleDeepLink(raw: string): void {
     return;
   }
   if (link.kind === 'auth') {
-    // Fase 4: validar link.state antes de aceptar el token.
+    const check = checkAuthState(pendingAuth, link.state);
+    if (check !== 'ok') {
+      store.appendEvent({ type: 'invalid-deeplink', at: new Date().toISOString(), detail: `yaleh://auth (state: ${check})` });
+      console.warn(`[deeplink] yaleh://auth rechazado: state ${check}`);
+      return;
+    }
+    pendingAuth = null;
     send(IPC_EVENT.authToken, link.token);
   } else {
+    if (isLocked()) {
+      console.warn('[deeplink] yaleh://sesion ignorado: ya hay una sesión en curso');
+      return;
+    }
+    linkedSessionId = link.sessionId;
     send(IPC_EVENT.sessionLink, { sessionId: link.sessionId });
   }
 }
@@ -243,7 +329,7 @@ function guardWebContents(contents: WebContents): void {
       controller.forceRelease();
       return;
     }
-    if (controller.isActive() && isBlockedInput(input)) {
+    if (isLocked() && isBlockedInput(input)) {
       event.preventDefault();
     }
   });
@@ -269,7 +355,7 @@ function createWindow(): BrowserWindow {
   });
 
   win.on('close', event => {
-    if (controller.isActive() && !osSessionEnding) event.preventDefault();
+    if (isLocked() && !osSessionEnding) event.preventDefault();
   });
 
   // Al apagar o cerrar la sesión de Windows se permite cerrar; la sesión quedará
@@ -282,17 +368,17 @@ function createWindow(): BrowserWindow {
   });
 
   win.on('blur', () => {
-    if (!controller.isActive()) return;
+    if (!isLocked()) return;
     controller.recordFocusLost();
     setTimeout(() => {
-      if (controller.isActive()) reclaimFocus(win);
+      if (isLocked()) reclaimFocus(win);
     }, 150);
   });
   win.on('minimize', () => {
-    if (controller.isActive()) reclaimFocus(win);
+    if (isLocked()) reclaimFocus(win);
   });
   win.on('leave-full-screen', () => {
-    if (controller.isActive()) reclaimFocus(win);
+    if (isLocked()) reclaimFocus(win);
   });
 
   win.webContents.on('did-finish-load', () => {
@@ -363,6 +449,7 @@ function openStorage(): void {
   const userData = app.getPath('userData');
   db = openDatabase(path.join(userData, DATABASE_FILE_NAME));
   store = new SqliteSessionStore(db);
+  workspace = new WorkspaceRepository(db);
   const imported = importLegacyJson(path.join(userData, 'session'), store);
   if (imported.sessionImported || imported.eventsImported > 0) {
     console.log(`[db] Importados de la fase 2: sesión=${imported.sessionImported}, eventos=${imported.eventsImported}`);

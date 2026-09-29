@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YALEH | Iniciar sesión en el escritorio</title>
+    <meta name="theme-color" content="#0f172a" />
+  </head>
+  <body class="bg-canvas text-ink">
+    <main class="min-h-screen flex items-center justify-center p-4">
+      <div class="w-full max-w-md bg-surface border border-line rounded-2xl p-8 text-center">
+        <h1 class="text-3xl font-bold mb-1">YALEH</h1>
+        <p class="text-ink-subtle text-xs mb-8">Iniciar sesión en la app de escritorio</p>
+        <p id="message" class="text-ink-soft text-sm mb-6" role="status">
+          Inicia sesión con tu cuenta de Google para continuar en YALEH.
+        </p>
+        <button
+          id="signin"
+          class="w-full py-3 rounded-xl font-semibold text-sm bg-white text-gray-800 hover:bg-gray-100 transition-colors disabled:opacity-60"
+        >
+          Continuar con Google
+        </button>
+        <a id="return" class="hidden mt-4 block text-accent-soft text-sm underline" href="#">Volver a YALEH</a>
+      </div>
+    </main>
+    <script type="module" src="/src/auth-desktop/main.ts"></script>
+  </body>
+</html>

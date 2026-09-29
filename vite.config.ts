@@ -32,11 +32,14 @@ function contentSecurityPolicy(): string {
   );
   return [
     "default-src 'self'",
-    "script-src 'self'",
+    // Google (inicio de sesión) y reCAPTCHA Enterprise (App Check).
+    "script-src 'self' https://apis.google.com https://www.google.com https://www.gstatic.com",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com",
     "font-src 'self' data:",
-    "connect-src 'self'",
+    // Firebase (Auth, Firestore, AI Logic, App Check) y la API de Wikipedia.
+    "connect-src 'self' https://*.googleapis.com https://www.google.com https://es.wikipedia.org",
+    "worker-src 'self' blob:",
     `frame-src ${[...new Set(frameHosts)].join(" ")}`,
     "object-src 'none'",
     "base-uri 'self'",
@@ -61,6 +64,15 @@ export default defineConfig({
   // Rutas relativas: la misma compilación sirve para Firebase Hosting y para file:// en Electron.
   base: "./",
   plugins: [react(), tailwindcss(), cspPlugin()],
+  build: {
+    rollupOptions: {
+      // auth-desktop.html: inicio de sesión del escritorio en el navegador del sistema (brief 4.5).
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        authDesktop: path.resolve(__dirname, "auth-desktop.html"),
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

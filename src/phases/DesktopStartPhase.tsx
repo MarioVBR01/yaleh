@@ -13,6 +13,7 @@ import { Globe, RefreshCw, WifiOff } from 'lucide-react';
 import { YALEH_WEB_ORIGINS } from '@shared/config';
 import type { SessionMode } from '@shared/ipc-types';
 import { useApp } from '../context/AppContext';
+import { newId } from '../data/workspace';
 import { getElectronAPI } from '../lib/electron';
 
 export default function DesktopStartPhase() {
@@ -28,6 +29,9 @@ export default function DesktopStartPhase() {
   /** Entra al flujo local: dropzone → tiempo → confirmación → kiosko. */
   const startFlow = (mode: SessionMode) => {
     dispatch({ type: 'SET_SESSION_MODE', payload: mode });
+    // Espacio de trabajo local nuevo (su id será el de la sesión).
+    dispatch({ type: 'SET_WORKSPACE', payload: newId() });
+    dispatch({ type: 'SET_FILES', payload: [] });
     dispatch({
       type: 'SET_SESSION',
       payload: { isAuthenticated: false, isAnonymous: true, displayName: 'Estudiante', initials: 'ES' },

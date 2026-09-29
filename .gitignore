@@ -7,3 +7,7 @@ release/
 !.env.example
 *.log
 .DS_Store
+# Firebase CLI
+.firebase/
+firebase-debug.log
+firestore-debug.log

@@ -11,13 +11,25 @@ function tableNames(db: DatabaseSync): string[] {
 }
 
 describe('runMigrations', () => {
-  it('crea las tablas iniciales y registra la versión', () => {
+  it('crea las tablas y registra las versiones', () => {
     const db = new DatabaseSync(':memory:');
-    expect(runMigrations(db)).toEqual([1]);
+    expect(runMigrations(db)).toEqual([1, 2]);
 
-    expect(tableNames(db)).toEqual(['local_profile', 'schema_migrations', 'session_events', 'sessions', 'settings']);
+    expect(tableNames(db)).toEqual([
+      'local_profile',
+      'notes',
+      'schema_migrations',
+      'session_events',
+      'sessions',
+      'settings',
+      'source_chunks',
+      'sources',
+    ]);
     const rows = db.prepare('SELECT version, name FROM schema_migrations').all();
-    expect(rows).toEqual([{ version: 1, name: 'initial' }]);
+    expect(rows).toEqual([
+      { version: 1, name: 'initial' },
+      { version: 2, name: 'workspace' },
+    ]);
   });
 
   it('es idempotente: ejecutarla otra vez no aplica nada ni cambia la base', () => {
@@ -28,15 +40,15 @@ describe('runMigrations', () => {
     expect(runMigrations(db)).toEqual([]);
     expect(runMigrations(db)).toEqual([]);
     expect(tableNames(db)).toEqual(before);
-    expect(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get()).toEqual({ n: 1 });
+    expect(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get()).toEqual({ n: 2 });
   });
 
   it('aplica solo las migraciones nuevas, en orden', () => {
     const db = new DatabaseSync(':memory:');
     runMigrations(db);
-    const extra: Migration = { version: 2, name: 'extra', sql: 'CREATE TABLE extra (x INTEGER)' };
+    const extra: Migration = { version: 3, name: 'extra', sql: 'CREATE TABLE extra (x INTEGER)' };
 
-    expect(runMigrations(db, [...MIGRATIONS, extra])).toEqual([2]);
+    expect(runMigrations(db, [...MIGRATIONS, extra])).toEqual([3]);
     expect(tableNames(db)).toContain('extra');
   });
 
@@ -44,14 +56,14 @@ describe('runMigrations', () => {
     const db = new DatabaseSync(':memory:');
     runMigrations(db);
     const broken: Migration = {
-      version: 2,
+      version: 3,
       name: 'broken',
       sql: 'CREATE TABLE half (x INTEGER); THIS IS NOT SQL;',
     };
 
-    expect(() => runMigrations(db, [...MIGRATIONS, broken])).toThrow(/La migración 2 \(broken\) falló/);
+    expect(() => runMigrations(db, [...MIGRATIONS, broken])).toThrow(/La migración 3 \(broken\) falló/);
     expect(tableNames(db)).not.toContain('half');
-    expect(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get()).toEqual({ n: 1 });
+    expect(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get()).toEqual({ n: 2 });
   });
 
   it('las restricciones rechazan modos y estados inválidos', () => {

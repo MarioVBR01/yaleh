@@ -11,8 +11,18 @@ export const IPC_INVOKE = {
   sessionGetState: 'session:get-state',
   sessionResume: 'session:resume',
   sessionDiscardResume: 'session:discard-resume',
+  sessionPrepareOnline: 'session:prepare-online',
+  sessionCancelOnline: 'session:cancel-online',
+  authBeginDesktop: 'auth:begin-desktop',
   connectionGet: 'connection:get',
   connectionRecheck: 'connection:recheck',
+  workspaceAddSource: 'workspace:add-source',
+  workspaceListSources: 'workspace:list-sources',
+  workspaceSourceText: 'workspace:source-text',
+  workspaceRemoveSource: 'workspace:remove-source',
+  workspaceListNotes: 'workspace:list-notes',
+  workspaceSaveNote: 'workspace:save-note',
+  workspaceDeleteNote: 'workspace:delete-note',
   appClose: 'app:close',
   appOpenExternal: 'app:open-external',
 } as const;
@@ -73,13 +83,54 @@ export interface SessionLinkPayload {
   sessionId: string;
 }
 
+/** Fuente guardada en SQLite (modo offline). */
+export interface LocalSourceInfo {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  charCount: number;
+  createdAt: string;
+}
+
+export interface LocalNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Datos del espacio de trabajo offline, guardados por el proceso principal en SQLite. */
+export interface LocalWorkspaceAPI {
+  addSource: (
+    workspaceId: string,
+    source: { id: string; name: string; type: string; size: number },
+    text: string
+  ) => Promise<void>;
+  listSources: (workspaceId: string) => Promise<LocalSourceInfo[]>;
+  getSourceText: (workspaceId: string, sourceId: string) => Promise<string>;
+  removeSource: (workspaceId: string, sourceId: string) => Promise<void>;
+  listNotes: (workspaceId: string) => Promise<LocalNote[]>;
+  saveNote: (workspaceId: string, note: { id: string; text: string }) => Promise<void>;
+  deleteNote: (workspaceId: string, noteId: string) => Promise<void>;
+}
+
 /** API expuesta por el preload en `window.electronAPI`. */
 export interface ElectronAPI {
   /** Versión de la aplicación de escritorio. */
   version: string;
   getAppInfo: () => Promise<AppInfo>;
-  /** Inicia la sesión; el proceso principal bloquea el equipo. */
-  startSession: (durationSeconds: number, mode: SessionMode) => Promise<SessionSnapshot>;
+  /**
+   * Inicia la sesión; el proceso principal bloquea el equipo. `sessionId`: el de Firestore
+   * (sesión online preparada) o uno local (offline); si falta, lo genera el proceso principal.
+   */
+  startSession: (durationSeconds: number, mode: SessionMode, sessionId?: string) => Promise<SessionSnapshot>;
+  /** Bloquea el equipo para la sesión recibida por yaleh://sesion, antes de confirmar la duración. */
+  prepareOnlineSession: (sessionId: string) => Promise<void>;
+  /** Cancela la sesión online preparada (solo antes de que empiece el tiempo) y libera el equipo. */
+  cancelOnlineSession: () => Promise<void>;
+  /** Abre auth-desktop.html en el navegador del sistema con un state nuevo. */
+  beginDesktopAuth: () => Promise<void>;
   getSessionState: () => Promise<SessionSnapshot>;
   /** Retoma una sesión interrumpida (estado `resumable`). */
   resumeSession: () => Promise<SessionSnapshot>;
@@ -98,4 +149,6 @@ export interface ElectronAPI {
   openExternal: (url: string) => Promise<boolean>;
   onAuthToken: (callback: (token: string) => void) => () => void;
   onSessionLink: (callback: (payload: SessionLinkPayload) => void) => () => void;
+  /** Fuentes y notas del modo offline (SQLite). */
+  workspace: LocalWorkspaceAPI;
 }

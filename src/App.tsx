@@ -11,11 +11,14 @@
 import { useEffect, useMemo, type ComponentType } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppProvider, useApp } from './context/AppContext';
-import { getElectronAPI } from './lib/electron';
+import { getElectronAPI, isElectron } from './lib/electron';
+import { watchUser } from './firebase/auth';
+import { createDraftSession } from './firebase/sessions';
 import { startPhase } from './lib/mode';
 import { initialState, type AppPhase, type AppState } from './store/appStore';
 import LoginPhase from './phases/LoginPhase';
 import DesktopStartPhase from './phases/DesktopStartPhase';
+import OnlineHandoffPhase from './phases/OnlineHandoffPhase';
 import DropzonePhase from './phases/DropzonePhase';
 import TimerSelectPhase from './phases/TimerSelectPhase';
 import ConfirmSessionPhase from './phases/ConfirmSessionPhase';
@@ -31,6 +34,7 @@ const fadeOut = { opacity: 0, scale: 0.97 };
 const PHASE_COMPONENTS: Record<AppPhase, ComponentType> = {
   login: LoginPhase,
   'desktop-start': DesktopStartPhase,
+  'online-handoff': OnlineHandoffPhase,
   dropzone: DropzonePhase,
   'timer-select': TimerSelectPhase,
   'confirm-session': ConfirmSessionPhase,
@@ -93,12 +97,96 @@ function useConnectionMode() {
 }
 
 /**
+ * Sincroniza el usuario de Google (Firebase Auth) con el estado global.
+ * Web: al iniciar sesión pasa a la dropzone; al cerrarla vuelve al login.
+ */
+function useAuthSync() {
+  const { state, dispatch } = useApp();
+  const phase = state.phase;
+  const signedIn = state.session.isAuthenticated;
+
+  useEffect(() => {
+    return watchUser(user => {
+      if (user) {
+        const name = user.displayName ?? user.email ?? 'Estudiante';
+        dispatch({
+          type: 'SET_SESSION',
+          payload: {
+            isAuthenticated: true,
+            isAnonymous: false,
+            uid: user.uid,
+            displayName: name,
+            email: user.email ?? undefined,
+            avatar: user.photoURL ?? undefined,
+            initials: name
+              .split(' ')
+              .map(part => part[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2),
+          },
+        });
+      } else if (!isElectron()) {
+        dispatch({ type: 'SET_SESSION', payload: { isAuthenticated: false, isAnonymous: false } });
+      }
+    });
+  }, [dispatch]);
+
+  // Web: el login lleva a la dropzone; sin sesión se vuelve al login.
+  useEffect(() => {
+    if (isElectron()) return;
+    if (signedIn && phase === 'login') dispatch({ type: 'SET_PHASE', payload: 'dropzone' });
+    if (!signedIn && phase !== 'login') dispatch({ type: 'SET_PHASE', payload: 'login' });
+  }, [signedIn, phase, dispatch]);
+}
+
+/** Web: crea la sesión en borrador en Firestore (agrupa fuentes, notas y resultados). */
+function useWebWorkspace() {
+  const { state, dispatch } = useApp();
+  const uid = state.session.uid;
+  const workspaceId = state.workspaceId;
+  const profile = { displayName: state.session.displayName ?? null, email: state.session.email ?? null };
+
+  useEffect(() => {
+    if (isElectron() || !uid || workspaceId) return;
+    let cancelled = false;
+    createDraftSession(uid, profile)
+      .then(id => {
+        if (!cancelled) dispatch({ type: 'SET_WORKSPACE', payload: id });
+      })
+      .catch(error => console.error('No se pudo crear la sesión en Firestore:', error));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, workspaceId, dispatch]);
+}
+
+/** Escritorio: una sesión enviada desde la web (yaleh://sesion) abre la pantalla de preparación. */
+function useSessionLinks() {
+  const { state, dispatch } = useApp();
+  const inKiosk = state.phase === 'kiosk';
+
+  useEffect(() => {
+    const api = getElectronAPI();
+    if (!api || inKiosk) return;
+    return api.onSessionLink(({ sessionId }) => {
+      dispatch({ type: 'SET_LINKED_SESSION', payload: sessionId });
+      dispatch({ type: 'SET_PHASE', payload: 'online-handoff' });
+    });
+  }, [inKiosk, dispatch]);
+}
+
+/**
  * Componente interno que renderiza la fase correcta según el estado global.
  */
 function AppContent() {
   const { state } = useApp();
   useSessionRecovery();
   useConnectionMode();
+  useAuthSync();
+  useWebWorkspace();
+  useSessionLinks();
 
   // El escritorio nunca muestra el login de la web.
   const phase = getElectronAPI() && state.phase === 'login' ? 'desktop-start' : state.phase;

@@ -26,6 +26,8 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
   let ended: ((p: SessionEndedPayload) => void) | null = null;
   let connectionListener: ((p: ConnectionChangedPayload) => void) | null = null;
   let connection: ConnectionMode = options.connection ?? 'offline';
+  let authTokenListener: ((token: string) => void) | null = null;
+  let sessionLinkListener: ((p: { sessionId: string }) => void) | null = null;
 
   const snapshot: SessionSnapshot = {
     status: 'idle',
@@ -39,13 +41,16 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
   const api: ElectronAPI = {
     version: 'test',
     getAppInfo: vi.fn(async () => ({ version: 'test', isPackaged: options.isPackaged ?? true })),
-    startSession: vi.fn(async (durationSeconds, mode) => ({
+    startSession: vi.fn(async (durationSeconds, mode, sessionId) => ({
       status: 'active' as const,
-      sessionId: 's1',
+      sessionId: sessionId ?? 's1',
       mode,
       durationSeconds,
       remainingSeconds: durationSeconds,
     })),
+    prepareOnlineSession: vi.fn(async () => {}),
+    cancelOnlineSession: vi.fn(async () => {}),
+    beginDesktopAuth: vi.fn(async () => {}),
     getSessionState: vi.fn(async () => snapshot),
     resumeSession: vi.fn(async () => ({ ...snapshot, status: 'active' as const })),
     discardResume: vi.fn(async () => ({ ...snapshot, status: 'idle' as const })),
@@ -71,8 +76,27 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
     }),
     closeApp: vi.fn(async () => {}),
     openExternal: vi.fn(async () => true),
-    onAuthToken: vi.fn(() => () => {}),
-    onSessionLink: vi.fn(() => () => {}),
+    onAuthToken: vi.fn(cb => {
+      authTokenListener = cb;
+      return () => {
+        authTokenListener = null;
+      };
+    }),
+    onSessionLink: vi.fn(cb => {
+      sessionLinkListener = cb;
+      return () => {
+        sessionLinkListener = null;
+      };
+    }),
+    workspace: {
+      addSource: vi.fn(async () => {}),
+      listSources: vi.fn(async () => []),
+      getSourceText: vi.fn(async () => ''),
+      removeSource: vi.fn(async () => {}),
+      listNotes: vi.fn(async () => []),
+      saveNote: vi.fn(async () => {}),
+      deleteNote: vi.fn(async () => {}),
+    },
   };
 
   return {
@@ -83,6 +107,8 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
     },
     emitTick: (remainingSeconds: number) => act(() => tick?.({ remainingSeconds })),
     emitEnded: () => act(() => ended?.({ reason: 'completed' })),
+    emitAuthToken: (token: string) => act(() => authTokenListener?.(token)),
+    emitSessionLink: (sessionId: string) => act(() => sessionLinkListener?.({ sessionId })),
     /** Cambia la conexión que devolverá la API y avisa a la interfaz. */
     setConnection: (mode: ConnectionMode) =>
       act(() => {

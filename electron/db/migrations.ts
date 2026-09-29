@@ -54,6 +54,40 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    name: 'workspace',
+    sql: `
+      -- Espacio de trabajo offline (fase 6): texto extraído de las fuentes y notas.
+      -- workspace_id es el id local de la sesión (la fila de sessions se crea al iniciarla).
+      CREATE TABLE sources (
+        id           TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        name         TEXT NOT NULL,
+        mime         TEXT,
+        size         INTEGER,
+        char_count   INTEGER NOT NULL,
+        created_at   TEXT NOT NULL
+      );
+      CREATE INDEX idx_sources_workspace ON sources (workspace_id);
+
+      CREATE TABLE source_chunks (
+        source_id TEXT NOT NULL,
+        idx       INTEGER NOT NULL,
+        text      TEXT NOT NULL,
+        PRIMARY KEY (source_id, idx)
+      );
+
+      CREATE TABLE notes (
+        id           TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        text         TEXT NOT NULL,
+        created_at   TEXT NOT NULL,
+        updated_at   TEXT NOT NULL
+      );
+      CREATE INDEX idx_notes_workspace ON notes (workspace_id);
+    `,
+  },
 ];
 
 /**

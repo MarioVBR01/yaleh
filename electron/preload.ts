@@ -21,7 +21,11 @@ function subscribe<T>(channel: string, callback: (payload: T) => void): () => vo
 const api: ElectronAPI = {
   version: __YALEH_VERSION__,
   getAppInfo: () => ipcRenderer.invoke(IPC_INVOKE.appGetInfo),
-  startSession: (durationSeconds, mode) => ipcRenderer.invoke(IPC_INVOKE.sessionStart, durationSeconds, mode),
+  startSession: (durationSeconds, mode, sessionId) =>
+    ipcRenderer.invoke(IPC_INVOKE.sessionStart, durationSeconds, mode, sessionId),
+  prepareOnlineSession: sessionId => ipcRenderer.invoke(IPC_INVOKE.sessionPrepareOnline, sessionId),
+  cancelOnlineSession: () => ipcRenderer.invoke(IPC_INVOKE.sessionCancelOnline),
+  beginDesktopAuth: () => ipcRenderer.invoke(IPC_INVOKE.authBeginDesktop),
   getSessionState: () => ipcRenderer.invoke(IPC_INVOKE.sessionGetState),
   resumeSession: () => ipcRenderer.invoke(IPC_INVOKE.sessionResume),
   discardResume: () => ipcRenderer.invoke(IPC_INVOKE.sessionDiscardResume),
@@ -34,6 +38,16 @@ const api: ElectronAPI = {
   openExternal: url => ipcRenderer.invoke(IPC_INVOKE.appOpenExternal, url),
   onAuthToken: callback => subscribe(IPC_EVENT.authToken, callback),
   onSessionLink: callback => subscribe(IPC_EVENT.sessionLink, callback),
+  workspace: {
+    addSource: (workspaceId, source, text) =>
+      ipcRenderer.invoke(IPC_INVOKE.workspaceAddSource, workspaceId, source, text),
+    listSources: workspaceId => ipcRenderer.invoke(IPC_INVOKE.workspaceListSources, workspaceId),
+    getSourceText: (workspaceId, sourceId) => ipcRenderer.invoke(IPC_INVOKE.workspaceSourceText, workspaceId, sourceId),
+    removeSource: (workspaceId, sourceId) => ipcRenderer.invoke(IPC_INVOKE.workspaceRemoveSource, workspaceId, sourceId),
+    listNotes: workspaceId => ipcRenderer.invoke(IPC_INVOKE.workspaceListNotes, workspaceId),
+    saveNote: (workspaceId, note) => ipcRenderer.invoke(IPC_INVOKE.workspaceSaveNote, workspaceId, note),
+    deleteNote: (workspaceId, noteId) => ipcRenderer.invoke(IPC_INVOKE.workspaceDeleteNote, workspaceId, noteId),
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);
