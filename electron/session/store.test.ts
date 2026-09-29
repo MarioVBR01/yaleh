@@ -17,6 +17,7 @@ afterEach(() => {
 
 const session: PersistedSession = {
   id: 'abc',
+  mode: 'offline',
   startedAt: 1,
   endsAt: 2,
   durationSeconds: 60,

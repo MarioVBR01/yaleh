@@ -1,18 +1,16 @@
 /**
- * Pruebas del temporizador del kiosko en la interfaz.
+ * Pruebas del kiosko en la interfaz.
  * - Escritorio: el tiempo lo envía el proceso principal; la interfaz no cuenta por su cuenta.
  * - Navegador: temporizador local de vista previa (regresión del intervalo duplicado del MVP).
+ * - Modo offline / conexión perdida: solo módulos locales.
  */
 
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  ElectronAPI,
-  SessionEndedPayload,
-  SessionTickPayload,
-} from '@shared/ipc-types';
+import type { ConnectionMode, SessionMode } from '@shared/ipc-types';
 import { AppProvider, useApp } from '../context/AppContext';
 import { initialState, type AppState } from '../store/appStore';
+import { createElectronMock, uninstallElectronMock } from '../test/electron-mock';
 import KioskLayout from './KioskLayout';
 
 function PhaseProbe() {
@@ -20,13 +18,18 @@ function PhaseProbe() {
   return <output data-testid="phase">{state.phase}</output>;
 }
 
-function renderKiosk(seconds: number) {
+function renderKiosk(
+  seconds: number,
+  options: { sessionMode?: SessionMode | null; connection?: ConnectionMode } = {}
+) {
   const initial: AppState = {
     ...initialState,
     phase: 'kiosk',
     kioskActive: true,
     sessionDuration: seconds,
     timeRemaining: seconds,
+    sessionMode: options.sessionMode ?? null,
+    connection: options.connection ?? 'online',
   };
   return render(
     <AppProvider initial={initial}>
@@ -43,41 +46,6 @@ async function advanceSeconds(n: number) {
       vi.advanceTimersByTime(1000);
     });
   }
-}
-
-/** API de escritorio simulada que permite emitir eventos del proceso principal. */
-function createElectronMock() {
-  let tick: ((p: SessionTickPayload) => void) | null = null;
-  let ended: ((p: SessionEndedPayload) => void) | null = null;
-  const snapshot = { status: 'active' as const, sessionId: 's1', durationSeconds: 10, remainingSeconds: 10 };
-  const api: ElectronAPI = {
-    version: 'test',
-    startSession: vi.fn(async () => snapshot),
-    getSessionState: vi.fn(async () => snapshot),
-    resumeSession: vi.fn(async () => snapshot),
-    discardResume: vi.fn(async () => snapshot),
-    onSessionTick: vi.fn(cb => {
-      tick = cb;
-      return () => {
-        tick = null;
-      };
-    }),
-    onSessionEnded: vi.fn(cb => {
-      ended = cb;
-      return () => {
-        ended = null;
-      };
-    }),
-    closeApp: vi.fn(async () => {}),
-    openExternal: vi.fn(async () => true),
-    onAuthToken: vi.fn(() => () => {}),
-    onSessionLink: vi.fn(() => () => {}),
-  };
-  return {
-    api,
-    emitTick: (remainingSeconds: number) => act(() => tick?.({ remainingSeconds })),
-    emitEnded: () => act(() => ended?.({ reason: 'completed' })),
-  };
 }
 
 describe('Temporizador del kiosko en el navegador (vista previa)', () => {
@@ -105,6 +73,11 @@ describe('Temporizador del kiosko en el navegador (vista previa)', () => {
 
     expect(screen.getByTestId('phase').textContent).toBe('session-complete');
   });
+
+  it('la web muestra las herramientas online (sin cambios en esta fase)', () => {
+    renderKiosk(60);
+    expect(screen.getByText('Herramientas')).toBeTruthy();
+  });
 });
 
 describe('Temporizador del kiosko en el escritorio', () => {
@@ -114,13 +87,13 @@ describe('Temporizador del kiosko en el escritorio', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    delete window.electronAPI;
+    uninstallElectronMock();
   });
 
   it('no cuenta por su cuenta: solo muestra el tiempo que envía el proceso principal', async () => {
     const mock = createElectronMock();
-    window.electronAPI = mock.api;
-    renderKiosk(10);
+    mock.install();
+    renderKiosk(10, { sessionMode: 'offline', connection: 'offline' });
 
     await advanceSeconds(3);
     expect(screen.getByText('00:00:10')).toBeTruthy();
@@ -129,10 +102,10 @@ describe('Temporizador del kiosko en el escritorio', () => {
     expect(screen.getByText('00:00:04')).toBeTruthy();
   });
 
-  it('muestra el resumen cuando el proceso principal avisa el fin, sin cerrar la app', async () => {
+  it('muestra el resumen cuando el proceso principal avisa el fin, sin cerrar la app', () => {
     const mock = createElectronMock();
-    window.electronAPI = mock.api;
-    renderKiosk(10);
+    mock.install();
+    renderKiosk(10, { sessionMode: 'offline', connection: 'offline' });
 
     mock.emitTick(0);
     // Con tiempo cero pero sin aviso de fin, sigue en el kiosko: manda el proceso principal.
@@ -141,5 +114,41 @@ describe('Temporizador del kiosko en el escritorio', () => {
     mock.emitEnded();
     expect(screen.getByTestId('phase').textContent).toBe('session-complete');
     expect(mock.api.closeApp).not.toHaveBeenCalled();
+  });
+});
+
+describe('Kiosko según el modo (escritorio)', () => {
+  afterEach(() => {
+    uninstallElectronMock();
+  });
+
+  it('sesión offline: oculta las herramientas online y Google Workspace', () => {
+    createElectronMock().install();
+    renderKiosk(60, { sessionMode: 'offline', connection: 'online' });
+
+    expect(screen.queryByText('Herramientas')).toBeNull();
+    expect(screen.queryByText('Google Workspace')).toBeNull();
+    // Los módulos locales siguen disponibles.
+    expect(screen.getByText('Ofimática Offline')).toBeTruthy();
+    expect(screen.getByText('Pomodoro')).toBeTruthy();
+  });
+
+  it('sesión online con conexión: muestra las herramientas y no muestra el aviso', () => {
+    createElectronMock({ connection: 'online' }).install();
+    renderKiosk(60, { sessionMode: 'online', connection: 'online' });
+
+    expect(screen.getByText('Herramientas')).toBeTruthy();
+    expect(screen.getByText('Google Workspace')).toBeTruthy();
+    expect(screen.queryByText(/Sin conexión: puedes seguir/)).toBeNull();
+  });
+
+  it('si se corta la conexión en una sesión online: oculta las herramientas y avisa', () => {
+    createElectronMock({ connection: 'online' }).install();
+    renderKiosk(60, { sessionMode: 'online', connection: 'offline' });
+
+    expect(screen.getByText('Sin conexión: puedes seguir con los módulos locales')).toBeTruthy();
+    expect(screen.queryByText('Herramientas')).toBeNull();
+    expect(screen.queryByText('Google Workspace')).toBeNull();
+    expect(screen.getByTestId('phase').textContent).toBe('kiosk');
   });
 });

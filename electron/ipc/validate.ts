@@ -4,6 +4,7 @@
  */
 
 import { EXTERNAL_OPEN_ORIGINS } from '../../shared/config';
+import type { SessionMode } from '../../shared/ipc-types';
 
 export interface SenderTrust {
   /** URL `file://` del index.html de la interfaz empaquetada. */
@@ -59,4 +60,12 @@ export function isAllowedExternalUrl(value: unknown): value is string {
   }
   if (url.protocol !== 'https:' || url.username || url.password) return false;
   return EXTERNAL_OPEN_ORIGINS.includes(url.origin);
+}
+
+/** Valida el modo de sesión pedido por la interfaz. */
+export function parseSessionMode(value: unknown): SessionMode {
+  if (value !== 'online' && value !== 'offline') {
+    throw new Error('Modo de sesión no válido.');
+  }
+  return value;
 }

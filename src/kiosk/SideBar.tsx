@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { WORKSPACE_LINKS, type ToolLink } from '@shared/config';
 import { useApp } from '../context/AppContext';
+import { useModeFlags } from '../lib/mode';
 
 /** Estilo de cada app de Google Workspace; la lista viene de shared/config.ts. */
 const WORKSPACE_STYLES: Record<string, string> = {
@@ -114,6 +115,7 @@ function NavItem({
 export default function SideBar({ collapsed }: SideBarProps) {
   const { state, dispatch, openTab, logActivity } = useApp();
   const [openDrawer, setOpenDrawer] = useState<string | null>(null);
+  const { isDesktop, onlineTools } = useModeFlags();
 
   /**
    * Alterna el panel desplegable de una categoría (Workspace/Offline).
@@ -124,10 +126,11 @@ export default function SideBar({ collapsed }: SideBarProps) {
 
   /**
    * Abre un servicio de Google Workspace en nueva pestaña.
-   * Verifica que el usuario esté autenticado antes de proceder.
+   * En la web verifica que el usuario esté autenticado antes de proceder.
+   * En el escritorio no hay login propio (fase 4).
    */
   const handleWorkspaceOpen = (app: ToolLink) => {
-    if (!state.session.isAuthenticated) {
+    if (!isDesktop && !state.session.isAuthenticated) {
       dispatch({ type: 'SET_PHASE', payload: 'login' });
       return;
     }
@@ -216,7 +219,8 @@ export default function SideBar({ collapsed }: SideBarProps) {
           collapsed={collapsed}
         />
 
-        {/* Google Workspace */}
+        {/* Google Workspace (solo con conexión) */}
+        {onlineTools && (
         <div>
           <NavItem
             icon={<span className="text-base">🌐</span>}
@@ -244,7 +248,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
                     <span className="text-slate-300 hover:text-white">{app.name}</span>
                   </button>
                 ))}
-                {!state.session.isAuthenticated && (
+                {!isDesktop && !state.session.isAuthenticated && (
                   <p className="text-[10px] text-amber-400/70 px-2 pb-1">
                     ⚠️ Requiere inicio de sesión
                   </p>
@@ -253,6 +257,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
             )}
           </AnimatePresence>
         </div>
+        )}
 
         {/* Ofimática Offline */}
         <div>

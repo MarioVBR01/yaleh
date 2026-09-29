@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "electron:dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron . --dev-server\"",
     "electron:preview": "npm run build && electron .",
-    "smoke:electron": "npm run build && node scripts/smoke-electron.mjs"
+    "smoke:electron": "npm run build && node scripts/smoke-electron.mjs",
+    "db:inspect": "node scripts/db-inspect.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

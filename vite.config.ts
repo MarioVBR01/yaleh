@@ -10,6 +10,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * node:sqlite necesita --experimental-sqlite en Node < 22.13 (las pruebas corren
+ * con el Node del sistema; Electron 42 trae Node 24 y no lo necesita).
+ */
+const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
+const sqliteExecArgv =
+  nodeMajor < 22 || (nodeMajor === 22 && nodeMinor < 13)
+    ? ["--experimental-sqlite", "--disable-warning=ExperimentalWarning"]
+    : ["--disable-warning=ExperimentalWarning"];
+
+/**
  * Content-Security-Policy de la interfaz (brief, sección 9).
  * Sin 'unsafe-inline' para scripts. Los estilos en línea se permiten porque
  * framer-motion y React escriben atributos style.
@@ -60,6 +70,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    execArgv: sqliteExecArgv,
     include: ["src/**/*.test.{ts,tsx}", "shared/**/*.test.ts", "electron/**/*.test.ts"],
   },
 });

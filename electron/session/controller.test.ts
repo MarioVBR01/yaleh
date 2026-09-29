@@ -40,6 +40,7 @@ describe('SessionController: inactiva → activa → terminada', () => {
     expect(controller.getSnapshot()).toEqual({
       status: 'idle',
       sessionId: null,
+      mode: null,
       durationSeconds: 0,
       remainingSeconds: 0,
     });
@@ -48,7 +49,7 @@ describe('SessionController: inactiva → activa → terminada', () => {
 
   it('al iniciar bloquea, guarda sessionEndsAt y envía el tiempo restante', () => {
     const { controller, store, lock, onTick } = setup();
-    const snapshot = controller.start(120);
+    const snapshot = controller.start(120, 'offline');
 
     expect(snapshot.status).toBe('active');
     expect(snapshot.remainingSeconds).toBe(120);
@@ -66,7 +67,7 @@ describe('SessionController: inactiva → activa → terminada', () => {
 
   it('envía el tiempo restante una vez por segundo', () => {
     const { controller, onTick } = setup();
-    controller.start(120);
+    controller.start(120, 'offline');
     onTick.mockClear();
 
     vi.advanceTimersByTime(3000);
@@ -76,7 +77,7 @@ describe('SessionController: inactiva → activa → terminada', () => {
 
   it('termina al cumplirse el tiempo: libera, guarda y avisa', () => {
     const { controller, store, unlock, onEnded } = setup();
-    controller.start(60);
+    controller.start(60, 'offline');
 
     vi.advanceTimersByTime(59_000);
     expect(controller.isActive()).toBe(true);
@@ -93,7 +94,7 @@ describe('SessionController: inactiva → activa → terminada', () => {
 
   it('el tiempo se calcula con el reloj, no contando ticks', () => {
     const { controller, onEnded } = setup();
-    controller.start(600);
+    controller.start(600, 'offline');
     // El equipo se suspende 10 minutos: al volver, la sesión ya terminó.
     vi.setSystemTime(T0 + 600_000);
     vi.advanceTimersByTime(1000);
@@ -102,31 +103,31 @@ describe('SessionController: inactiva → activa → terminada', () => {
 
   it('rechaza una segunda sesión mientras hay una activa', () => {
     const { controller } = setup();
-    controller.start(120);
-    expect(() => controller.start(120)).toThrow('Ya hay una sesión activa.');
+    controller.start(120, 'offline');
+    expect(() => controller.start(120, 'offline')).toThrow('Ya hay una sesión activa.');
   });
 
   it.each([0, 59, MAX + 1, 90.5, Number.NaN])('rechaza la duración %s', duration => {
     const { controller, lock } = setup();
-    expect(() => controller.start(duration)).toThrow('Duración de sesión no válida.');
+    expect(() => controller.start(duration, 'offline')).toThrow('Duración de sesión no válida.');
     expect(lock).not.toHaveBeenCalled();
   });
 
   it('acepta los límites exactos (1 y 180 minutos)', () => {
-    expect(setup().controller.start(MIN).status).toBe('active');
-    expect(setup().controller.start(MAX).status).toBe('active');
+    expect(setup().controller.start(MIN, 'offline').status).toBe('active');
+    expect(setup().controller.start(MAX, 'offline').status).toBe('active');
   });
 
   it('permite una nueva sesión después de terminar', () => {
     const { controller } = setup();
-    controller.start(60);
+    controller.start(60, 'offline');
     vi.advanceTimersByTime(60_000);
-    expect(controller.start(60).status).toBe('active');
+    expect(controller.start(60, 'offline').status).toBe('active');
   });
 
   it('la salida de desarrollo libera de inmediato y queda registrada', () => {
     const { controller, store, unlock, onEnded } = setup();
-    controller.start(600);
+    controller.start(600, 'offline');
     controller.forceRelease();
 
     expect(controller.isActive()).toBe(false);
@@ -146,7 +147,7 @@ describe('SessionController: inactiva → activa → terminada', () => {
     controller.recordFocusLost();
     expect(store.events).toHaveLength(0);
 
-    controller.start(120);
+    controller.start(120, 'offline');
     vi.setSystemTime(T0 + 5000);
     controller.recordFocusLost();
     expect(store.events.at(-1)).toEqual({
@@ -158,7 +159,7 @@ describe('SessionController: inactiva → activa → terminada', () => {
 
   it('dispose detiene los ticks', () => {
     const { controller, onTick } = setup();
-    controller.start(120);
+    controller.start(120, 'offline');
     onTick.mockClear();
     controller.dispose();
     vi.advanceTimersByTime(5000);
@@ -169,6 +170,7 @@ describe('SessionController: inactiva → activa → terminada', () => {
 describe('SessionController: sesiones interrumpidas', () => {
   const saved: PersistedSession = {
     id: 'prev',
+    mode: 'offline',
     startedAt: T0,
     endsAt: T0 + 50 * 60_000,
     durationSeconds: 50 * 60,
@@ -204,6 +206,7 @@ describe('SessionController: sesiones interrumpidas', () => {
     expect(snapshot).toEqual({
       status: 'resumable',
       sessionId: 'prev',
+      mode: 'offline',
       durationSeconds: 50 * 60,
       remainingSeconds: 30 * 60,
     });
@@ -234,7 +237,7 @@ describe('SessionController: sesiones interrumpidas', () => {
     vi.setSystemTime(T0 + 20 * 60_000);
     const { controller } = setup(storeWith(saved));
     controller.recover();
-    expect(() => controller.start(120)).toThrow(/sesión interrumpida pendiente/);
+    expect(() => controller.start(120, 'offline')).toThrow(/sesión interrumpida pendiente/);
   });
 
   it('descartar deja la sesión como interrumpida y permite empezar otra', () => {
@@ -244,7 +247,7 @@ describe('SessionController: sesiones interrumpidas', () => {
 
     expect(controller.discardResume().status).toBe('idle');
     expect(store.session?.status).toBe('interrupted');
-    expect(controller.start(120).status).toBe('active');
+    expect(controller.start(120, 'offline').status).toBe('active');
   });
 
   it('reapertura después de sessionEndsAt: la registra como interrumpida y no ofrece retomar', () => {
@@ -273,5 +276,39 @@ describe('SessionController: sesiones interrumpidas', () => {
   it('retomar sin sesión pendiente falla', () => {
     const { controller } = setup();
     expect(() => controller.resume()).toThrow('No hay ninguna sesión para retomar.');
+  });
+});
+
+describe('SessionController: modo y conexión', () => {
+  it('guarda el modo de la sesión y lo informa en el snapshot', () => {
+    const { controller, store } = setup();
+    expect(controller.start(120, 'online').mode).toBe('online');
+    expect(store.session?.mode).toBe('online');
+    expect(store.events[0]).toMatchObject({ type: 'session-started', detail: 'online, 120s' });
+  });
+
+  it('rechaza un modo inválido', () => {
+    const { controller } = setup();
+    expect(() => controller.start(120, 'hybrid' as never)).toThrow('Modo de sesión no válido.');
+  });
+
+  it('registra connection-lost y connection-restored durante la sesión, sin terminarla', () => {
+    const { controller, store, unlock } = setup();
+    controller.start(120, 'online');
+
+    controller.recordConnectionChange('offline', 'online');
+    controller.recordConnectionChange('online', 'offline');
+
+    expect(store.events.map(e => e.type)).toEqual(['session-started', 'connection-lost', 'connection-restored']);
+    expect(controller.isActive()).toBe(true);
+    expect(unlock).not.toHaveBeenCalled();
+  });
+
+  it('no registra cambios de conexión sin sesión activa ni la primera detección', () => {
+    const { controller, store } = setup();
+    controller.recordConnectionChange('offline', 'online');
+    controller.start(120, 'offline');
+    controller.recordConnectionChange('online', 'unknown');
+    expect(store.events.map(e => e.type)).toEqual(['session-started']);
   });
 });

@@ -5,8 +5,11 @@
  * archivos cargados y tiempo de sesión.
  */
 
+import type { ConnectionMode, SessionMode } from '@shared/ipc-types';
+
 export type AppPhase =
   | 'login'
+  | 'desktop-start'
   | 'dropzone'
   | 'timer-select'
   | 'confirm-session'
@@ -72,6 +75,10 @@ export interface AppState {
   activityHistory: ActivityRecord[];
   /** Panel lateral activo */
   activeSidePanel: string | null;
+  /** Conexión detectada por el proceso principal (escritorio). En la web se asume online. */
+  connection: ConnectionMode;
+  /** Modo de la sesión de concentración (escritorio). null en la web. */
+  sessionMode: SessionMode | null;
 }
 
 export interface ActivityRecord {
@@ -92,7 +99,12 @@ export type AppAction =
   | { type: 'START_KIOSK' }
   | { type: 'TICK_TIMER' }
   | { type: 'SYNC_TIME'; payload: number }
-  | { type: 'RESUME_SESSION'; payload: { durationSeconds: number; remainingSeconds: number } }
+  | {
+      type: 'RESUME_SESSION';
+      payload: { durationSeconds: number; remainingSeconds: number; mode: SessionMode | null };
+    }
+  | { type: 'SET_CONNECTION'; payload: ConnectionMode }
+  | { type: 'SET_SESSION_MODE'; payload: SessionMode | null }
   | { type: 'END_SESSION' }
   | { type: 'ADD_TAB'; payload: Tab }
   | { type: 'CLOSE_TAB'; payload: string }
@@ -130,6 +142,8 @@ export const initialState: AppState = {
   activeTabId: 'dashboard',
   activityHistory: [],
   activeSidePanel: null,
+  connection: 'online',
+  sessionMode: null,
 };
 
 /**
@@ -187,8 +201,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         sessionDuration: action.payload.durationSeconds,
         timeRemaining: action.payload.remainingSeconds,
         kioskActive: true,
+        sessionMode: action.payload.mode ?? state.sessionMode,
         phase: 'kiosk',
       };
+
+    case 'SET_CONNECTION':
+      return { ...state, connection: action.payload };
+
+    case 'SET_SESSION_MODE':
+      return { ...state, sessionMode: action.payload };
 
     case 'END_SESSION':
       return {

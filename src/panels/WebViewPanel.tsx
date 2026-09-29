@@ -10,13 +10,32 @@ import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, ExternalLink, Shield, AlertTriangle, Lock } from 'lucide-react';
 import { displayHost, isUrlAllowed } from '@shared/allowlist';
+import { useModeFlags } from '../lib/mode';
 
 interface WebViewPanelProps {
   url: string;
   title: string;
 }
 
-export default function WebViewPanel({ url, title }: WebViewPanelProps) {
+/**
+ * En el escritorio, las herramientas online solo se muestran con conexión.
+ * Si una pestaña ya estaba abierta cuando se cortó la red, se muestra un aviso.
+ */
+export default function WebViewPanel(props: WebViewPanelProps) {
+  const { onlineTools } = useModeFlags();
+  if (!onlineTools) {
+    return (
+      <div className="h-full flex items-center justify-center bg-canvas p-8">
+        <p role="status" className="text-ink-muted text-sm text-center max-w-sm">
+          Sin conexión: esta herramienta no está disponible. Puedes seguir con los módulos locales.
+        </p>
+      </div>
+    );
+  }
+  return <WebViewPanelContent {...props} />;
+}
+
+function WebViewPanelContent({ url, title }: WebViewPanelProps) {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);

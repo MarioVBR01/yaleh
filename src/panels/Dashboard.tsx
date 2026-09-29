@@ -10,6 +10,7 @@
 import { motion } from 'framer-motion';
 import { TOOL_LINKS } from '@shared/config';
 import { useApp } from '../context/AppContext';
+import { useModeFlags } from '../lib/mode';
 
 // ─── DATOS DE SECCIONES ───────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ function SectionHeader({ emoji, title, subtitle }: { emoji: string; title: strin
 
 export default function Dashboard() {
   const { state, openTab, logActivity } = useApp();
+  const { onlineTools } = useModeFlags();
 
   /**
    * Abre un sitio web en una nueva pestaña y registra la actividad.
@@ -102,7 +104,8 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* ── SECCIÓN 1: HERRAMIENTAS ───────────────────────────────────── */}
+        {/* ── SECCIÓN 1: HERRAMIENTAS (solo con conexión) ───────────────── */}
+        {onlineTools && (
         <motion.section variants={itemVariants}>
           <SectionHeader
             emoji="🧰"
@@ -131,6 +134,7 @@ export default function Dashboard() {
             })}
           </div>
         </motion.section>
+        )}
 
         {/* ── SECCIÓN 2: TRABAJO CON IA ───────────────────────────────────── */}
         <motion.section variants={itemVariants}>

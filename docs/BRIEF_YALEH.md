@@ -1,7 +1,7 @@
 # Brief — YALEH v1
 
 > Especificación de la versión 1. Autor: Mario Víctor Brañez Rodriguez (TECBA, Cochabamba).
-> Fecha: 28 de septiembre de 2026. **Revisión 1.2** (28/09/2026): elimina la salida de emergencia y agrega la confirmación previa, la duración máxima y las sesiones interrumpidas. La revisión 1.1 incorporó las decisiones del plan de trabajo (sección 16).
+> Fecha: 28 de septiembre de 2026. **Revisión 1.3** (28/09/2026): detección del modo, pantallas de inicio del escritorio, esquema SQLite y URL del Moodle. La revisión 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
 > Documento complementario: `INFORME_ANALISIS_SRB.md` (análisis del MVP actual).
 > El diseño visual se define **después**; en esta versión no se rediseña la interfaz.
 > Este documento es la **fuente de verdad** del proyecto: si el código lo contradice, gana el brief.
@@ -27,7 +27,7 @@ El proyecto parte del MVP existente ("Safe Research Browser"), que se **reorgani
 | --- | --- |
 | Productos | Dos aplicaciones en v1: web y escritorio |
 | Función principal del escritorio | Bloquear el sistema operativo durante la sesión, con o sin conexión |
-| Modo | Lo define el inicio: con sesión de Google es online; sin conexión es offline |
+| Modo | Lo define el inicio: con sesión de Google es online; sin conexión es offline. El escritorio detecta la conexión en el proceso principal: online si `net.isOnline()` es verdadero y la web de YALEH responde una petición HTTPS en menos de 5 segundos (cualquier respuesta HTTP cuenta). Se vuelve a comprobar cada 30 segundos, al volver de la suspensión y con los eventos de red |
 | Navegación | Sin navegación libre; la IA busca la información |
 | Enciclopedia (Encarta) | Eliminada |
 | IA en v1 | Solo en línea: Gemini mediante Firebase AI Logic (API de desarrollador de Gemini, nivel gratuito) |
@@ -107,13 +107,17 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 
 ### 4.2 Sesión offline (empieza en el escritorio)
 
-1. El escritorio no muestra login. Muestra: **"No estás conectado. ¿Quieres iniciar sesión offline?"**
+**El escritorio no tiene login propio:** no existen el login manual ni el acceso como invitado (el login de la web sigue en la web hasta la fase 4). Al abrirse, muestra "Comprobando conexión…" hasta la primera detección y luego:
+
+1. **Sin conexión:** **"No estás conectado. ¿Quieres iniciar sesión offline?"**, con los botones "Iniciar sesión offline" (va a la dropzone) y "Reintentar conexión".
 2. El estudiante carga archivos locales en la dropzone.
 3. Configura el tiempo.
 4. Confirma la sesión en la pantalla de confirmación.
 5. Se activa el kiosko con los módulos locales.
 
-**Escritorio abierto con internet sin venir de la web:** muestra **"Inicia tu sesión desde la web"**, con un botón que abre la web en el navegador del sistema, y también la opción de iniciar una sesión offline.
+**Escritorio abierto con internet sin venir de la web:** muestra **"Inicia tu sesión desde la web"**, con un botón que abre la web de YALEH en el navegador del sistema y otro "Usar modo offline" (mismo flujo offline). Solo sin empaquetar aparece además "Probar sesión online (solo desarrollo)", que permite probar el modo online del kiosko hasta que la fase 4 traiga el flujo real desde la web.
+
+**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Moodle, Canva, Gamma) no se muestran, y el panel de IA muestra "Disponible próximamente".
 
 ### 4.3 Durante la sesión (ambos modos)
 
@@ -127,7 +131,7 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 - **Sesión interrumpida.** Al iniciar la sesión, el proceso principal guarda su estado (inicio y `sessionEndsAt`). Si la app se abre y encuentra una sesión activa sin terminar, la registra como "interrumpida" y, si todavía queda tiempo, ofrece retomarla con el tiempo restante (el tiempo sigue corriendo mientras el equipo está apagado).
 - **Registro.** Las pérdidas de foco de la ventana y las interrupciones se registran con fecha y hora.
 - **Salida para desarrollo.** Solo cuando la app no está empaquetada existe un atajo (Ctrl+Shift+F12) que libera el kiosko y queda registrado. En la versión empaquetada no existe.
-- Si se corta internet a mitad de sesión, el kiosko sigue cerrado y el tiempo sigue corriendo. Las pestañas online dejan de responder y la aplicación ofrece pasar a los módulos locales. **El resto de la sesión se guarda en SQLite con el mismo identificador de sesión y se sube a Firestore al reconectar.**
+- Si se corta internet a mitad de sesión, el kiosko sigue cerrado y el tiempo sigue corriendo. Las herramientas online y la IA se ocultan, aparece el aviso **"Sin conexión: puedes seguir con los módulos locales"** y se registran los eventos `connection-lost` y `connection-restored`. Al volver la conexión, las herramientas reaparecen. **El resto de la sesión se guarda en SQLite con el mismo identificador de sesión y se sube a Firestore al reconectar.**
 
 ### 4.4 Al terminar
 
@@ -309,7 +313,14 @@ PDF con texto, DOCX y TXT. Los PDF escaneados quedan fuera. La extracción se ha
 ### 8.5 SQLite y sincronización
 
 - SQLite vive en el proceso principal con el módulo integrado **`node:sqlite`** (disponible en Electron 42, Node 24.16). No necesita compilar módulos nativos en Windows.
-- La interfaz accede a los datos solo por IPC.
+- Base: `app.getPath('userData')/yaleh.db`, en modo WAL, con migraciones versionadas registradas en `schema_migrations` (una migración publicada nunca se edita; los cambios van en una nueva).
+- Tablas (migración 1):
+  - `sessions`: `id`, `mode` (online/offline), `started_at`, `ends_at` (epoch en ms), `duration_seconds`, `status` (active/finished/interrupted), `owner_uid` y `synced_at` (vacíos hasta la fase 10).
+  - `session_events`: `id`, `session_id`, `type`, `at` (ISO 8601), `detail`. Sin clave foránea: hay eventos sin sesión (enlaces inválidos).
+  - `local_profile` (perfil local del equipo) y `settings` (clave-valor).
+- Los datos JSON de la fase 2 (`session.json` y `events.json`) se importan una sola vez en el primer arranque y se renombran a `.migrated`. Una sesión activa importada se sigue detectando como interrumpida.
+- `npm run db:inspect` muestra las últimas sesiones (con pérdidas de foco y cortes de red) y eventos, en solo lectura.
+- La interfaz accede a los datos solo por IPC; nunca abre la base.
 - Cada sesión offline tiene un identificador propio. Al detectar conexión y una cuenta iniciada, se sube a Firestore y se marca como sincronizada.
 - **Cuenta de destino:** las sesiones offline se suben a la **última cuenta que inició sesión en ese equipo**. Si nunca inició sesión ninguna cuenta, quedan como sesiones locales.
 
@@ -331,7 +342,21 @@ Todo el bloqueo se aplica en el **proceso principal**, nunca en la interfaz. Ver
 - [x] Content-Security-Policy en la web, sin `'unsafe-inline'` para scripts. *(fase 2)*
 - [ ] El enlace directo de autenticación valida un `state` aleatorio. *(fase 4; en la fase 2 solo se aceptan `yaleh://auth` y `yaleh://sesion` con parámetros válidos)*
 
-**Sitios permitidos en modo online:** el dominio de la web de YALEH, Google Workspace y sus dominios de inicio de sesión, Canva, Gamma, el Moodle del TECBA, Google Classroom y `youtube-nocookie.com` (solo para el reproductor). Todo lo demás se bloquea. La lista vive en **un único módulo de configuración** (`shared/config.ts`) compartido por el proceso principal y la interfaz.
+**Sitios permitidos en modo online:** todo lo demás se bloquea. La lista vive en **un único módulo de configuración** (`shared/config.ts`) compartido por el proceso principal y la interfaz. Solo HTTPS.
+
+| Sitio | Motivo |
+| --- | --- |
+| `yaleh-fbe1c.web.app`, `yaleh-fbe1c.firebaseapp.com` | Web de YALEH y marco de Firebase Auth |
+| `workspace.google.com`, `docs.google.com`, `sheets.google.com`, `slides.google.com`, `drive.google.com` | Google Workspace |
+| `classroom.google.com` | Google Classroom |
+| `accounts.google.com` | Inicio de sesión de Google |
+| `accounts.youtube.com` | Paso del inicio de sesión de Google que fija la sesión; sin él el login se interrumpe |
+| `www.google.com`, solo la ruta `/recaptcha/` | App Check (Fraud Defense) carga su marco desde ahí (fase 4) |
+| `canva.com` y subdominios | Canva |
+| `gamma.app` y subdominios | Gamma |
+| `moodle-108854-0.cloudclusters.net` | Moodle del TECBA (entrada: `/login/`) |
+| `www.youtube-nocookie.com` | Reproductor de YouTube embebido (fase 8) |
+| `localhost:5173` | Servidor de Vite, solo sin empaquetar |
 
 ---
 
@@ -408,7 +433,6 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 - Extensión del archivo de sesión de respaldo (por ejemplo `.yaleh`).
 - Función del botón de configuración.
 - Fecha de entrega.
-- URL del Moodle del TECBA (para la lista de sitios permitidos).
 - Actualizar el documento de proyecto de grado al cerrar este sprint.
 
 ### Configuración manual en la consola de Firebase (la hace Mario)
@@ -459,3 +483,15 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 21 | Registro de foco | Las pérdidas de foco se registran con fecha y hora |
 | 22 | Salida para desarrollo | Ctrl+Shift+F12 libera el kiosko y queda registrado, solo cuando la app no está empaquetada |
 | 23 | Bloqueo tras intentos fallidos | No aplica: solo tenía sentido con el código de emergencia |
+
+### Revisión 1.3 — 28/09/2026 (fase 3)
+
+| # | Tema | Decisión |
+| --- | --- | --- |
+| 24 | Moodle del TECBA | `https://moodle-108854-0.cloudclusters.net/login/` |
+| 25 | Lista de sitios | Se aceptan `accounts.youtube.com` y `www.google.com/recaptcha/` (motivos en la sección 9) |
+| 26 | Detección del modo | En el proceso principal: `net.isOnline()` + petición HTTPS a la web de YALEH (< 5 s, cualquier respuesta HTTP). Nueva comprobación cada 30 s, al volver de la suspensión y con los eventos de red |
+| 27 | Inicio del escritorio | Sin login propio ni acceso como invitado. Pantallas "No estás conectado…" y "Inicia tu sesión desde la web" (sección 4.2) |
+| 28 | Conexión perdida en una sesión online | Kiosko bloqueado y tiempo corriendo; se ocultan las herramientas online y la IA, aviso "Sin conexión: puedes seguir con los módulos locales" y eventos `connection-lost` / `connection-restored` |
+| 29 | SQLite | Esquema de la sección 8.5, migraciones versionadas, importación única de los JSON de la fase 2 y `npm run db:inspect` |
+| 30 | Sesión online de prueba | Solo sin empaquetar, hasta la fase 4 (el proceso principal rechaza sesiones online en la versión empaquetada) |

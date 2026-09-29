@@ -10,28 +10,47 @@ import {
   globalShortcut,
   ipcMain,
   Menu,
+  net,
+  powerMonitor,
   session,
   shell,
   type IpcMainInvokeEvent,
   type WebContents,
 } from 'electron';
+import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { DEV_SERVER_ORIGIN, LIMITS } from '../shared/config';
-import { IPC_EVENT, IPC_INVOKE } from '../shared/ipc-types';
+import type { DatabaseSync } from 'node:sqlite';
+import { CONNECTIVITY, DEV_SERVER_ORIGIN, LIMITS } from '../shared/config';
+import { IPC_EVENT, IPC_INVOKE, type AppInfo, type SessionMode } from '../shared/ipc-types';
+import { ConnectivityMonitor, createHttpProbe } from './connectivity';
+import { DATABASE_FILE_NAME, ensureLocalProfile, openDatabase } from './db/database';
+import { importLegacyJson } from './db/import-json';
+import { SqliteSessionStore } from './db/sqlite-session-store';
 import { describeDeepLinkForLog, findDeepLinkInArgv, parseDeepLink, PROTOCOL_SCHEME } from './deeplink';
-import { isAllowedExternalUrl, isTrustedSenderUrl, parseDurationSeconds, type SenderTrust } from './ipc/validate';
+import {
+  isAllowedExternalUrl,
+  isTrustedSenderUrl,
+  parseDurationSeconds,
+  parseSessionMode,
+  type SenderTrust,
+} from './ipc/validate';
 import { lockWindow, reclaimFocus, unlockWindow } from './kiosk/window';
 import { DEV_ESCAPE_ACCELERATOR, isBlockedInput, isDevEscapeInput } from './kiosk/shortcuts';
 import { isFrameUrlAllowed, isMainWindowNavigationAllowed, type NavigationContext } from './navigation-policy';
 import { SessionController } from './session/controller';
-import { JsonSessionStore } from './session/store';
 
 const isPackaged = app.isPackaged;
 /** `electron . --dev-server` carga el servidor de Vite; sin la bandera, carga dist/. */
 const useDevServer = !isPackaged && process.argv.includes('--dev-server');
 /** Prueba de humo sin ventana visible (scripts/smoke-electron.mjs). Solo sin empaquetar. */
 const isSmokeTest = !isPackaged && process.env.YALEH_SMOKE === '1';
+
+// La prueba de humo usa una carpeta de datos temporal para no tocar la base real.
+// scripts/smoke-electron.mjs la crea y la borra al terminar.
+if (isSmokeTest) {
+  app.setPath('userData', process.env.YALEH_SMOKE_USER_DATA ?? path.join(os.tmpdir(), `yaleh-smoke-${process.pid}`));
+}
 
 // Se empaqueta como CommonJS (dist-electron/main.cjs): __dirname es dist-electron/.
 const PRELOAD_PATH = path.join(__dirname, 'preload.cjs');
@@ -57,8 +76,10 @@ const pendingDeepLinks: string[] = [];
 
 // ─── Sesión ──────────────────────────────────────────────────────────────────
 
-let store: JsonSessionStore;
+let db: DatabaseSync;
+let store: SqliteSessionStore;
 let controller: SessionController;
+let connectivity: ConnectivityMonitor;
 
 function send(channel: string, payload: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -76,6 +97,17 @@ function createController(): SessionController {
     onTick: remainingSeconds => send(IPC_EVENT.sessionTick, { remainingSeconds }),
     onEnded: reason => send(IPC_EVENT.sessionEnded, { reason }),
   });
+}
+
+/**
+ * Solo se pueden iniciar sesiones online con conexión.
+ * TODO(fase 4): en la versión empaquetada, las sesiones online llegan desde la web
+ * (yaleh://sesion). Hasta entonces solo se permiten en desarrollo, para probar el modo.
+ */
+function assertSessionModeAllowed(mode: SessionMode): void {
+  if (mode !== 'online') return;
+  if (isPackaged) throw new Error('Las sesiones online se inician desde la web de YALEH.');
+  if (connectivity.getMode() !== 'online') throw new Error('No hay conexión para una sesión online.');
 }
 
 // ─── IPC ─────────────────────────────────────────────────────────────────────
@@ -102,14 +134,20 @@ function handle(channel: string, listener: (event: IpcMainInvokeEvent, ...args: 
 }
 
 function registerIpcHandlers(): void {
-  handle(IPC_INVOKE.sessionStart, (_event, durationSeconds) =>
-    controller.start(
-      parseDurationSeconds(durationSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60)
-    )
-  );
+  handle(IPC_INVOKE.appGetInfo, (): AppInfo => ({ version: app.getVersion(), isPackaged }));
+
+  handle(IPC_INVOKE.sessionStart, (_event, durationSeconds, mode) => {
+    const seconds = parseDurationSeconds(durationSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60);
+    const sessionMode = parseSessionMode(mode);
+    assertSessionModeAllowed(sessionMode);
+    return controller.start(seconds, sessionMode);
+  });
   handle(IPC_INVOKE.sessionGetState, () => controller.getSnapshot());
   handle(IPC_INVOKE.sessionResume, () => controller.resume());
   handle(IPC_INVOKE.sessionDiscardResume, () => controller.discardResume());
+
+  handle(IPC_INVOKE.connectionGet, () => connectivity.getMode());
+  handle(IPC_INVOKE.connectionRecheck, () => connectivity.check());
 
   handle(IPC_INVOKE.appClose, () => {
     if (controller.isActive()) {
@@ -288,23 +326,72 @@ function runSmokeTest(win: BrowserWindow): void {
             hasApi: typeof window.electronAPI === 'object',
             version: window.electronAPI?.version ?? null,
             state: window.electronAPI ? await window.electronAPI.getSessionState() : null,
+            connection: window.electronAPI ? await window.electronAPI.getConnectionMode() : null,
           }))()`
         );
-        const ok = result.rootChildren > 0 && result.hasApi && result.state !== null && errors.length === 0;
-        console.log(`[smoke] ${JSON.stringify({ ok, ...result, errors })}`);
-        app.exit(ok ? 0 : 1);
+        const migrations = (db.prepare('SELECT version FROM schema_migrations').all() as { version: number }[]).map(
+          r => r.version
+        );
+        const ok =
+          result.rootChildren > 0 &&
+          result.hasApi &&
+          result.state !== null &&
+          result.connection !== null &&
+          migrations.length > 0 &&
+          errors.length === 0;
+        console.log(`[smoke] ${JSON.stringify({ ok, ...result, migrations, errors })}`);
+        finishSmokeTest(ok);
       } catch (error) {
         console.log(`[smoke] ${JSON.stringify({ ok: false, error: String(error), errors })}`);
-        app.exit(1);
+        finishSmokeTest(false);
       }
     }, 2000);
   });
 }
 
+/** Cierra la base y termina (el script lanzador borra la carpeta temporal). */
+function finishSmokeTest(ok: boolean): void {
+  connectivity.stop();
+  db.close();
+  app.exit(ok ? 0 : 1);
+}
+
 // ─── Arranque ────────────────────────────────────────────────────────────────
 
+/** Abre SQLite, importa los datos JSON de la fase 2 (una sola vez) y crea el perfil local. */
+function openStorage(): void {
+  const userData = app.getPath('userData');
+  db = openDatabase(path.join(userData, DATABASE_FILE_NAME));
+  store = new SqliteSessionStore(db);
+  const imported = importLegacyJson(path.join(userData, 'session'), store);
+  if (imported.sessionImported || imported.eventsImported > 0) {
+    console.log(`[db] Importados de la fase 2: sesión=${imported.sessionImported}, eventos=${imported.eventsImported}`);
+  }
+  ensureLocalProfile(db);
+}
+
+function startConnectivityMonitor(): void {
+  connectivity = new ConnectivityMonitor({
+    isOnline: () => net.isOnline(),
+    probe: createHttpProbe(
+      (url, init) => net.fetch(url, { ...init, cache: 'no-store' }),
+      CONNECTIVITY.probeUrl,
+      CONNECTIVITY.probeTimeoutMs
+    ),
+    intervalMs: CONNECTIVITY.recheckIntervalMs,
+    onChange: (mode, previous) => {
+      console.log(`[red] Modo: ${previous} → ${mode}`);
+      controller.recordConnectionChange(mode, previous);
+      send(IPC_EVENT.connectionChanged, { mode });
+    },
+  });
+  void connectivity.start();
+  // Al volver de la suspensión la red puede haber cambiado.
+  powerMonitor.on('resume', () => void connectivity.check());
+}
+
 function bootstrap(): void {
-  store = new JsonSessionStore(path.join(app.getPath('userData'), 'session'));
+  openStorage();
   controller = createController();
   registerProtocol();
   if (isPackaged) Menu.setApplicationMenu(null);
@@ -320,6 +407,7 @@ function bootstrap(): void {
   // Sesión interrumpida por apagado, reinicio o cierre forzado.
   controller.recover();
 
+  startConnectivityMonitor();
   mainWindow = createWindow();
   if (isSmokeTest) runSmokeTest(mainWindow);
 
@@ -354,6 +442,8 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', () => {
     controller?.dispose();
+    connectivity?.stop();
     globalShortcut.unregisterAll();
+    db?.close();
   });
 }

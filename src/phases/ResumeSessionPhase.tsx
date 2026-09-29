@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { RotateCcw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getElectronAPI } from '../lib/electron';
+import { startPhase } from '../lib/mode';
 import { formatMinutes } from '../utils/format';
 
 export default function ResumeSessionPhase() {
@@ -25,7 +26,7 @@ export default function ResumeSessionPhase() {
       if (snapshot.status === 'resumable') {
         setRemainingSeconds(snapshot.remainingSeconds);
       } else {
-        dispatch({ type: 'SET_PHASE', payload: 'login' });
+        dispatch({ type: 'SET_PHASE', payload: startPhase(true) });
       }
     });
   }, [api, dispatch]);
@@ -41,6 +42,7 @@ export default function ResumeSessionPhase() {
         payload: {
           durationSeconds: snapshot.durationSeconds,
           remainingSeconds: snapshot.remainingSeconds,
+          mode: snapshot.mode,
         },
       });
     } catch (err) {
@@ -54,7 +56,7 @@ export default function ResumeSessionPhase() {
     if (!api) return;
     setBusy(true);
     await api.discardResume();
-    dispatch({ type: 'SET_PHASE', payload: 'login' });
+    dispatch({ type: 'SET_PHASE', payload: startPhase(true) });
   };
 
   const remainingMinutes = remainingSeconds === null ? null : Math.max(1, Math.ceil(remainingSeconds / 60));

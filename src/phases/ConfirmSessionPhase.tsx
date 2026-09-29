@@ -27,7 +27,7 @@ export default function ConfirmSessionPhase() {
     setError(null);
     try {
       if (api) {
-        const snapshot = await api.startSession(state.sessionDuration);
+        const snapshot = await api.startSession(state.sessionDuration, state.sessionMode ?? 'offline');
         dispatch({ type: 'START_KIOSK' });
         dispatch({ type: 'SYNC_TIME', payload: snapshot.remainingSeconds });
       } else {

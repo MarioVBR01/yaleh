@@ -13,6 +13,7 @@ import {
   MessageSquare, Star, Sparkles, RefreshCw, Copy, Check, Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useModeFlags } from '../lib/mode';
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
@@ -134,7 +135,33 @@ function MessageContent({ content }: { content: string }) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
+/**
+ * En v1 la IA solo funciona en línea (brief, sección 6). Sin conexión o en una
+ * sesión offline se muestra un aviso en lugar del chat.
+ */
 export default function AIWorkPanel() {
+  const { ai } = useModeFlags();
+  return ai ? <AIWorkPanelContent /> : <AIUnavailable />;
+}
+
+function AIUnavailable() {
+  return (
+    <div className="h-full flex items-center justify-center bg-canvas p-8">
+      <div className="max-w-sm text-center">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-surface-raised mb-4">
+          <Sparkles size={26} className="text-accent" />
+        </div>
+        <h2 className="text-ink text-lg font-semibold mb-2">Disponible próximamente</h2>
+        <p className="text-ink-muted text-sm">
+          El asistente de IA necesita conexión. En el modo offline puedes seguir con los editores,
+          el Pomodoro y tus archivos.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AIWorkPanelContent() {
   const { state } = useApp();
   const hasFiles = state.uploadedFiles.length > 0;
   const [messages, setMessages] = useState<ChatMessage[]>([

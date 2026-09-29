@@ -24,6 +24,7 @@ import DownloadsPanel from '../panels/DownloadsPanel';
 import StatsPanel from '../panels/StatsPanel';
 import { useApp } from '../context/AppContext';
 import { getElectronAPI } from '../lib/electron';
+import { useModeFlags } from '../lib/mode';
 import type { Tab } from '../store/appStore';
 
 /**
@@ -59,6 +60,7 @@ export default function KioskLayout() {
   const [showNewTabDialog, setShowNewTabDialog] = useState(false);
 
   const api = getElectronAPI();
+  const { onlineTools, offlineNotice } = useModeFlags();
 
   /**
    * Escritorio: el proceso principal envía el tiempo restante cada segundo y
@@ -122,6 +124,16 @@ export default function KioskLayout() {
         {/* ── WORKSPACE CENTRAL (Pestañas) ──────────────────────────────── */}
         <div className="flex-1 min-w-0 overflow-hidden relative">
 
+          {/* Conexión perdida en una sesión online: el kiosko sigue bloqueado y el tiempo corre. */}
+          {offlineNotice && (
+            <div
+              role="status"
+              className="absolute top-0 inset-x-0 z-20 px-4 py-2 bg-warning/15 border-b border-warning/40 text-ink-soft text-sm text-center"
+            >
+              Sin conexión: puedes seguir con los módulos locales
+            </div>
+          )}
+
           {/*
            * Renderiza TODAS las pestañas pero solo muestra la activa.
            * Esto preserva el estado (editores, formularios, reproductores)
@@ -167,6 +179,8 @@ export default function KioskLayout() {
               onClick={e => e.stopPropagation()}
             >
               <h2 className="text-white font-bold text-lg mb-1">Nueva Pestaña</h2>
+              {onlineTools && (
+                <>
               <p className="text-slate-400 text-sm mb-5">Herramientas autorizadas</p>
 
               <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto mb-4">
@@ -186,6 +200,8 @@ export default function KioskLayout() {
                   </motion.button>
                 ))}
               </div>
+                </>
+              )}
 
               {/* Opciones especiales */}
               <div className="border-t border-slate-800 pt-4 grid grid-cols-1 gap-2">

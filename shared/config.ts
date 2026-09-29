@@ -18,11 +18,8 @@ export interface AllowedSite {
   reason: string;
 }
 
-/**
- * Moodle del TECBA.
- * TODO: reemplazar por el host real del Moodle del TECBA (pendiente en el brief, sección 15).
- */
-export const TECBA_MOODLE_URL = 'https://moodle.org';
+/** Moodle del TECBA (página de inicio de sesión). */
+export const TECBA_MOODLE_URL = 'https://moodle-108854-0.cloudclusters.net/login/';
 
 const moodleHost = new URL(TECBA_MOODLE_URL).hostname;
 
@@ -97,6 +94,18 @@ export const LIMITS = {
   minSessionMinutes: 1,
   /** Duración máxima de una sesión de concentración, en minutos. */
   maxSessionMinutes: 180,
+} as const;
+
+// ─── Conexión ────────────────────────────────────────────────────────────────
+
+/**
+ * Detección del modo en el escritorio (brief, sección 4): online si el sistema
+ * tiene red y la web de YALEH responde (cualquier respuesta HTTP) a tiempo.
+ */
+export const CONNECTIVITY = {
+  probeUrl: `${YALEH_WEB_ORIGINS[0]}/`,
+  probeTimeoutMs: 5000,
+  recheckIntervalMs: 30_000,
 } as const;
 
 /** Opciones rápidas de la pantalla de selección de tiempo, en minutos. */

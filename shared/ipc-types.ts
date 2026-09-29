@@ -6,10 +6,13 @@
 
 /** Canales invocables desde la interfaz (ipcRenderer.invoke → ipcMain.handle). */
 export const IPC_INVOKE = {
+  appGetInfo: 'app:get-info',
   sessionStart: 'session:start',
   sessionGetState: 'session:get-state',
   sessionResume: 'session:resume',
   sessionDiscardResume: 'session:discard-resume',
+  connectionGet: 'connection:get',
+  connectionRecheck: 'connection:recheck',
   appClose: 'app:close',
   appOpenExternal: 'app:open-external',
 } as const;
@@ -18,6 +21,7 @@ export const IPC_INVOKE = {
 export const IPC_EVENT = {
   sessionTick: 'session:tick',
   sessionEnded: 'session:ended',
+  connectionChanged: 'connection:changed',
   authToken: 'auth:token-received',
   sessionLink: 'deeplink:session',
 } as const;
@@ -33,11 +37,24 @@ export type SessionStatus = 'idle' | 'resumable' | 'active' | 'finished';
 
 export type SessionEndReason = 'completed' | 'dev-release';
 
+/** Modo de una sesión: con la web y las herramientas en línea, o solo con módulos locales. */
+export type SessionMode = 'online' | 'offline';
+
+/** Estado de la conexión detectado por el proceso principal. `unknown` hasta la primera comprobación. */
+export type ConnectionMode = 'online' | 'offline' | 'unknown';
+
 export interface SessionSnapshot {
   status: SessionStatus;
   sessionId: string | null;
+  mode: SessionMode | null;
   durationSeconds: number;
   remainingSeconds: number;
+}
+
+export interface AppInfo {
+  version: string;
+  /** false durante el desarrollo (electron:dev, electron:preview). */
+  isPackaged: boolean;
 }
 
 export interface SessionTickPayload {
@@ -48,6 +65,10 @@ export interface SessionEndedPayload {
   reason: SessionEndReason;
 }
 
+export interface ConnectionChangedPayload {
+  mode: ConnectionMode;
+}
+
 export interface SessionLinkPayload {
   sessionId: string;
 }
@@ -56,8 +77,9 @@ export interface SessionLinkPayload {
 export interface ElectronAPI {
   /** Versión de la aplicación de escritorio. */
   version: string;
+  getAppInfo: () => Promise<AppInfo>;
   /** Inicia la sesión; el proceso principal bloquea el equipo. */
-  startSession: (durationSeconds: number) => Promise<SessionSnapshot>;
+  startSession: (durationSeconds: number, mode: SessionMode) => Promise<SessionSnapshot>;
   getSessionState: () => Promise<SessionSnapshot>;
   /** Retoma una sesión interrumpida (estado `resumable`). */
   resumeSession: () => Promise<SessionSnapshot>;
@@ -65,6 +87,11 @@ export interface ElectronAPI {
   discardResume: () => Promise<SessionSnapshot>;
   onSessionTick: (callback: (payload: SessionTickPayload) => void) => () => void;
   onSessionEnded: (callback: (payload: SessionEndedPayload) => void) => () => void;
+  /** Modo de conexión actual según el proceso principal. */
+  getConnectionMode: () => Promise<ConnectionMode>;
+  /** Fuerza una nueva comprobación de la conexión y devuelve el resultado. */
+  recheckConnection: () => Promise<ConnectionMode>;
+  onConnectionChange: (callback: (payload: ConnectionChangedPayload) => void) => () => void;
   /** Cierra la aplicación. Se rechaza mientras la sesión está activa. */
   closeApp: () => Promise<void>;
   /** Abre la web de YALEH en el navegador del sistema. Otras URL se rechazan. */

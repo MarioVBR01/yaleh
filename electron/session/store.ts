@@ -1,17 +1,19 @@
 /**
  * @file store.ts
- * @description Almacenamiento del estado de la sesión y del registro de eventos.
- * Implementación temporal en archivos JSON dentro de `app.getPath('userData')`;
- * en la fase 3 se reemplaza por SQLite detrás de la misma interfaz.
+ * @description Interfaz del almacenamiento de sesiones y eventos, y sus
+ * implementaciones en JSON (fase 2; hoy solo se usa para importar esos datos)
+ * y en memoria (pruebas). La implementación en uso es SqliteSessionStore.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import type { SessionMode } from '../../shared/ipc-types';
 
 export type PersistedSessionStatus = 'active' | 'finished' | 'interrupted';
 
 export interface PersistedSession {
   id: string;
+  mode: SessionMode;
   /** Inicio de la sesión (epoch en milisegundos). */
   startedAt: number;
   /** Momento en que termina la sesión (epoch en milisegundos). */
@@ -27,6 +29,8 @@ export type SessionEventType =
   | 'session-resumed'
   | 'focus-lost'
   | 'dev-release'
+  | 'connection-lost'
+  | 'connection-restored'
   | 'invalid-deeplink';
 
 export interface SessionEvent {
@@ -38,7 +42,9 @@ export interface SessionEvent {
 }
 
 export interface SessionStore {
+  /** Devuelve la sesión más reciente (la de inicio más tardío), o null. */
   loadSession(): PersistedSession | null;
+  /** Crea la sesión o actualiza la que tiene el mismo id. */
   saveSession(session: PersistedSession): void;
   appendEvent(event: SessionEvent): void;
   listEvents(): SessionEvent[];
@@ -46,6 +52,12 @@ export interface SessionStore {
 
 /** Máximo de eventos que se conservan en el archivo. */
 const MAX_EVENTS = 1000;
+
+/** La sesión que se debe conservar como "más reciente" al guardar `next`. */
+function latestOf(current: PersistedSession | null, next: PersistedSession): PersistedSession {
+  if (!current || current.id === next.id || next.startedAt >= current.startedAt) return next;
+  return current;
+}
 
 function readJson<T>(file: string, fallback: T): T {
   try {
@@ -80,7 +92,7 @@ export class JsonSessionStore implements SessionStore {
   }
 
   saveSession(session: PersistedSession): void {
-    writeJsonAtomic(this.sessionFile, session);
+    writeJsonAtomic(this.sessionFile, latestOf(this.loadSession(), session));
   }
 
   appendEvent(event: SessionEvent): void {
@@ -105,7 +117,7 @@ export class MemorySessionStore implements SessionStore {
   }
 
   saveSession(session: PersistedSession): void {
-    this.session = { ...session };
+    this.session = { ...latestOf(this.session, session) };
   }
 
   appendEvent(event: SessionEvent): void {

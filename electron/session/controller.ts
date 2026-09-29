@@ -8,7 +8,13 @@
  * (o con la salida de desarrollo, que solo existe sin empaquetar).
  */
 
-import type { SessionEndReason, SessionSnapshot, SessionStatus } from '../../shared/ipc-types';
+import type {
+  ConnectionMode,
+  SessionEndReason,
+  SessionMode,
+  SessionSnapshot,
+  SessionStatus,
+} from '../../shared/ipc-types';
 import type { PersistedSession, SessionEvent, SessionStore } from './store';
 
 export interface SessionControllerDeps {
@@ -47,6 +53,7 @@ export class SessionController {
     return {
       status: this.status,
       sessionId: this.current?.id ?? null,
+      mode: this.current?.mode ?? null,
       durationSeconds: this.current?.durationSeconds ?? 0,
       remainingSeconds: this.remainingSeconds(),
     };
@@ -74,7 +81,7 @@ export class SessionController {
     return this.getSnapshot();
   }
 
-  start(durationSeconds: number): SessionSnapshot {
+  start(durationSeconds: number, mode: SessionMode): SessionSnapshot {
     if (this.status === 'active') throw new Error('Ya hay una sesión activa.');
     if (this.status === 'resumable') {
       throw new Error('Hay una sesión interrumpida pendiente. Retómala o descártala primero.');
@@ -86,17 +93,21 @@ export class SessionController {
     ) {
       throw new Error('Duración de sesión no válida.');
     }
+    if (mode !== 'online' && mode !== 'offline') {
+      throw new Error('Modo de sesión no válido.');
+    }
 
     const startedAt = this.now();
     this.current = {
       id: this.newId(),
+      mode,
       startedAt,
       endsAt: startedAt + durationSeconds * 1000,
       durationSeconds,
       status: 'active',
     };
     this.deps.store.saveSession(this.current);
-    this.log('session-started', this.current.id, `${durationSeconds}s`);
+    this.log('session-started', this.current.id, `${mode}, ${durationSeconds}s`);
     this.activate();
     return this.getSnapshot();
   }
@@ -135,6 +146,16 @@ export class SessionController {
   /** Registra una pérdida de foco de la ventana durante la sesión. */
   recordFocusLost(): void {
     if (this.isActive()) this.log('focus-lost', this.current?.id ?? null);
+  }
+
+  /**
+   * Registra que se perdió o se recuperó la conexión durante la sesión.
+   * El kiosko sigue bloqueado y el tiempo sigue corriendo: no cambia nada más.
+   */
+  recordConnectionChange(mode: ConnectionMode, previous: ConnectionMode): void {
+    if (!this.isActive()) return;
+    if (mode === 'offline' && previous === 'online') this.log('connection-lost', this.current?.id ?? null);
+    if (mode === 'online' && previous === 'offline') this.log('connection-restored', this.current?.id ?? null);
   }
 
   /** Detiene el intervalo (al cerrar la app). No cambia el estado guardado. */
