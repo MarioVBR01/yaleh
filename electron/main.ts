@@ -44,6 +44,7 @@ import { lockWindow, reclaimFocus, unlockWindow } from './kiosk/window';
 import { DEV_ESCAPE_ACCELERATOR, isBlockedInput, isDevEscapeInput } from './kiosk/shortcuts';
 import { isFrameUrlAllowed, isMainWindowNavigationAllowed, type NavigationContext } from './navigation-policy';
 import { SessionController } from './session/controller';
+import { runSmokeTest } from './smoke';
 
 const isPackaged = app.isPackaged;
 /** `electron . --dev-server` carga el servidor de Vite; sin la bandera, carga dist/. */
@@ -397,44 +398,6 @@ function createWindow(): BrowserWindow {
 
 // ─── Prueba de humo (solo desarrollo) ────────────────────────────────────────
 
-function runSmokeTest(win: BrowserWindow): void {
-  const errors: string[] = [];
-  win.webContents.on('console-message', details => {
-    if (details.level === 'error') errors.push(details.message);
-  });
-  win.webContents.on('preload-error', (_event, _path, error) => errors.push(`preload: ${error.message}`));
-  win.webContents.once('did-finish-load', () => {
-    setTimeout(async () => {
-      try {
-        const result = await win.webContents.executeJavaScript(
-          `(async () => ({
-            rootChildren: document.getElementById('root')?.childElementCount ?? 0,
-            hasApi: typeof window.electronAPI === 'object',
-            version: window.electronAPI?.version ?? null,
-            state: window.electronAPI ? await window.electronAPI.getSessionState() : null,
-            connection: window.electronAPI ? await window.electronAPI.getConnectionMode() : null,
-          }))()`
-        );
-        const migrations = (db.prepare('SELECT version FROM schema_migrations').all() as { version: number }[]).map(
-          r => r.version
-        );
-        const ok =
-          result.rootChildren > 0 &&
-          result.hasApi &&
-          result.state !== null &&
-          result.connection !== null &&
-          migrations.length > 0 &&
-          errors.length === 0;
-        console.log(`[smoke] ${JSON.stringify({ ok, ...result, migrations, errors })}`);
-        finishSmokeTest(ok);
-      } catch (error) {
-        console.log(`[smoke] ${JSON.stringify({ ok: false, error: String(error), errors })}`);
-        finishSmokeTest(false);
-      }
-    }, 2000);
-  });
-}
-
 /** Cierra la base y termina (el script lanzador borra la carpeta temporal). */
 function finishSmokeTest(ok: boolean): void {
   connectivity.stop();
@@ -496,7 +459,7 @@ function bootstrap(): void {
 
   startConnectivityMonitor();
   mainWindow = createWindow();
-  if (isSmokeTest) runSmokeTest(mainWindow);
+  if (isSmokeTest) runSmokeTest(mainWindow, db, finishSmokeTest);
 
   const initialLink = findDeepLinkInArgv(process.argv);
   if (initialLink) handleDeepLink(initialLink);

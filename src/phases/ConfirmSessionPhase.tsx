@@ -105,7 +105,11 @@ export default function ConfirmSessionPhase() {
               Abrir YALEH otra vez
             </a>
             <button
-              onClick={() => dispatch({ type: 'START_KIOSK' })}
+              onClick={() => {
+                // La sesión corre en el escritorio: la web solo muestra el espacio de trabajo, sin temporizador.
+                dispatch({ type: 'SET_SESSION_DURATION', payload: 0 });
+                dispatch({ type: 'START_KIOSK' });
+              }}
               className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink transition-colors"
             >
               Ir a mi espacio de trabajo en la web

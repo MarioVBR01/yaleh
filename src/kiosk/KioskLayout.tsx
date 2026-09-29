@@ -86,12 +86,15 @@ export default function KioskLayout() {
     return () => clearInterval(interval);
   }, [api, state.kioskActive, state.timeRemaining, dispatch]);
 
-  /** Navegador: al llegar a cero se muestra el resumen. */
+  /**
+   * Navegador: al llegar a cero se muestra el resumen. Sin duración (espacio de
+   * trabajo de la web sin sesión de concentración) no hay temporizador.
+   */
   useEffect(() => {
-    if (!api && state.timeRemaining === 0 && state.phase === 'kiosk') {
+    if (!api && state.sessionDuration > 0 && state.timeRemaining === 0 && state.phase === 'kiosk') {
       dispatch({ type: 'END_SESSION' });
     }
-  }, [api, state.timeRemaining, state.phase, dispatch]);
+  }, [api, state.sessionDuration, state.timeRemaining, state.phase, dispatch]);
 
   /**
    * Abre el diálogo de nueva pestaña.

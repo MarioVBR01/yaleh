@@ -73,7 +73,8 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
       {/* Contenido principal de la barra */}
       <div className="h-10 flex items-center gap-2 px-3">
 
-        {/* Temporizador regresivo */}
+        {/* Temporizador regresivo (no aparece en el espacio de trabajo de la web sin sesión) */}
+        {state.sessionDuration > 0 && (
         <div
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold flex-shrink-0 ${
             isLowTime
@@ -89,6 +90,7 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
           </motion.div>
           <span>{formatTime(state.timeRemaining)}</span>
         </div>
+        )}
 
         {/* Separador */}
         <div className="h-6 w-px bg-slate-700/50 flex-shrink-0" />

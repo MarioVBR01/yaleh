@@ -22,7 +22,7 @@ const COLUMNS: { id: Column; label: string; icon: typeof FileText }[] = [
 ];
 
 export default function WorkspaceView() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const { isDesktop } = useModeFlags();
   const [active, setActive] = useState<Column>('chat');
   const firstName = (state.session.displayName ?? '').split(' ')[0];
@@ -33,11 +33,19 @@ export default function WorkspaceView() {
   return (
     <div className="h-full flex flex-col bg-canvas">
       {!isDesktop && (
-        <header className="px-5 pt-4">
-          <h1 className="text-ink text-lg font-bold">¡Hola{firstName ? `, ${firstName}` : ''}! 👋</h1>
-          <p className="text-ink-muted text-xs">
-            Carga tus materiales, pregúntale al asistente y prepara tu sesión de concentración.
-          </p>
+        <header className="px-5 pt-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-ink text-lg font-bold">¡Hola{firstName ? `, ${firstName}` : ''}! 👋</h1>
+            <p className="text-ink-muted text-xs">
+              Carga tus materiales, pregúntale al asistente y prepara tu sesión de concentración.
+            </p>
+          </div>
+          <button
+            onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
+            className="px-4 py-2 rounded-xl text-sm font-semibold bg-accent-strong hover:bg-accent text-ink transition-colors"
+          >
+            Iniciar sesión de concentración
+          </button>
         </header>
       )}
 
