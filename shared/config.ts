@@ -110,3 +110,29 @@ export const CONNECTIVITY = {
 
 /** Opciones rápidas de la pantalla de selección de tiempo, en minutos. */
 export const QUICK_SESSION_MINUTES = [25, 50, 90] as const;
+
+// ─── Inteligencia artificial (brief, sección 7) ──────────────────────────────
+
+export const AI = {
+  /**
+   * Gemini vía Firebase AI Logic (API de desarrollador, nivel gratuito). Se usa en orden:
+   * si un modelo está saturado o sin cuota (429/500/503), se prueba el siguiente.
+   * gemini-3.5-flash-lite es el más disponible en el nivel gratuito (verificado el 29/09/2026).
+   */
+  models: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+  /** Proveedor de App Check de la web publicada (Google Cloud Fraud Defense). */
+  appCheckProvider: 'recaptcha-enterprise',
+  /**
+   * Máximo de caracteres de las fuentes que se envían como contexto
+   * (~100 000 tokens; el modelo admite mucho más, pero cuida la cuota gratuita).
+   */
+  maxSourceChars: 400_000,
+} as const;
+
+/** Búsqueda de información (brief, sección 7.2): API pública de Wikipedia en español. */
+export const WIKIPEDIA = {
+  apiUrl: 'https://es.wikipedia.org/w/api.php',
+  maxResults: 3,
+  /** Wikimedia pide identificar a los clientes con Api-User-Agent. */
+  userAgent: 'YALEH/0.1 (proyecto de grado TECBA; https://yaleh-fbe1c.web.app)',
+} as const;
