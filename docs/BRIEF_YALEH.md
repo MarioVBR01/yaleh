@@ -1,7 +1,7 @@
 # Brief — YALEH v1
 
 > Especificación de la versión 1. Autor: Mario Víctor Brañez Rodriguez (TECBA, Cochabamba).
-> Fecha: 28 de septiembre de 2026. **Revisión 1.3** (28/09/2026): detección del modo, pantallas de inicio del escritorio, esquema SQLite y URL del Moodle. La revisión 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
+> Fecha: 29 de septiembre de 2026. **Revisión 1.4** (29/09/2026): Firebase, paso de la web al escritorio, vista NotebookLM, extracción de texto e IA (fases 4 a 7). La 1.3 agregó la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
 > Documento complementario: `INFORME_ANALISIS_SRB.md` (análisis del MVP actual).
 > El diseño visual se define **después**; en esta versión no se rediseña la interfaz.
 > Este documento es la **fuente de verdad** del proyecto: si el código lo contradice, gana el brief.
@@ -33,7 +33,7 @@ El proyecto parte del MVP existente ("Safe Research Browser"), que se **reorgani
 | IA en v1 | Solo en línea: Gemini mediante Firebase AI Logic (API de desarrollador de Gemini, nivel gratuito) |
 | Búsqueda de información en v1 | **API pública de Wikipedia en español** (`es.wikipedia.org`); los artículos se pasan a Gemini como contexto. Detrás de una interfaz de proveedor de búsqueda para agregar OpenAlex en v2 (sección 7) |
 | Búsqueda con Google | **Fuera de v1** (no está disponible en el nivel gratuito; ver sección 7) |
-| App Check | **Obligatorio** para AI Logic desde el 2 de noviembre de 2026. Proveedor: Google Cloud Fraud Defense (antes reCAPTCHA Enterprise) con `ReCaptchaEnterpriseProvider` |
+| App Check | **Obligatorio para AI Logic** (verificado el 29/09/2026: sin token válido, la IA responde 401). Web publicada: Google Cloud Fraud Defense (reCAPTCHA Enterprise) con `ReCaptchaEnterpriseProvider`. Escritorio (`file://`) y `localhost`: token de depuración registrado (provisional, ver sección 7.4) |
 | IA local | v2 |
 | Backend | Firebase, plan gratuito **Spark**: Authentication, Firestore, Hosting, AI Logic y App Check. **Sin servidor propio**. Proyecto `Yaleh` (ID `yaleh-fbe1c`) |
 | Base de datos local | SQLite en el escritorio, con el módulo integrado `node:sqlite` |
@@ -57,7 +57,7 @@ El escritorio es un **contenedor bloqueado** con dos capas independientes:
 
 1. **Bloqueo:** vive en el proceso principal de Electron y funciona siempre, con o sin red.
 2. **Contenido:** cambia según el modo.
-   - Online: carga la web de YALEH (Firebase Hosting) dentro del kiosko, más las herramientas en pestañas.
+   - Online: la misma interfaz de YALEH (compilación local, no la web publicada; decisión de la revisión 1.4) con los datos de Firestore, más las herramientas en pestañas.
    - Offline: muestra los módulos locales (editores, notas, Pomodoro, archivos).
 
 ```mermaid
@@ -99,10 +99,10 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 2. Carga sus archivos en la dropzone.
 3. Configura el tiempo de concentración (25, 50 o 90 minutos, o manual hasta 180).
 4. Confirma la sesión en la pantalla de confirmación (sección 4.3).
-5. La sesión se guarda en Firestore y la web abre el escritorio con `yaleh://sesion?id=<id>`.
-6. El escritorio **se bloquea en cuanto recibe el enlace** (kiosko activo, sin temporizador todavía) y muestra una pantalla de carga.
-7. El escritorio genera un `state` aleatorio y abre el inicio de sesión de Google en el navegador del sistema (sección 4.5). Como el estudiante ya inició sesión en la web, el paso es casi automático.
-8. La web cargada en el kiosko inicia sesión, lee la sesión de Firestore y confirma la duración al proceso principal.
+5. La sesión se guarda en Firestore (estado `pending`) y la web abre el escritorio con `yaleh://sesion?id=<id>`.
+6. Si el escritorio no tiene sesión de Google, genera un `state` aleatorio y abre el inicio de sesión en el navegador del sistema (sección 4.5). Firebase recuerda la sesión, así que este paso solo ocurre la primera vez.
+7. Con la cuenta iniciada, el escritorio **se bloquea** (kiosko activo, sin temporizador todavía), lee la sesión y sus fuentes de Firestore y muestra la confirmación. *Cambio de la revisión 1.4:* el bloqueo ocurre después del inicio de sesión y no al recibir el enlace, porque el kiosko (siempre al frente) taparía el navegador donde el estudiante inicia sesión.
+8. La sesión debe pertenecer a la cuenta iniciada; si no, se muestra un aviso y se puede cancelar.
 9. **El tiempo empieza a contar cuando se confirma la duración.** Antes de ese momento se permite cancelar; después, la sesión solo termina al cumplirse el tiempo.
 
 ### 4.2 Sesión offline (empieza en el escritorio)
@@ -196,7 +196,7 @@ Barra superior completa (buscador y botón de configuración), Enciclopedia SRB,
 | --- | --- | --- |
 | Bloqueo del sistema operativo | Sí | Sí |
 | Inicio | Recibe la sesión desde la web | "No estás conectado…" → dropzone → tiempo |
-| Vista principal | La web de YALEH cargada dentro del kiosko | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
+| Vista principal | La interfaz de YALEH (Fuentes · Chat · Estudio) con los datos de Firestore | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
 | Asistente de IA | Sí (Gemini) | No en v1 |
 | Workspace, Canva, Gamma, Moodle, Classroom | Pestañas internas | No visibles |
 | Reproductor de YouTube | Sí | No |
@@ -248,7 +248,7 @@ En el nivel gratuito, Google puede usar el contenido para mejorar sus productos:
 
 | Tarea | Cómo |
 | --- | --- |
-| Chat sobre los archivos, resumen, cuestionario, tarjetas, informe | `gemini-3.8-flash` (alternativa: `gemini-3.5-flash-lite`) |
+| Chat sobre los archivos, resumen, cuestionario, tarjetas, informe | `gemini-3.5-flash-lite`, con respaldo automático a `gemini-3.8-flash` si hay saturación o falta cuota (revisión 1.4: el 29/09/2026 `gemini-3.8-flash` respondía "alta demanda" y 429 en el nivel gratuito) |
 | Buscar información | **API pública de Wikipedia en español** (`es.wikipedia.org`, búsqueda y extractos de artículos). Los artículos encontrados se pasan a Gemini como contexto |
 
 - La búsqueda vive detrás de una **interfaz de proveedor de búsqueda** (por ejemplo `SearchProvider`), para agregar OpenAlex en v2 sin tocar el asistente.
@@ -267,7 +267,9 @@ En el nivel gratuito, Google puede usar el contenido para mejorar sus productos:
 
 - Proveedor: **Google Cloud Fraud Defense** (antes reCAPTCHA Enterprise), registrado en la consola de Firebase, con `ReCaptchaEnterpriseProvider`. La consola ya no permite registrar reCAPTCHA v3.
 - El proveedor y la clave del sitio se definen en `shared/config.ts` y en las variables de entorno de Vite.
-- Estado actual: registrado **sin enforcement**. Se activa el enforcement antes del 2 de noviembre de 2026, después de verificar que funciona en la web y dentro del kiosko.
+- **AI Logic ya exige App Check** (el servicio no admite desactivar el enforcement). Firestore y Authentication siguen sin enforcement.
+- Clave del sitio registrada: `6LdbPtMtAAAAADFcG-cMeEb3tAOlEl51cu6dMBhX` (la única clave de Fraud Defense del proyecto; dominios: `yaleh-fbe1c.web.app`, `yaleh-fbe1c.firebaseapp.com`, `localhost`). El 29/09/2026 App Check tenía registrada por error otra clave inexistente; se corrigió con la API de App Check. Verificado: reCAPTCHA → App Check → Gemini responde en la web publicada.
+- **Escritorio (`file://`) y `localhost`:** reCAPTCHA solo funciona en los dominios registrados, así que usan un **token de depuración** registrado en la consola ("YALEH escritorio demo (borrar)"). Es provisional: el token viaja dentro del instalador y permite saltarse App Check. Alternativa definitiva pendiente: cargar la web publicada dentro del kiosko en modo online, o un proveedor personalizado.
 - App Check no se usa en modo offline (no hay IA).
 
 ---
@@ -441,11 +443,11 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 - [x] Authentication: proveedor de Google habilitado.
 - [ ] Authentication: agregar los dominios autorizados.
 - [x] Firestore: base creada en modo producción.
-- [ ] Firestore: publicar las reglas de seguridad (se generan en la fase 4).
+- [x] Firestore: reglas publicadas (fase 4).
 - [x] AI Logic: API de desarrollador de Gemini habilitada (sin facturación).
-- [x] App Check: registrado con Google Cloud Fraud Defense, sin enforcement.
-- [ ] App Check: entregar la clave del sitio (fase 4) y activar el enforcement antes del 2/11/2026.
-- [ ] Hosting: configurar el sitio de la web.
+- [x] App Check: registrado con Google Cloud Fraud Defense; clave corregida el 29/09/2026.
+- [ ] App Check: borrar el token de depuración "YALEH escritorio demo (borrar)" cuando el escritorio deje de necesitarlo, y activar el enforcement de Firestore y Authentication.
+- [x] Hosting: web publicada en `https://yaleh-fbe1c.web.app` (fase 4).
 
 ---
 
@@ -495,3 +497,16 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 28 | Conexión perdida en una sesión online | Kiosko bloqueado y tiempo corriendo; se ocultan las herramientas online y la IA, aviso "Sin conexión: puedes seguir con los módulos locales" y eventos `connection-lost` / `connection-restored` |
 | 29 | SQLite | Esquema de la sección 8.5, migraciones versionadas, importación única de los JSON de la fase 2 y `npm run db:inspect` |
 | 30 | Sesión online de prueba | Solo sin empaquetar, hasta la fase 4 (el proceso principal rechaza sesiones online en la versión empaquetada) |
+
+### Revisión 1.4 — 29/09/2026 (fases 4 a 7, preparación de la presentación)
+
+| # | Tema | Decisión |
+| --- | --- | --- |
+| 31 | Interfaz del kiosko online | Se usa la compilación local (la misma que la web) con los datos de Firestore, no la web publicada cargada dentro del kiosko: evita confiar IPC a un origen remoto y cambiar de página a mitad de sesión |
+| 32 | Momento del bloqueo | El escritorio se bloquea después del inicio de sesión de Google y de leer la sesión, no al recibir yaleh://sesion (el kiosko taparía el navegador) |
+| 33 | Login de la web | Solo Google (`signInWithPopup`). Se eliminaron el login manual y el acceso como invitado |
+| 34 | Espacio de trabajo en la web | La web puede abrir Fuentes · Chat · Estudio sin sesión de concentración (sin temporizador). La sesión de concentración siempre se abre en el escritorio |
+| 35 | Herramientas en la web | Se abren en una pestaña nueva del navegador; en el escritorio, en pestañas internas |
+| 36 | Modelos | `gemini-3.5-flash-lite` con respaldo a `gemini-3.8-flash` (sección 7.2) |
+| 37 | App Check | Clave de Fraud Defense corregida; token de depuración provisional para el escritorio (sección 7.4) |
+| 38 | Formatos | PDF, DOCX y TXT (sin PPTX, XLSX, CSV ni MP4 en v1), validados por extensión, tipo MIME y firma |

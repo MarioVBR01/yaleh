@@ -16,10 +16,10 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | 1. Preparación (renombre, limpieza, temporizador, tsc, Vitest) | Hecha |
 | 2. Seguridad del kiosko en el proceso principal | Hecha |
 | 3. Modos, plataforma y SQLite básico | Hecha |
-| 4. Firebase (Auth, Firestore, App Check, paso web → escritorio) | Pendiente |
-| 5. Vista principal estilo NotebookLM y sidebar | Pendiente |
-| 6. Archivos (extracción de texto) | Pendiente |
-| 7. IA (Gemini + búsqueda en Wikipedia) | Pendiente |
+| 4. Firebase (Auth, Firestore, App Check, paso web → escritorio) | Hecha |
+| 5. Vista principal estilo NotebookLM y sidebar | Hecha |
+| 6. Archivos (extracción de texto) | Hecha |
+| 7. IA (Gemini + búsqueda en Wikipedia) | Hecha |
 | 8. Pestañas con WebContentsView, herramientas y YouTube | Pendiente |
 | 9. Editores de ofimática con exportación | Pendiente |
 | 10. Sincronización, historial y estadísticas | Pendiente |
@@ -38,6 +38,8 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | `npm test` | Pruebas con Vitest (una ejecución) |
 | `npm run test:watch` | Vitest en modo observación |
 | `npm run smoke:electron` | Compila y abre la app sin ventana visible, con una carpeta de datos temporal: comprueba que la interfaz carga con la CSP, que el preload expone `electronAPI`, que la IPC responde y que SQLite se crea con sus migraciones. No activa el kiosko ni toca la base real |
+| `firebase deploy --only hosting` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes) |
+| `firebase deploy --only firestore:rules` | Publica `firestore.rules` |
 | `npm run db:inspect` | Muestra las últimas sesiones y eventos de la base local (solo lectura; funciona con la app abierta). Opciones: `-- --sessions 20 --events 50 --db <ruta>` |
 
 Al cerrar cada fase deben pasar `typecheck`, `build` y `test` (y conviene `smoke:electron`).
@@ -64,15 +66,26 @@ electron/                   Proceso principal (TypeScript → esbuild → dist-e
   ipc/validate.ts           Origen del remitente, duración, URL externas
   navigation-policy.ts      Qué páginas y marcos pueden cargarse
   deeplink.ts               Análisis de yaleh://auth y yaleh://sesion
+  auth-state.ts             state del inicio de sesión del escritorio (único uso, 10 min)
+  db/workspace-repository.ts  Fuentes (texto en partes) y notas del modo offline
+  smoke.ts                  Prueba de humo (recorrido offline con extracción de PDF/TXT)
 shared/                     Usado por el proceso principal y la interfaz (sin Node ni DOM)
   config.ts                 Sitios permitidos, herramientas, límites (8 pestañas, 500 MB, 1–180 min)
   allowlist.ts              isUrlAllowed()
   ipc-types.ts              Canales IPC y tipo ElectronAPI
+  text.ts                   splitText(): partes de 200 000 caracteres (límite de 1 MiB de Firestore)
 src/                        Interfaz React (web y escritorio). Alias: @/ → src, @shared/ → shared
   App.tsx                   Fases. Web: login → dropzone → timer-select → confirm-session → kiosk → session-complete.
                             Escritorio: desktop-start (según la conexión) → dropzone → … (nunca login).
                             + resume-offer al abrir con una sesión interrumpida
   lib/mode.ts               useModeFlags(): qué se muestra según plataforma y modo (herramientas online, IA, aviso)
+  firebase/                 app.ts (inicialización + App Check), auth.ts (Google), sessions.ts (users/{uid}/sessions)
+  data/                     workspace.ts (Firestore / SQLite por IPC / memoria), sources.ts (Firestore),
+                            file-types.ts + extract.ts + useIngest.ts (validación y extracción de PDF/DOCX/TXT)
+  ai/                       gemini.ts (AI Logic, respaldo de modelos), search.ts (Wikipedia, SearchProvider),
+                            study-items.ts (esquemas y validación), errors.ts (429, App Check, red)
+  workspace/                WorkspaceView (Fuentes · Chat · Estudio), columnas, NotesBox, Markdown
+  auth-desktop/main.ts      Página auth-desktop.html (login del escritorio en el navegador del sistema)
   store/appStore.ts         Estado global y reducer
   context/AppContext.tsx    Provider + useApp (acepta `initial` para pruebas)
   lib/electron.ts           isElectron(), getElectronAPI(), closeApp()
@@ -84,6 +97,21 @@ docs/                       Brief e informe del MVP
 ```
 
 Una sola compilación de la interfaz (`dist/`, `base: './'`) sirve para Firebase Hosting y para `file://` en Electron.
+
+## Firebase y paso web → escritorio (fase 4)
+
+- Configuración en `.env` (no versionado; plantilla en `.env.example`). Proyecto `yaleh-fbe1c`. Reglas: `firestore.rules` (cada usuario solo `users/{su uid}/**`).
+- **Web:** login solo con Google (`signInWithPopup`) → dropzone → espacio de trabajo o sesión de concentración. Confirmar la sesión la guarda en Firestore (`pending`) y abre `yaleh://sesion?id=…`.
+- **Escritorio:** `yaleh://sesion` → `online-handoff`. Si no hay cuenta, `beginDesktopAuth` abre `auth-desktop.html?state=…` en el navegador; la página devuelve `yaleh://auth?token=<ID token de Google>&state=…`; el proceso principal valida el state (`auth-state.ts`) y la interfaz usa `signInWithCredential`. Luego `prepareOnlineSession` bloquea el equipo (sin tiempo), se lee la sesión y sus fuentes y se confirma; `startSession(…, 'online', id)` empieza el tiempo. `cancelOnlineSession` solo antes de empezar.
+- La interfaz del kiosko online es la **compilación local**, no la web publicada.
+- **App Check:** AI Logic lo exige. Web publicada: reCAPTCHA Enterprise (clave en `.env`). Escritorio y localhost: token de depuración `VITE_APPCHECK_DEBUG_TOKEN`, registrado en la consola como "YALEH escritorio demo (borrar)". `VITE_APPCHECK_DEBUG_ON_WEB=false`.
+
+## Espacio de trabajo, fuentes e IA (fases 5 a 7)
+
+- `WorkspaceView` reemplaza al Dashboard: Fuentes · Chat · Estudio (pestañas en pantallas angostas). `state.workspaceId` es el id de la sesión (Firestore online, id local offline) y agrupa fuentes, notas y resultados.
+- **Fuentes:** PDF/DOCX/TXT validados por extensión + MIME + firma; texto extraído en el cliente (pdf.js 6, mammoth) y guardado en partes: Firestore `sources/{id}/chunks/{n}` o SQLite `source_chunks` (migración 2). En el escritorio no se agregan fuentes dentro del kiosko.
+- **IA:** `AI.models` en `shared/config.ts` (`gemini-3.5-flash-lite` → `gemini-3.8-flash` si hay 429/500/503). Chat con streaming basado en las fuentes; Wikipedia opcional (fuentes como texto). Resumen/cuestionario/tarjetas con esquema JSON validado; informe en markdown (`react-markdown`, sin HTML, enlaces como texto). En Firestore se guardan como `studyItems`.
+- Offline o sin conexión: chat y herramientas de IA muestran "Disponible próximamente"; las notas funcionan.
 
 ## Modos online / offline (fase 3)
 
@@ -144,17 +172,18 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 
 - Firebase: proyecto `Yaleh`, ID `yaleh-fbe1c`, plan Spark.
 - Protocolo del escritorio: `yaleh://` (`yaleh://auth?...`, `yaleh://sesion?id=...`).
-- IA: `gemini-3.8-flash` vía Firebase AI Logic (API de desarrollador). Búsqueda: API de Wikipedia en español detrás de `SearchProvider`. App Check con Fraud Defense (`ReCaptchaEnterpriseProvider`), obligatorio desde el 2/11/2026.
+- IA: `gemini-3.5-flash-lite` (respaldo `gemini-3.8-flash`) vía Firebase AI Logic (API de desarrollador). Búsqueda: API de Wikipedia en español detrás de `SearchProvider`. App Check obligatorio para AI Logic: Fraud Defense (`ReCaptchaEnterpriseProvider`) en la web y token de depuración en el escritorio.
 - SQLite: `node:sqlite` en el proceso principal (Electron 42, Node 24).
 
 ## Pendientes conocidos
 
-- La URL de login de Google en `LoginPhase.tsx` apunta a `yaleh-fbe1c.web.app`, que aún no existe; la página se crea en la fase 4 (`TODO(fase 4)`).
-- `yaleh://sesion` se analiza y se reenvía a la interfaz (`onSessionLink`), pero nadie lo usa todavía (fase 4).
-- El botón "Probar sesión online (solo desarrollo)" de `DesktopStartPhase` y la restricción de sesiones online en `assertSessionModeAllowed` (`electron/main.ts`) se reemplazan en la fase 4 (`TODO(fase 4)`).
+- **Token de depuración de App Check** en el escritorio: provisional (se puede extraer del instalador). Borrarlo de la consola cuando exista la alternativa (cargar la web publicada en el kiosko online o proveedor propio).
+- El botón "Probar sesión online (solo desarrollo)" sigue como respaldo, solo sin empaquetar; sin cuenta usa almacenamiento en memoria.
+- El historial del chat vive en memoria (no se guarda en Firestore). Los `studyItems` se guardan pero no se vuelven a cargar al abrir el espacio de trabajo.
+- Sin pruebas de reglas con el emulador; sin pruebas automáticas del login de Google ni del flujo web → escritorio (se probó manualmente la infraestructura: páginas publicadas, App Check y Gemini por REST).
+- Las sesiones online del escritorio también se guardan en SQLite (tabla `sessions`), pero las fuentes online no se copian a SQLite: si se corta la red, el texto ya leído queda en memoria.
 - `local_profile` y `settings` existen, pero todavía nadie las lee (fase 10: cuenta de destino de la sincronización).
 - `WebViewPanel` sigue usando iframes (fase 8: `WebContentsView`). Muchos sitios de Google no se dejan mostrar en iframes.
 - El límite de 8 pestañas está en `shared/config.ts`, pero se aplica en la fase 8.
-- `AIWorkPanel.tsx` sigue siendo simulado (fase 7) y contiene un XSS conocido (`dangerouslySetInnerHTML`); la CSP impide ejecutar scripts inyectados en línea.
 - El bundle de la interfaz pesa ~900 KB (Vite avisa); dividirlo con carga diferida queda para más adelante.
 - `public/ai-banner.jpg` no se usa en ningún componente.
