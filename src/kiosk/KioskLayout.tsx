@@ -14,10 +14,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { TOOL_LINKS } from '@shared/config';
 import SideBar from './SideBar';
 import BottomBar from './BottomBar';
-import Dashboard from '../panels/Dashboard';
+import WorkspaceView from '../workspace/WorkspaceView';
 import WebViewPanel from '../panels/WebViewPanel';
 import OfflineEditorPanel from '../panels/OfflineEditorPanel';
-import AIWorkPanel from '../panels/AIWorkPanel';
 import HistoryPanel from '../panels/HistoryPanel';
 import PomodoroPanel from '../panels/PomodoroPanel';
 import DownloadsPanel from '../panels/DownloadsPanel';
@@ -34,13 +33,11 @@ import type { Tab } from '../store/appStore';
 function TabContent({ tab }: { tab: Tab }) {
   switch (tab.type) {
     case 'dashboard':
-      return <Dashboard />;
+      return <WorkspaceView />;
     case 'workspace-url':
       return <WebViewPanel url={tab.url ?? ''} title={tab.title} />;
     case 'offline-editor':
       return <OfflineEditorPanel editorType={tab.editorType || 'docs'} />;
-    case 'ai-work':
-      return <AIWorkPanel />;
     case 'history':
       return <HistoryPanel />;
     case 'pomodoro':
@@ -50,7 +47,7 @@ function TabContent({ tab }: { tab: Tab }) {
     case 'stats':
       return <StatsPanel />;
     default:
-      return <Dashboard />;
+      return <WorkspaceView />;
   }
 }
 
@@ -203,19 +200,12 @@ export default function KioskLayout() {
                 </>
               )}
 
-              {/* Opciones especiales */}
-              <div className="border-t border-slate-800 pt-4 grid grid-cols-1 gap-2">
-                <motion.button
-                  onClick={() => {
-                    openTab({ type: 'ai-work', title: 'Trabajo con IA', icon: '🤖' });
-                    setShowNewTabDialog(false);
-                  }}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm font-medium hover:bg-purple-500/20 transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                >
-                  🤖 Trabajo con IA
-                </motion.button>
-              </div>
+              {!onlineTools && (
+                <p className="text-slate-400 text-sm">
+                  Sin conexión: las herramientas online no están disponibles. Usa el menú lateral para abrir los
+                  módulos locales.
+                </p>
+              )}
 
               <button
                 onClick={() => setShowNewTabDialog(false)}

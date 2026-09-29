@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { ConnectionMode } from '@shared/ipc-types';
 import App from '../App';
 import { AppProvider, useApp } from '../context/AppContext';
-import AIWorkPanel from '../panels/AIWorkPanel';
+import ChatColumn from '../workspace/ChatColumn';
 import { initialState, type AppState } from '../store/appStore';
 import { createElectronMock, uninstallElectronMock } from '../test/electron-mock';
 import DesktopStartPhase from './DesktopStartPhase';
@@ -128,11 +128,11 @@ describe('App en la web', () => {
   });
 });
 
-describe('Panel de IA', () => {
+describe('Chat con la IA', () => {
   function renderAI(state: Partial<AppState>) {
     return render(
       <AppProvider initial={{ ...initialState, ...state }}>
-        <AIWorkPanel />
+        <ChatColumn />
       </AppProvider>
     );
   }

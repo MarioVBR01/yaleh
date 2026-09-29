@@ -1,18 +1,19 @@
 /**
  * @file SideBar.tsx
  * @description Barra Lateral Izquierda del entorno Kiosko de YALEH.
- * Contiene: Inicio, Google Workspace, Ofimática Offline, Historial,
- * Pomodoro, Descargas, Resumen/Estadísticas y Configuración.
+ * Brief, sección 5.3: Espacio de trabajo, Estadísticas, Pomodoro, Herramientas
+ * (solo con conexión), Actividades recientes y Configuración (próximamente).
+ * En el escritorio agrega los editores de ofimática. Se oculta con el botón lateral.
  * Soporta menús desplegables internos (App Drawers).
  */
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Home, FileEdit, History, Clock, Download,
+  Home, FileEdit, History, Clock, Wrench,
   BarChart2, ChevronRight, ChevronDown, Settings
 } from 'lucide-react';
-import { WORKSPACE_LINKS, type ToolLink } from '@shared/config';
+import { TOOL_LINKS, WORKSPACE_LINKS, type ToolLink } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import { useModeFlags } from '../lib/mode';
 import { signOut } from '../firebase/auth';
@@ -126,21 +127,15 @@ export default function SideBar({ collapsed }: SideBarProps) {
   };
 
   /**
-   * Abre un servicio de Google Workspace en nueva pestaña.
-   * En la web verifica que el usuario esté autenticado antes de proceder.
-   * En el escritorio no hay login propio (fase 4).
+   * Abre una herramienta autorizada (brief, sección 5.3):
+   * en el navegador, en una pestaña nueva del navegador; en el kiosko, en una pestaña interna.
    */
-  const handleWorkspaceOpen = (app: ToolLink) => {
-    if (!isDesktop && !state.session.isAuthenticated) {
-      dispatch({ type: 'SET_PHASE', payload: 'login' });
-      return;
+  const handleToolOpen = (app: ToolLink) => {
+    if (!isDesktop) {
+      window.open(app.url, '_blank', 'noopener,noreferrer');
+    } else {
+      openTab({ type: 'workspace-url', title: app.name, url: app.url, icon: app.icon });
     }
-    openTab({
-      type: 'workspace-url',
-      title: app.name,
-      url: app.url,
-      icon: app.icon,
-    });
     logActivity({ type: 'tool', label: `${app.name} abierto`, icon: app.icon });
   };
 
@@ -160,8 +155,8 @@ export default function SideBar({ collapsed }: SideBarProps) {
 
   /** Abre la vista de historial de actividad */
   const handleHistory = () => {
-    openTab({ type: 'history', title: 'Historial', icon: '📋' });
-    logActivity({ type: 'tool', label: 'Historial consultado', icon: '📋' });
+    openTab({ type: 'history', title: 'Actividades recientes', icon: '📋' });
+    logActivity({ type: 'tool', label: 'Actividades recientes consultadas', icon: '📋' });
   };
 
   /** Abre el temporizador Pomodoro */
@@ -170,19 +165,13 @@ export default function SideBar({ collapsed }: SideBarProps) {
     logActivity({ type: 'tool', label: 'Pomodoro abierto', icon: '⏱️' });
   };
 
-  /** Abre el panel de descargas/archivos */
-  const handleDownloads = () => {
-    openTab({ type: 'downloads', title: 'Mis Archivos', icon: '📁' });
-    logActivity({ type: 'tool', label: 'Panel de descargas abierto', icon: '📁' });
-  };
-
   /** Abre el dashboard de estadísticas */
   const handleStats = () => {
     openTab({ type: 'stats', title: 'Estadísticas', icon: '📊' });
     logActivity({ type: 'tool', label: 'Estadísticas consultadas', icon: '📊' });
   };
 
-  /** Regresa al Dashboard principal */
+  /** Regresa al espacio de trabajo (Fuentes · Chat · Estudio) */
   const handleHome = () => {
     dispatch({ type: 'SET_ACTIVE_TAB', payload: 'dashboard' });
   };
@@ -239,60 +228,84 @@ export default function SideBar({ collapsed }: SideBarProps) {
       {/* Navegación principal */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
 
-        {/* Inicio */}
+        {/* Espacio de trabajo */}
         <NavItem
           icon={<Home size={18} />}
-          label="Inicio"
+          label="Espacio de trabajo"
           active={activeTab?.type === 'dashboard'}
           onClick={handleHome}
           collapsed={collapsed}
         />
 
-        {/* Google Workspace (solo con conexión) */}
+        {/* Estadísticas */}
+        <NavItem
+          icon={<BarChart2 size={18} />}
+          label="Estadísticas"
+          active={activeTab?.type === 'stats'}
+          onClick={handleStats}
+          collapsed={collapsed}
+        />
+
+        {/* Pomodoro */}
+        <NavItem
+          icon={<Clock size={18} />}
+          label="Pomodoro"
+          active={activeTab?.type === 'pomodoro'}
+          onClick={handlePomodoro}
+          collapsed={collapsed}
+        />
+
+        {/* Herramientas (solo con conexión) */}
         {onlineTools && (
         <div>
           <NavItem
-            icon={<span className="text-base">🌐</span>}
-            label="Google Workspace"
+            icon={<Wrench size={18} />}
+            label="Herramientas"
             hasChildren
-            isOpen={openDrawer === 'workspace'}
-            onClick={() => toggleDrawer('workspace')}
+            isOpen={openDrawer === 'tools'}
+            onClick={() => toggleDrawer('tools')}
             collapsed={collapsed}
           />
           <AnimatePresence>
-            {openDrawer === 'workspace' && !collapsed && (
+            {openDrawer === 'tools' && !collapsed && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="ml-3 mt-1 space-y-1 overflow-hidden border-l border-slate-700/50 pl-3"
               >
-                {WORKSPACE_LINKS.map(app => (
+                {[...WORKSPACE_LINKS, ...TOOL_LINKS].map(app => (
                   <button
                     key={app.id}
-                    onClick={() => handleWorkspaceOpen(app)}
-                    className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-all hover:bg-slate-800 ${WORKSPACE_STYLES[app.id] ?? ''}`}
+                    onClick={() => handleToolOpen(app)}
+                    className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-all hover:bg-slate-800 ${WORKSPACE_STYLES[app.id] ?? 'text-slate-300'}`}
                   >
                     <span>{app.icon}</span>
                     <span className="text-slate-300 hover:text-white">{app.name}</span>
                   </button>
                 ))}
-                {!isDesktop && !state.session.isAuthenticated && (
-                  <p className="text-[10px] text-amber-400/70 px-2 pb-1">
-                    ⚠️ Requiere inicio de sesión
-                  </p>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
         )}
 
-        {/* Ofimática Offline */}
+        {/* Actividades recientes */}
+        <NavItem
+          icon={<History size={18} />}
+          label="Actividades recientes"
+          active={activeTab?.type === 'history'}
+          onClick={handleHistory}
+          collapsed={collapsed}
+          badge={state.activityHistory.length > 0 ? state.activityHistory.length : undefined}
+        />
+
+        {/* Ofimática: solo en el escritorio (brief, secciones 5.5 y 6.1) */}
+        {isDesktop && (
         <div>
           <NavItem
             icon={<FileEdit size={18} />}
-            label="Ofimática Offline"
+            label="Ofimática"
             hasChildren
             isOpen={openDrawer === 'offline'}
             onClick={() => toggleDrawer('offline')}
@@ -323,44 +336,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
             )}
           </AnimatePresence>
         </div>
-
-        {/* Historial */}
-        <NavItem
-          icon={<History size={18} />}
-          label="Historial"
-          active={activeTab?.type === 'history'}
-          onClick={handleHistory}
-          collapsed={collapsed}
-          badge={state.activityHistory.length > 0 ? state.activityHistory.length : undefined}
-        />
-
-        {/* Pomodoro */}
-        <NavItem
-          icon={<Clock size={18} />}
-          label="Pomodoro"
-          active={activeTab?.type === 'pomodoro'}
-          onClick={handlePomodoro}
-          collapsed={collapsed}
-        />
-
-        {/* Descargas */}
-        <NavItem
-          icon={<Download size={18} />}
-          label="Descargas"
-          active={activeTab?.type === 'downloads'}
-          onClick={handleDownloads}
-          collapsed={collapsed}
-          badge={state.uploadedFiles.length > 0 ? state.uploadedFiles.length : undefined}
-        />
-
-        {/* Estadísticas */}
-        <NavItem
-          icon={<BarChart2 size={18} />}
-          label="Resumen"
-          active={activeTab?.type === 'stats'}
-          onClick={handleStats}
-          collapsed={collapsed}
-        />
+        )}
 
         {/* Configuración: botón visible; su función se define después (brief 5.3) */}
         <NavItem
@@ -372,7 +348,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
       </nav>
 
       {/* Footer de la sidebar */}
-      {!collapsed && (
+      {!collapsed && isDesktop && (
         <div className="p-3 border-t border-slate-800">
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

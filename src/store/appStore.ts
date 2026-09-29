@@ -22,7 +22,6 @@ export type TabType =
   | 'dashboard'
   | 'workspace-url'
   | 'offline-editor'
-  | 'ai-work'
   | 'history'
   | 'pomodoro'
   | 'downloads'
@@ -158,7 +157,7 @@ export const initialState: AppState = {
     {
       id: 'dashboard',
       type: 'dashboard',
-      title: 'Inicio',
+      title: 'Espacio de trabajo',
       icon: '🏠',
     },
   ],

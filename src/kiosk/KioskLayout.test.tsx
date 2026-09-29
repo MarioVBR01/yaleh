@@ -122,14 +122,14 @@ describe('Kiosko según el modo (escritorio)', () => {
     uninstallElectronMock();
   });
 
-  it('sesión offline: oculta las herramientas online y Google Workspace', () => {
+  it('sesión offline: oculta las herramientas online', () => {
     createElectronMock().install();
     renderKiosk(60, { sessionMode: 'offline', connection: 'online' });
 
     expect(screen.queryByText('Herramientas')).toBeNull();
     expect(screen.queryByText('Google Workspace')).toBeNull();
     // Los módulos locales siguen disponibles.
-    expect(screen.getByText('Ofimática Offline')).toBeTruthy();
+    expect(screen.getByText('Ofimática')).toBeTruthy();
     expect(screen.getByText('Pomodoro')).toBeTruthy();
   });
 
@@ -138,7 +138,6 @@ describe('Kiosko según el modo (escritorio)', () => {
     renderKiosk(60, { sessionMode: 'online', connection: 'online' });
 
     expect(screen.getByText('Herramientas')).toBeTruthy();
-    expect(screen.getByText('Google Workspace')).toBeTruthy();
     expect(screen.queryByText(/Sin conexión: puedes seguir/)).toBeNull();
   });
 
