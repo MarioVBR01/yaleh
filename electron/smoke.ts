@@ -4,22 +4,47 @@
  * Abre la versión compilada sin ventana visible, con una carpeta de datos temporal, y comprueba:
  * 1. Que la interfaz carga con la CSP, el preload expone electronAPI y la IPC responde.
  * 2. Que SQLite tiene sus migraciones.
- * 3. Un recorrido offline real: modo offline → dropzone → extracción de un TXT y un PDF
- *    (pdf.js desde file://) → rechazo de un DOCX dañado (mammoth) → filas en SQLite.
+ * 3. Que un archivo .yaleh caducado y uno inválido se rechazan por IPC sin bloquear
+ *    y quedan registrados (session-file-rejected).
+ * 4. Un recorrido local real: bienvenida → "Iniciar" → dropzone → extracción de un TXT y
+ *    un PDF (pdf.js desde file://) → rechazo de un DOCX dañado (mammoth) → filas en SQLite.
  * No activa el kiosko.
  */
 
 import type { BrowserWindow } from 'electron';
 import type { DatabaseSync } from 'node:sqlite';
 
+/**
+ * Código que se ejecuta en la página: crea un .yaleh caducado con un checksum válido
+ * (misma serialización que shared/session-file.ts) y otro inválido, y los envía por IPC.
+ * Ninguno debe iniciar la sesión.
+ */
+const SESSION_FILE_SCRIPT = `(async () => {
+  const hex = async text => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))]
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  const created = new Date(Date.now() - 48 * 3600000);
+  const payload = {
+    format: 'yaleh-session', version: 1, sessionId: 'smokeExpired1',
+    createdAt: created.toISOString(), expiresAt: new Date(created.getTime() + 24 * 3600000).toISOString(),
+    createdBy: { name: 'Prueba', email: 'prueba@tecba.edu.bo' }, durationSeconds: 120,
+    sources: [{ id: 'src1', name: 'a.txt', type: 'text/plain', size: 1, text: 'hola' }],
+  };
+  const expired = JSON.stringify({ ...payload, checksum: await hex(JSON.stringify(payload)) });
+  const r1 = await window.electronAPI.openSessionFileContent(expired);
+  const r2 = await window.electronAPI.openSessionFileContent('esto no es un .yaleh');
+  const state = await window.electronAPI.getSessionState();
+  return { expiredRejected: !r1.ok && /caducó/.test(r1.message), invalidRejected: !r2.ok, stillIdle: state.status === 'idle' };
+})()`;
+
 /** Código que se ejecuta en la página: genera archivos y los entrega a la dropzone. */
 const INGEST_SCRIPT = `(async () => {
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const byText = text => [...document.querySelectorAll('button')].find(b => b.textContent.includes(text));
-  for (let i = 0; i < 20 && !byText('modo offline') && !byText('Iniciar sesión offline'); i++) await wait(250);
-  const offline = byText('Usar modo offline') || byText('Iniciar sesión offline');
-  if (!offline) return { error: 'no apareció la pantalla de inicio' };
-  offline.click();
+  const startButton = () => [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Iniciar');
+  for (let i = 0; i < 20 && !startButton(); i++) await wait(250);
+  const start = startButton();
+  if (!start) return { error: 'no apareció la bienvenida' };
+  start.click();
   for (let i = 0; i < 20 && !document.querySelector('[data-testid=dropzone-input]'); i++) await wait(250);
   const input = document.querySelector('[data-testid=dropzone-input]');
   if (!input) return { error: 'no apareció la dropzone' };
@@ -81,6 +106,12 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
         const migrations = (db.prepare('SELECT version FROM schema_migrations').all() as { version: number }[]).map(
           r => r.version
         );
+        const sessionFile = await win.webContents.executeJavaScript(SESSION_FILE_SCRIPT);
+        const rejectedEvents = (
+          db.prepare("SELECT COUNT(*) AS n FROM session_events WHERE type = 'session-file-rejected'").get() as { n: number }
+        ).n;
+        const sessionFileOk =
+          sessionFile.expiredRejected && sessionFile.invalidRejected && sessionFile.stillIdle && rejectedEvents === 2;
         const ingest = await win.webContents.executeJavaScript(INGEST_SCRIPT);
         const sources = db.prepare('SELECT name, char_count FROM sources ORDER BY name').all() as {
           name: string;
@@ -96,8 +127,9 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           base.connection !== null &&
           migrations.length > 0 &&
           ingestOk &&
+          sessionFileOk &&
           errors.length === 0;
-        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, ingest, sources, errors })}`);
+        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, sessionFile, rejectedEvents, ingest, sources, errors })}`);
         finish(ok);
       } catch (error) {
         console.log(`[smoke] ${JSON.stringify({ ok: false, error: String(error), errors })}`);

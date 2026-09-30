@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { isAllowedExternalUrl, isTrustedSenderUrl, parseDurationSeconds, type SenderTrust } from './validate';
+import { isTrustedSenderUrl, parseDurationSeconds, type SenderTrust } from './validate';
 
 const packaged: SenderTrust = {
   appIndexUrl: 'file:///C:/Program%20Files/YALEH/resources/app/dist/index.html',
@@ -62,30 +62,5 @@ describe('parseDurationSeconds', () => {
   it('rechaza valores fuera del rango', () => {
     expect(() => parseDurationSeconds(59, 60, 10800)).toThrow('fuera del rango');
     expect(() => parseDurationSeconds(10801, 60, 10800)).toThrow('fuera del rango');
-  });
-});
-
-describe('isAllowedExternalUrl', () => {
-  it('acepta solo la web de YALEH por HTTPS', () => {
-    expect(isAllowedExternalUrl('https://yaleh-fbe1c.web.app/')).toBe(true);
-    expect(isAllowedExternalUrl('https://yaleh-fbe1c.firebaseapp.com/auth-desktop.html?state=x')).toBe(true);
-  });
-
-  it.each([
-    'http://yaleh-fbe1c.web.app/',
-    'https://docs.google.com/',
-    'https://yaleh-fbe1c.web.app.evil.io/',
-    'https://user@yaleh-fbe1c.web.app/',
-    'file:///C:/Windows/System32/cmd.exe',
-    'ms-settings:',
-    'mailto:x@y.z',
-    'javascript:alert(1)',
-  ])('rechaza %s', url => {
-    expect(isAllowedExternalUrl(url)).toBe(false);
-  });
-
-  it('rechaza valores que no son texto', () => {
-    expect(isAllowedExternalUrl(42)).toBe(false);
-    expect(isAllowedExternalUrl(undefined)).toBe(false);
   });
 });

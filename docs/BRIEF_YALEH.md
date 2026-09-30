@@ -1,7 +1,7 @@
 # Brief — YALEH v1
 
 > Especificación de la versión 1. Autor: Mario Víctor Brañez Rodriguez (TECBA, Cochabamba).
-> Fecha: 29 de septiembre de 2026. **Revisión 1.4** (29/09/2026): Firebase, paso de la web al escritorio, vista NotebookLM, extracción de texto e IA (fases 4 a 7). La 1.3 agregó la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
+> Fecha: 29 de septiembre de 2026. **Revisión 1.5** (29/09/2026): la web y el escritorio funcionan por separado y se unen solo con un **archivo de sesión .yaleh**, al estilo de Safe Exam Browser. La 1.4 agregó Firebase, la vista NotebookLM, la extracción de texto y la IA; la 1.3, la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
 > Documento complementario: `INFORME_ANALISIS_SRB.md` (análisis del MVP actual).
 > El diseño visual se define **después**; en esta versión no se rediseña la interfaz.
 > Este documento es la **fuente de verdad** del proyecto: si el código lo contradice, gana el brief.
@@ -25,9 +25,10 @@ El proyecto parte del MVP existente ("Safe Research Browser"), que se **reorgani
 
 | Tema | Decisión |
 | --- | --- |
-| Productos | Dos aplicaciones en v1: web y escritorio |
+| Productos | Dos aplicaciones en v1: web y escritorio, **independientes**. Se unen solo con el archivo de sesión `.yaleh` que descarga la web (revisión 1.5) |
+| Archivo de sesión | JSON `.yaleh` con la duración y el texto de las fuentes; vale 24 horas y se usa una sola vez (sección 4.1) |
 | Función principal del escritorio | Bloquear el sistema operativo durante la sesión, con o sin conexión |
-| Modo | Lo define el inicio: con sesión de Google es online; sin conexión es offline. El escritorio detecta la conexión en el proceso principal: online si `net.isOnline()` es verdadero y la web de YALEH responde una petición HTTPS en menos de 5 segundos (cualquier respuesta HTTP cuenta). Se vuelve a comprobar cada 30 segundos, al volver de la suspensión y con los eventos de red |
+| Modo | Lo define el escritorio al empezar la sesión: con conexión es online (herramientas e IA); sin conexión, offline (módulos locales). El escritorio no inicia sesión con Google. El escritorio detecta la conexión en el proceso principal: online si `net.isOnline()` es verdadero y la web de YALEH responde una petición HTTPS en menos de 5 segundos (cualquier respuesta HTTP cuenta). Se vuelve a comprobar cada 30 segundos, al volver de la suspensión y con los eventos de red |
 | Navegación | Sin navegación libre; la IA busca la información |
 | Enciclopedia (Encarta) | Eliminada |
 | IA en v1 | Solo en línea: Gemini mediante Firebase AI Logic (API de desarrollador de Gemini, nivel gratuito) |
@@ -57,19 +58,19 @@ El escritorio es un **contenedor bloqueado** con dos capas independientes:
 
 1. **Bloqueo:** vive en el proceso principal de Electron y funciona siempre, con o sin red.
 2. **Contenido:** cambia según el modo.
-   - Online: la misma interfaz de YALEH (compilación local, no la web publicada; decisión de la revisión 1.4) con los datos de Firestore, más las herramientas en pestañas.
+   - Online: la misma interfaz de YALEH (compilación local) con las fuentes guardadas en SQLite, la IA y las herramientas en pestañas.
    - Offline: muestra los módulos locales (editores, notas, Pomodoro, archivos).
 
 ```mermaid
 flowchart LR
-  W[Web YALEH<br/>Firebase Hosting] -->|yaleh://sesion?id=...| D
+  W[Web YALEH<br/>Firebase Hosting] -->|archivo .yaleh<br/>duración + texto de las fuentes| D
   subgraph D[Escritorio YALEH - Electron]
     B[Bloqueo<br/>proceso principal]
     ON[Contenido online<br/>web + herramientas + YouTube]
     OFF[Contenido offline<br/>editores, notas, Pomodoro]
   end
   W --> F[(Firebase<br/>Auth, Firestore, AI Logic, App Check)]
-  ON --> F
+  ON -->|AI Logic| F
   ON --> WK[API de Wikipedia]
   OFF --> S[(SQLite local)]
   S -->|sube al reconectar| F
@@ -85,7 +86,7 @@ No hay servidor propio. Firebase AI Logic protege la clave de Gemini, App Check 
 - `electron/`: proceso principal y preload en TypeScript, empaquetados con esbuild en `dist-electron/`. El preload se empaqueta como un único archivo CommonJS, requisito de `sandbox: true`.
 - `shared/`: módulo de configuración único (modelos de Gemini, proveedor de App Check, sitios permitidos, límites) y tipos de los canales IPC, usado por el proceso principal y la interfaz.
 
-La interfaz detecta la plataforma (`window.electronAPI` presente o no) y el modo (online u offline, informado por el proceso principal) para mostrar u ocultar funciones. Como el escritorio en modo online carga la web publicada, la web comprueba la versión del escritorio (`electronAPI.version`) y avisa si está desactualizado.
+La interfaz detecta la plataforma (`window.electronAPI` presente o no) y el modo (online u offline, informado por el proceso principal) para mostrar u ocultar funciones.
 
 Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un solo desarrollador y casi toda la interfaz compartida, complica electron-builder y la gestión de dependencias sin aportar nada que `shared/` no resuelva.
 
@@ -93,37 +94,36 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 
 ## 4. Flujos de sesión
 
-### 4.1 Sesión online (empieza en la web)
+### 4.1 Sesión preparada en la web (archivo .yaleh)
+
+*Revisión 1.5:* la web y el escritorio funcionan por separado y se unen solo con un archivo de sesión, como Safe Exam Browser. La web ya no abre el escritorio (no hay enlaces `yaleh://`) y el escritorio no inicia sesión con Google.
 
 1. El estudiante inicia sesión en la web con Google (Firebase Authentication).
-2. Carga sus archivos en la dropzone.
-3. Configura el tiempo de concentración (25, 50 o 90 minutos, o manual hasta 180).
-4. Confirma la sesión en la pantalla de confirmación (sección 4.3).
-5. La sesión se guarda en Firestore (estado `pending`) y la web abre el escritorio con `yaleh://sesion?id=<id>`.
-6. Si el escritorio no tiene sesión de Google, genera un `state` aleatorio y abre el inicio de sesión en el navegador del sistema (sección 4.5). Firebase recuerda la sesión, así que este paso solo ocurre la primera vez.
-7. Con la cuenta iniciada, el escritorio **se bloquea** (kiosko activo, sin temporizador todavía), lee la sesión y sus fuentes de Firestore y muestra la confirmación. *Cambio de la revisión 1.4:* el bloqueo ocurre después del inicio de sesión y no al recibir el enlace, porque el kiosko (siempre al frente) taparía el navegador donde el estudiante inicia sesión.
-8. La sesión debe pertenecer a la cuenta iniciada; si no, se muestra un aviso y se puede cancelar.
-9. **El tiempo empieza a contar cuando se confirma la duración.** Antes de ese momento se permite cancelar; después, la sesión solo termina al cumplirse el tiempo.
+2. Carga sus archivos en la dropzone; el texto se extrae y se guarda en Firestore.
+3. Trabaja con la IA en el espacio de trabajo (Fuentes · Chat · Estudio).
+4. Configura el tiempo (25, 50 o 90 minutos, o manual hasta 180) y confirma.
+5. Pulsa **"Descargar archivo de sesión"**. La web muestra: "Abre el archivo con la aplicación de escritorio YALEH".
+6. En el escritorio, el estudiante abre el archivo (botón "Abrir archivo de sesión (.yaleh)", arrastrándolo a la ventana, o con la app abierta por el archivo). El proceso principal lo valida; si es válido, guarda las fuentes en SQLite, **bloquea el equipo y empieza el tiempo de inmediato**. Si está caducado, dañado o ya se usó, muestra un mensaje claro y no bloquea.
+7. Modo: con conexión, el kiosko muestra las herramientas y la IA (AI Logic no necesita Firebase Auth); sin conexión, solo módulos locales.
 
-### 4.2 Sesión offline (empieza en el escritorio)
+**Formato del archivo `.yaleh` (JSON, versión 1):** `format` = "yaleh-session", `version` = 1, `sessionId` (nuevo en cada descarga), `createdAt`, `expiresAt` (24 horas), `createdBy` (nombre y correo, solo para mostrar), `durationSeconds` (1 a 180 minutos), `sources` [{ `id`, `name`, `type`, `size`, `text` }] con el texto ya extraído y `checksum` (SHA-256 del contenido, en un orden de campos fijo). Tamaño máximo: 50 MB. El checksum solo detecta archivos dañados: el propio estudiante crea su archivo, así que no hay amenaza de manipulación. El uso único se controla en el escritorio con el `sessionId` registrado en SQLite.
 
-**El escritorio no tiene login propio:** no existen el login manual ni el acceso como invitado (el login de la web sigue en la web hasta la fase 4). Al abrirse, muestra "Comprobando conexión…" hasta la primera detección y luego:
+### 4.2 Sesión local (empieza en el escritorio)
 
-1. **Sin conexión:** **"No estás conectado. ¿Quieres iniciar sesión offline?"**, con los botones "Iniciar sesión offline" (va a la dropzone) y "Reintentar conexión".
-2. El estudiante carga archivos locales en la dropzone.
-3. Configura el tiempo.
-4. Confirma la sesión en la pantalla de confirmación.
-5. Se activa el kiosko con los módulos locales.
+**El escritorio no tiene login:** al abrirse muestra una **bienvenida** (con y sin conexión) con el botón principal **"Iniciar"** y el secundario **"Abrir archivo de sesión (.yaleh)"**, que abre un diálogo del sistema desde el proceso principal (solo fuera de la sesión).
 
-**Escritorio abierto con internet sin venir de la web:** muestra **"Inicia tu sesión desde la web"**, con un botón que abre la web de YALEH en el navegador del sistema y otro "Usar modo offline" (mismo flujo offline). Solo sin empaquetar aparece además "Probar sesión online (solo desarrollo)", que permite probar el modo online del kiosko hasta que la fase 4 traiga el flujo real desde la web.
+1. "Iniciar" → dropzone (texto guardado en SQLite).
+2. Configura el tiempo.
+3. Confirma la sesión en la pantalla de confirmación.
+4. Se activa el kiosko. El modo lo decide el proceso principal según la conexión en ese momento.
 
-**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Moodle, Canva, Gamma) no se muestran, y el panel de IA muestra "Disponible próximamente".
+**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Moodle, Canva, Gamma) no se muestran, y la IA muestra "Disponible próximamente".
 
 ### 4.3 Durante la sesión (ambos modos)
 
 - El proceso principal cuenta el tiempo. No se puede romper desde la aplicación.
 - **No hay salida anticipada.** No existe salida de emergencia ni código: la sesión solo termina al cumplirse el tiempo. La única forma de salir antes es apagar o reiniciar el equipo (o forzar el cierre con Ctrl+Alt+Supr, que Windows no permite bloquear).
-- **Confirmación previa.** Antes de entrar al kiosko, una pantalla muestra:
+- **Confirmación previa.** Antes de entrar al kiosko (flujo local) o de descargar el archivo (web), una pantalla muestra:
   - Los archivos cargados y la pregunta "¿Cargaste todos los archivos que necesitas?", con la opción de volver a la dropzone.
   - La duración elegida (máximo 180 minutos).
   - El aviso: "No podrás salir hasta que termine el tiempo. Solo apagando o reiniciando el equipo."
@@ -131,34 +131,28 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 - **Sesión interrumpida.** Al iniciar la sesión, el proceso principal guarda su estado (inicio y `sessionEndsAt`). Si la app se abre y encuentra una sesión activa sin terminar, la registra como "interrumpida" y, si todavía queda tiempo, ofrece retomarla con el tiempo restante (el tiempo sigue corriendo mientras el equipo está apagado).
 - **Registro.** Las pérdidas de foco de la ventana y las interrupciones se registran con fecha y hora.
 - **Salida para desarrollo.** Solo cuando la app no está empaquetada existe un atajo (Ctrl+Shift+F12) que libera el kiosko y queda registrado. En la versión empaquetada no existe.
-- Si se corta internet a mitad de sesión, el kiosko sigue cerrado y el tiempo sigue corriendo. Las herramientas online y la IA se ocultan, aparece el aviso **"Sin conexión: puedes seguir con los módulos locales"** y se registran los eventos `connection-lost` y `connection-restored`. Al volver la conexión, las herramientas reaparecen. **El resto de la sesión se guarda en SQLite con el mismo identificador de sesión y se sube a Firestore al reconectar.**
+- Si se corta internet a mitad de sesión, el kiosko sigue cerrado y el tiempo sigue corriendo. Las herramientas online y la IA se ocultan, aparece el aviso **"Sin conexión: puedes seguir con los módulos locales"** y se registran los eventos `connection-lost` y `connection-restored`. Al volver la conexión, las herramientas reaparecen. Todos los datos de la sesión del escritorio están en SQLite.
 
 ### 4.4 Al terminar
 
 1. Se cumple el tiempo y se muestra el resumen de la sesión.
 2. La sesión se guarda en SQLite.
-3. Si hay conexión, se sube a Firestore.
-4. Se libera el sistema operativo.
+3. Se libera el sistema operativo.
+4. (Fase 10) Sincronización con Firestore: pendiente de redefinir, porque el escritorio ya no tiene cuenta de Google.
 
 ### 4.5 Inicio de sesión dentro del kiosko
 
-Google puede bloquear su inicio de sesión dentro de ventanas de Electron. Por eso **el escritorio nunca muestra el login de Google adentro**:
-
-1. El escritorio abre el inicio de sesión de Google en el **navegador del sistema**. La página de inicio de sesión para el escritorio **se rehace dentro de este repositorio** y se publica en Firebase Hosting (la página del MVP no estaba versionada).
-2. La página obtiene el **ID token de Google** con `GoogleAuthProvider.credentialFromResult(result).idToken` (no el ID token de Firebase) y lo devuelve por `yaleh://auth?...`, junto con el `state` aleatorio generado por el escritorio.
-3. El escritorio valida el `state` y la web cargada en el kiosko inicia sesión con `signInWithCredential(GoogleAuthProvider.credential(idToken))`.
-
-Este flujo inicia sesión en **Firebase**, no en las páginas de Google: Workspace y Classroom pueden seguir pidiendo su propio inicio de sesión dentro del kiosko (riesgo aceptado, sección 13). Se prueba al inicio de la fase de Firebase.
+*Eliminado en la revisión 1.5.* El escritorio no inicia sesión con Google: se eliminaron la página `auth-desktop.html`, el `state` y los enlaces `yaleh://auth` y `yaleh://sesion` (el diseño anterior queda en el tag de git `demo-antes-archivo`). Workspace y Classroom siguen pidiendo su propio inicio de sesión dentro del kiosko (riesgo aceptado, sección 13).
 
 ---
 
 ## 5. Aplicación web
 
-La web se usa en el navegador y también dentro del kiosko en modo online. En el navegador **no bloquea nada**: el bloqueo es exclusivo del escritorio.
+La web es independiente (se ejecuta sola con `npm run dev` o en Firebase Hosting) y **no bloquea nada**: el bloqueo es exclusivo del escritorio. El escritorio usa la misma interfaz compilada.
 
 ### 5.1 Flujo de entrada
 
-Inicio de sesión con Google → dropzone → configuración del tiempo → confirmación → iniciar sesión (abre el escritorio).
+Inicio de sesión con Google → dropzone → espacio de trabajo con IA → configurar tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones para abrirlo en el escritorio.
 
 ### 5.2 Vista principal (estilo NotebookLM)
 
@@ -195,7 +189,7 @@ Barra superior completa (buscador y botón de configuración), Enciclopedia SRB,
 | Función | Modo online | Modo offline |
 | --- | --- | --- |
 | Bloqueo del sistema operativo | Sí | Sí |
-| Inicio | Recibe la sesión desde la web | "No estás conectado…" → dropzone → tiempo |
+| Inicio | Bienvenida: "Iniciar" (flujo local) o "Abrir archivo de sesión (.yaleh)" | Igual |
 | Vista principal | La interfaz de YALEH (Fuentes · Chat · Estudio) con los datos de Firestore | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
 | Asistente de IA | Sí (Gemini) | No en v1 |
 | Workspace, Canva, Gamma, Moodle, Classroom | Pestañas internas | No visibles |
@@ -342,7 +336,7 @@ Todo el bloqueo se aplica en el **proceso principal**, nunca en la interfaz. Ver
 - [x] El temporizador vive en el proceso principal (`sessionEndsAt`); la interfaz solo lo muestra. *(fase 2)*
 - [x] La interfaz no puede salir del kiosko antes de tiempo: se rechazan el cierre de la app y de la ventana mientras la sesión está activa. No hay salida de emergencia. *(fase 2)*
 - [x] Content-Security-Policy en la web, sin `'unsafe-inline'` para scripts. *(fase 2)*
-- [ ] El enlace directo de autenticación valida un `state` aleatorio. *(fase 4; en la fase 2 solo se aceptan `yaleh://auth` y `yaleh://sesion` con parámetros válidos)*
+- [x] ~~El enlace directo de autenticación valida un `state` aleatorio~~. *No aplica desde la revisión 1.5: no hay enlaces `yaleh://`; el escritorio solo acepta archivos `.yaleh` validados por el proceso principal.*
 
 **Sitios permitidos en modo online:** todo lo demás se bloquea. La lista vive en **un único módulo de configuración** (`shared/config.ts`) compartido por el proceso principal y la interfaz. Solo HTTPS.
 
@@ -381,7 +375,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | **Mover al proceso principal** | Lista de sitios permitidos, salida del kiosko, temporizador |
 | **Corregir** | Temporizador al doble de velocidad (intervalos duplicados en `KioskLayout.tsx` y `BottomBar.tsx`); cierre de la aplicación antes del resumen; errores de `tsc --noEmit` y la opción inválida de `tsconfig.json` |
 | **Reemplazar** | Iframes de Workspace por `WebContentsView`; IA simulada por Gemini real; usuario con datos fijos por autenticación real; página de login de Firebase Hosting por una versionada en este repositorio |
-| **Agregar** | Firebase real (con App Check), SQLite, extracción de texto, búsqueda en Wikipedia, exportación a Office, reproductor de YouTube, pantalla "No estás conectado", scripts `typecheck` y `test`, empaquetado con `electron-builder` y registro del protocolo `yaleh://` |
+| **Agregar** | Firebase real (con App Check), SQLite, extracción de texto, búsqueda en Wikipedia, exportación a Office, reproductor de YouTube, pantalla "No estás conectado", scripts `typecheck` y `test`, empaquetado con `electron-builder` y asociación del tipo de archivo `.yaleh` (revisión 1.5) |
 | **Renombrar** | "SRB", "Safe Research Browser", "TextMaker", "PlanMaker" y el nombre del paquete (`react-vite-tailwind`) |
 | **Eliminar** | Enciclopedia SRB (`EncartaPanel.tsx` y sus imágenes), videos educativos, material offline, barra superior con buscador, accesos a Duolingo, Wikipedia, Khan Academy, Coursera, SciELO y Google Scholar, botón de login con Facebook, configuración de tema sin efecto, informes antiguos `AI_APPLICATION_REPORT.md` y `.json` |
 
@@ -432,7 +426,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 ## 15. Pendientes fuera del código
 
 - Diseño visual.
-- Extensión del archivo de sesión de respaldo (por ejemplo `.yaleh`).
+- ~~Extensión del archivo de sesión~~: `.yaleh` (revisión 1.5). Su asociación con la app (doble clic) se configura en el instalador, fase 11.
 - Función del botón de configuración.
 - Fecha de entrega.
 - Actualizar el documento de proyecto de grado al cerrar este sprint.
@@ -510,3 +504,16 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 36 | Modelos | `gemini-3.5-flash-lite` con respaldo a `gemini-3.8-flash` (sección 7.2) |
 | 37 | App Check | Clave de Fraud Defense corregida; token de depuración provisional para el escritorio (sección 7.4) |
 | 38 | Formatos | PDF, DOCX y TXT (sin PPTX, XLSX, CSV ni MP4 en v1), validados por extensión, tipo MIME y firma |
+
+### Revisión 1.5 — 29/09/2026 (web y escritorio separados, archivo de sesión)
+
+| # | Tema | Decisión |
+| --- | --- | --- |
+| 39 | Unión web → escritorio | Solo por un archivo de sesión `.yaleh` (JSON), como Safe Exam Browser. Se eliminan los enlaces `yaleh://auth` y `yaleh://sesion`, `auth-desktop.html` y la pantalla de paso desde la web (tag `demo-antes-archivo` para volver al diseño anterior) |
+| 40 | Web | Independiente: login con Google → dropzone → espacio de trabajo con IA → tiempo → confirmación → "Descargar archivo de sesión" → instrucciones |
+| 41 | Formato `.yaleh` | Versión 1: sessionId, createdAt, expiresAt (24 h), createdBy, durationSeconds, sources con texto, checksum SHA-256 (solo integridad). Máximo 50 MB |
+| 42 | Escritorio | Sin login con Google. Bienvenida con "Iniciar" (flujo local) y "Abrir archivo de sesión (.yaleh)" (diálogo del sistema solo fuera de la sesión). También se abre arrastrándolo a la ventana, por los argumentos de arranque o por una segunda instancia |
+| 43 | Abrir un `.yaleh` | El proceso principal valida formato, versión, duración, checksum y caducidad, y el uso único (sessionId en SQLite). Si es válido: guarda las fuentes en SQLite, bloquea y empieza el tiempo de inmediato. Si no: mensaje claro, sin bloqueo, y evento `session-file-rejected` |
+| 44 | Modo | Lo decide el proceso principal según la conexión al empezar (archivo o flujo local). Datos del escritorio siempre en SQLite |
+| 45 | Asociación de `.yaleh` | Doble clic para abrir el archivo: queda para el instalador (fase 11) |
+| 46 | Sincronización (fase 10) | Pendiente de redefinir: el escritorio ya no tiene cuenta de Google para subir sesiones a Firestore |

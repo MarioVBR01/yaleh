@@ -11,9 +11,8 @@ export const IPC_INVOKE = {
   sessionGetState: 'session:get-state',
   sessionResume: 'session:resume',
   sessionDiscardResume: 'session:discard-resume',
-  sessionPrepareOnline: 'session:prepare-online',
-  sessionCancelOnline: 'session:cancel-online',
-  authBeginDesktop: 'auth:begin-desktop',
+  sessionFileOpenDialog: 'session-file:open-dialog',
+  sessionFileOpenContent: 'session-file:open-content',
   connectionGet: 'connection:get',
   connectionRecheck: 'connection:recheck',
   workspaceAddSource: 'workspace:add-source',
@@ -24,7 +23,6 @@ export const IPC_INVOKE = {
   workspaceSaveNote: 'workspace:save-note',
   workspaceDeleteNote: 'workspace:delete-note',
   appClose: 'app:close',
-  appOpenExternal: 'app:open-external',
 } as const;
 
 /** Eventos que el proceso principal envía a la interfaz (webContents.send). */
@@ -32,8 +30,8 @@ export const IPC_EVENT = {
   sessionTick: 'session:tick',
   sessionEnded: 'session:ended',
   connectionChanged: 'connection:changed',
-  authToken: 'auth:token-received',
-  sessionLink: 'deeplink:session',
+  /** Resultado de abrir un .yaleh que llegó por los argumentos de arranque o una segunda instancia. */
+  sessionFileResult: 'session-file:result',
 } as const;
 
 /**
@@ -47,7 +45,7 @@ export type SessionStatus = 'idle' | 'resumable' | 'active' | 'finished';
 
 export type SessionEndReason = 'completed' | 'dev-release';
 
-/** Modo de una sesión: con la web y las herramientas en línea, o solo con módulos locales. */
+/** Modo de una sesión: con herramientas online e IA, o solo con módulos locales. */
 export type SessionMode = 'online' | 'offline';
 
 /** Estado de la conexión detectado por el proceso principal. `unknown` hasta la primera comprobación. */
@@ -79,11 +77,7 @@ export interface ConnectionChangedPayload {
   mode: ConnectionMode;
 }
 
-export interface SessionLinkPayload {
-  sessionId: string;
-}
-
-/** Fuente guardada en SQLite (modo offline). */
+/** Fuente guardada en SQLite. */
 export interface LocalSourceInfo {
   id: string;
   name: string;
@@ -100,7 +94,20 @@ export interface LocalNote {
   updatedAt: string;
 }
 
-/** Datos del espacio de trabajo offline, guardados por el proceso principal en SQLite. */
+/**
+ * Resultado de abrir un archivo de sesión .yaleh. Si es válido, la sesión ya
+ * empezó (equipo bloqueado); si no, `message` explica el motivo.
+ */
+export type OpenSessionFileResult =
+  | {
+      ok: true;
+      snapshot: SessionSnapshot;
+      sources: LocalSourceInfo[];
+      createdBy: { name: string; email: string };
+    }
+  | { ok: false; message: string; canceled?: boolean };
+
+/** Datos del espacio de trabajo del escritorio, guardados por el proceso principal en SQLite. */
 export interface LocalWorkspaceAPI {
   addSource: (
     workspaceId: string,
@@ -121,16 +128,10 @@ export interface ElectronAPI {
   version: string;
   getAppInfo: () => Promise<AppInfo>;
   /**
-   * Inicia la sesión; el proceso principal bloquea el equipo. `sessionId`: el de Firestore
-   * (sesión online preparada) o uno local (offline); si falta, lo genera el proceso principal.
+   * Inicia una sesión local (flujo "Iniciar"); el proceso principal bloquea el equipo
+   * y decide el modo según la conexión. `sessionId`: id local del espacio de trabajo.
    */
-  startSession: (durationSeconds: number, mode: SessionMode, sessionId?: string) => Promise<SessionSnapshot>;
-  /** Bloquea el equipo para la sesión recibida por yaleh://sesion, antes de confirmar la duración. */
-  prepareOnlineSession: (sessionId: string) => Promise<void>;
-  /** Cancela la sesión online preparada (solo antes de que empiece el tiempo) y libera el equipo. */
-  cancelOnlineSession: () => Promise<void>;
-  /** Abre auth-desktop.html en el navegador del sistema con un state nuevo. */
-  beginDesktopAuth: () => Promise<void>;
+  startSession: (durationSeconds: number, sessionId?: string) => Promise<SessionSnapshot>;
   getSessionState: () => Promise<SessionSnapshot>;
   /** Retoma una sesión interrumpida (estado `resumable`). */
   resumeSession: () => Promise<SessionSnapshot>;
@@ -138,6 +139,12 @@ export interface ElectronAPI {
   discardResume: () => Promise<SessionSnapshot>;
   onSessionTick: (callback: (payload: SessionTickPayload) => void) => () => void;
   onSessionEnded: (callback: (payload: SessionEndedPayload) => void) => () => void;
+  /** Abre el diálogo del sistema para elegir un .yaleh (solo fuera de la sesión). */
+  openSessionFileDialog: () => Promise<OpenSessionFileResult>;
+  /** Abre un .yaleh cuyo contenido ya se leyó (por ejemplo, arrastrado a la ventana). */
+  openSessionFileContent: (content: string) => Promise<OpenSessionFileResult>;
+  /** .yaleh abierto por los argumentos de arranque o por una segunda instancia. */
+  onSessionFileResult: (callback: (result: OpenSessionFileResult) => void) => () => void;
   /** Modo de conexión actual según el proceso principal. */
   getConnectionMode: () => Promise<ConnectionMode>;
   /** Fuerza una nueva comprobación de la conexión y devuelve el resultado. */
@@ -145,10 +152,6 @@ export interface ElectronAPI {
   onConnectionChange: (callback: (payload: ConnectionChangedPayload) => void) => () => void;
   /** Cierra la aplicación. Se rechaza mientras la sesión está activa. */
   closeApp: () => Promise<void>;
-  /** Abre la web de YALEH en el navegador del sistema. Otras URL se rechazan. */
-  openExternal: (url: string) => Promise<boolean>;
-  onAuthToken: (callback: (token: string) => void) => () => void;
-  onSessionLink: (callback: (payload: SessionLinkPayload) => void) => () => void;
-  /** Fuentes y notas del modo offline (SQLite). */
+  /** Fuentes y notas del escritorio (SQLite). */
   workspace: LocalWorkspaceAPI;
 }

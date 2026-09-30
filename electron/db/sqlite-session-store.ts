@@ -49,6 +49,11 @@ export class SqliteSessionStore implements SessionStore {
     this.selectEvents = db.prepare('SELECT session_id, type, at, detail FROM session_events ORDER BY id');
   }
 
+  /** true si ya existe una sesión con ese id (archivo .yaleh ya usado). */
+  hasSession(sessionId: string): boolean {
+    return this.db.prepare('SELECT 1 FROM sessions WHERE id = ?').get(sessionId) !== undefined;
+  }
+
   loadSession(): PersistedSession | null {
     const row = this.selectLatest.get() as SessionRow | undefined;
     if (!row) return null;

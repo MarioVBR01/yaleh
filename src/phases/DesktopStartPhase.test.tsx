@@ -1,10 +1,11 @@
 /**
- * Pantallas de inicio según el modo (brief, sección 4.2) y el panel de IA sin conexión.
+ * Bienvenida del escritorio y apertura del archivo de sesión .yaleh (brief, revisión 1.5),
+ * y el chat de la IA según el modo.
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { ConnectionMode } from '@shared/ipc-types';
+import type { ConnectionMode, OpenSessionFileResult } from '@shared/ipc-types';
 import App from '../App';
 import { AppProvider, useApp } from '../context/AppContext';
 import ChatColumn from '../workspace/ChatColumn';
@@ -18,11 +19,13 @@ function StateProbe() {
     <>
       <output data-testid="phase">{state.phase}</output>
       <output data-testid="session-mode">{String(state.sessionMode)}</output>
+      <output data-testid="workspace">{String(state.workspaceId)}</output>
+      <output data-testid="files">{state.uploadedFiles.map(f => f.name).join(',')}</output>
     </>
   );
 }
 
-function renderStart(connection: ConnectionMode) {
+function renderWelcome(connection: ConnectionMode) {
   const initial: AppState = { ...initialState, phase: 'desktop-start', connection };
   return render(
     <AppProvider initial={initial}>
@@ -32,99 +35,99 @@ function renderStart(connection: ConnectionMode) {
   );
 }
 
+const OPENED: OpenSessionFileResult = {
+  ok: true,
+  snapshot: { status: 'active', sessionId: 'archivo1', mode: 'online', durationSeconds: 3000, remainingSeconds: 3000 },
+  sources: [{ id: 'f1', name: 'apuntes.pdf', type: 'application/pdf', size: 10, charCount: 500, createdAt: '' }],
+  createdBy: { name: 'Mario Brañez', email: 'mario@tecba.edu.bo' },
+};
+
 afterEach(() => {
   uninstallElectronMock();
 });
 
-describe('Pantalla de inicio del escritorio', () => {
-  it('mientras comprueba la conexión lo indica', () => {
-    createElectronMock().install();
-    renderStart('unknown');
-    expect(screen.getByText('Comprobando conexión…')).toBeTruthy();
+describe('Bienvenida del escritorio', () => {
+  it.each<ConnectionMode>(['online', 'offline'])('muestra la bienvenida y los dos botones (%s)', connection => {
+    createElectronMock({ connection }).install();
+    renderWelcome(connection);
+
+    expect(screen.getByText('Bienvenido a YALEH')).toBeTruthy();
+    expect(screen.getByText('Iniciar')).toBeTruthy();
+    expect(screen.getByText('Abrir archivo de sesión (.yaleh)')).toBeTruthy();
+    expect(screen.queryByText(/Inicia tu sesión desde la web/)).toBeNull();
   });
 
-  it('sin conexión ofrece iniciar sesión offline', () => {
+  it('"Iniciar" lleva al flujo local con un espacio de trabajo nuevo', () => {
     createElectronMock().install();
-    renderStart('offline');
+    renderWelcome('offline');
 
-    expect(screen.getByText('No estás conectado. ¿Quieres iniciar sesión offline?')).toBeTruthy();
-    fireEvent.click(screen.getByText('Iniciar sesión offline'));
+    fireEvent.click(screen.getByText('Iniciar'));
 
     expect(screen.getByTestId('phase').textContent).toBe('dropzone');
-    expect(screen.getByTestId('session-mode').textContent).toBe('offline');
+    expect(screen.getByTestId('workspace').textContent).not.toBe('null');
   });
 
-  it('"Reintentar conexión" pide una nueva comprobación y actualiza la pantalla', async () => {
-    const mock = createElectronMock({ connection: 'online' });
+  it('un .yaleh válido entra directo al kiosko con sus fuentes y el modo que decidió el proceso principal', async () => {
+    const mock = createElectronMock({ connection: 'online', openResult: OPENED });
     mock.install();
-    renderStart('offline');
+    renderWelcome('online');
 
-    fireEvent.click(screen.getByText('Reintentar conexión'));
+    fireEvent.click(screen.getByText('Abrir archivo de sesión (.yaleh)'));
 
-    await waitFor(() => expect(screen.getByText('Inicia tu sesión desde la web')).toBeTruthy());
-    expect(mock.api.recheckConnection).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.getByTestId('phase').textContent).toBe('kiosk'));
+    expect(screen.getByTestId('session-mode').textContent).toBe('online');
+    expect(screen.getByTestId('workspace').textContent).toBe('archivo1');
+    expect(screen.getByTestId('files').textContent).toBe('apuntes.pdf');
   });
 
-  it('con conexión pide iniciar desde la web y abre la web de YALEH', () => {
-    const mock = createElectronMock({ connection: 'online' });
+  it('un .yaleh caducado o ya usado muestra el mensaje y no sale de la bienvenida', async () => {
+    const message = 'Este archivo de sesión ya se usó. Descarga uno nuevo en la web de YALEH.';
+    createElectronMock({ openResult: { ok: false, message } }).install();
+    renderWelcome('offline');
+
+    fireEvent.click(screen.getByText('Abrir archivo de sesión (.yaleh)'));
+
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(message));
+    expect(screen.getByTestId('phase').textContent).toBe('desktop-start');
+  });
+
+  it('cancelar el diálogo no muestra ningún mensaje', async () => {
+    const mock = createElectronMock();
     mock.install();
-    renderStart('online');
+    renderWelcome('offline');
 
-    expect(screen.getByText('Inicia tu sesión desde la web')).toBeTruthy();
-    fireEvent.click(screen.getByText('Abrir la web de YALEH'));
-    expect(mock.api.openExternal).toHaveBeenCalledWith('https://yaleh-fbe1c.web.app/');
-  });
+    fireEvent.click(screen.getByText('Abrir archivo de sesión (.yaleh)'));
 
-  it('con conexión permite usar el modo offline', () => {
-    createElectronMock({ connection: 'online' }).install();
-    renderStart('online');
-
-    fireEvent.click(screen.getByText('Usar modo offline'));
-
-    expect(screen.getByTestId('phase').textContent).toBe('dropzone');
-    expect(screen.getByTestId('session-mode').textContent).toBe('offline');
-  });
-
-  it('el botón de sesión online de prueba solo existe sin empaquetar', async () => {
-    createElectronMock({ connection: 'online', isPackaged: true }).install();
-    const packaged = renderStart('online');
-    await waitFor(() => expect(screen.queryByText(/solo desarrollo/)).toBeNull());
-    packaged.unmount();
-
-    createElectronMock({ connection: 'online', isPackaged: false }).install();
-    renderStart('online');
-    await waitFor(() => expect(screen.getByText('Probar sesión online (solo desarrollo)')).toBeTruthy());
+    await waitFor(() => expect(mock.api.openSessionFileDialog).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
 describe('App en el escritorio', () => {
-  it('no muestra el login de la web: arranca en la pantalla de inicio según la conexión', async () => {
+  it('no muestra el login de la web: arranca en la bienvenida', async () => {
     createElectronMock({ connection: 'offline' }).install();
     render(<App />);
 
-    await waitFor(() =>
-      expect(screen.getByText('No estás conectado. ¿Quieres iniciar sesión offline?')).toBeTruthy()
-    );
-    expect(screen.queryByText('Iniciar Sesión')).toBeNull();
-    expect(screen.queryByText(/Omitir registro/)).toBeNull();
+    await waitFor(() => expect(screen.getByText('Bienvenido a YALEH')).toBeTruthy());
+    expect(screen.queryByText('Continuar con Google')).toBeNull();
   });
 
-  it('cambia de pantalla cuando el proceso principal avisa un cambio de conexión', async () => {
-    const mock = createElectronMock({ connection: 'offline' });
+  it('un .yaleh abierto desde fuera de la app (doble clic o segunda instancia) entra al kiosko', async () => {
+    const mock = createElectronMock({ connection: 'online' });
     mock.install();
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/No estás conectado/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Bienvenido a YALEH')).toBeTruthy());
 
-    mock.setConnection('online');
+    mock.emitSessionFileResult(OPENED);
 
-    await waitFor(() => expect(screen.getByText('Inicia tu sesión desde la web')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('00:50:00')).toBeTruthy());
   });
 });
 
 describe('App en la web', () => {
-  it('sigue mostrando el login (hasta la fase 4)', () => {
+  it('sigue mostrando el login con Google', () => {
     render(<App />);
-    expect(screen.getByText('Iniciar Sesión')).toBeTruthy();
+    expect(screen.getByText('Continuar con Google')).toBeTruthy();
   });
 });
 

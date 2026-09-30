@@ -10,7 +10,6 @@ import type { ConnectionMode, SessionMode } from '@shared/ipc-types';
 export type AppPhase =
   | 'login'
   | 'desktop-start'
-  | 'online-handoff'
   | 'dropzone'
   | 'timer-select'
   | 'confirm-session'
@@ -92,10 +91,8 @@ export interface AppState {
    * Agrupa las fuentes, notas y resultados de la IA, y es el id de la sesión de concentración.
    */
   workspaceId: string | null;
-  /** Escritorio: sesión recibida por yaleh://sesion, pendiente de preparar. */
-  linkedSessionId: string | null;
-  /** Escritorio: la sesión online está preparada (equipo bloqueado, tiempo aún sin correr). */
-  onlineSessionHeld: boolean;
+  /** Escritorio: mensaje para la pantalla de bienvenida (por ejemplo, un .yaleh caducado o ya usado). */
+  notice: string | null;
 }
 
 export interface ActivityRecord {
@@ -123,8 +120,7 @@ export type AppAction =
   | { type: 'SET_CONNECTION'; payload: ConnectionMode }
   | { type: 'SET_SESSION_MODE'; payload: SessionMode | null }
   | { type: 'SET_WORKSPACE'; payload: string | null }
-  | { type: 'SET_LINKED_SESSION'; payload: string | null }
-  | { type: 'SET_ONLINE_SESSION_HELD'; payload: boolean }
+  | { type: 'SET_NOTICE'; payload: string | null }
   | { type: 'SET_FILES'; payload: UploadedFile[] }
   | { type: 'UPDATE_FILE'; payload: { id: string } & Partial<UploadedFile> }
   | { type: 'END_SESSION' }
@@ -167,8 +163,7 @@ export const initialState: AppState = {
   connection: 'online',
   sessionMode: null,
   workspaceId: null,
-  linkedSessionId: null,
-  onlineSessionHeld: false,
+  notice: null,
 };
 
 /**
@@ -239,11 +234,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_WORKSPACE':
       return { ...state, workspaceId: action.payload };
 
-    case 'SET_LINKED_SESSION':
-      return { ...state, linkedSessionId: action.payload };
-
-    case 'SET_ONLINE_SESSION_HELD':
-      return { ...state, onlineSessionHeld: action.payload };
+    case 'SET_NOTICE':
+      return { ...state, notice: action.payload };
 
     case 'SET_FILES':
       return { ...state, uploadedFiles: action.payload };

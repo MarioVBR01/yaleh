@@ -21,23 +21,19 @@ function subscribe<T>(channel: string, callback: (payload: T) => void): () => vo
 const api: ElectronAPI = {
   version: __YALEH_VERSION__,
   getAppInfo: () => ipcRenderer.invoke(IPC_INVOKE.appGetInfo),
-  startSession: (durationSeconds, mode, sessionId) =>
-    ipcRenderer.invoke(IPC_INVOKE.sessionStart, durationSeconds, mode, sessionId),
-  prepareOnlineSession: sessionId => ipcRenderer.invoke(IPC_INVOKE.sessionPrepareOnline, sessionId),
-  cancelOnlineSession: () => ipcRenderer.invoke(IPC_INVOKE.sessionCancelOnline),
-  beginDesktopAuth: () => ipcRenderer.invoke(IPC_INVOKE.authBeginDesktop),
+  startSession: (durationSeconds, sessionId) => ipcRenderer.invoke(IPC_INVOKE.sessionStart, durationSeconds, sessionId),
   getSessionState: () => ipcRenderer.invoke(IPC_INVOKE.sessionGetState),
   resumeSession: () => ipcRenderer.invoke(IPC_INVOKE.sessionResume),
   discardResume: () => ipcRenderer.invoke(IPC_INVOKE.sessionDiscardResume),
   onSessionTick: callback => subscribe(IPC_EVENT.sessionTick, callback),
   onSessionEnded: callback => subscribe(IPC_EVENT.sessionEnded, callback),
+  openSessionFileDialog: () => ipcRenderer.invoke(IPC_INVOKE.sessionFileOpenDialog),
+  openSessionFileContent: content => ipcRenderer.invoke(IPC_INVOKE.sessionFileOpenContent, content),
+  onSessionFileResult: callback => subscribe(IPC_EVENT.sessionFileResult, callback),
   getConnectionMode: () => ipcRenderer.invoke(IPC_INVOKE.connectionGet),
   recheckConnection: () => ipcRenderer.invoke(IPC_INVOKE.connectionRecheck),
   onConnectionChange: callback => subscribe(IPC_EVENT.connectionChanged, callback),
   closeApp: () => ipcRenderer.invoke(IPC_INVOKE.appClose),
-  openExternal: url => ipcRenderer.invoke(IPC_INVOKE.appOpenExternal, url),
-  onAuthToken: callback => subscribe(IPC_EVENT.authToken, callback),
-  onSessionLink: callback => subscribe(IPC_EVENT.sessionLink, callback),
   workspace: {
     addSource: (workspaceId, source, text) =>
       ipcRenderer.invoke(IPC_INVOKE.workspaceAddSource, workspaceId, source, text),

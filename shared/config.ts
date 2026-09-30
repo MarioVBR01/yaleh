@@ -56,9 +56,6 @@ export const ALLOWED_SITES: readonly AllowedSite[] = [
 /** Servidor de desarrollo de Vite. Solo se permite cuando la app no está empaquetada. */
 export const DEV_SERVER_ORIGIN = 'http://localhost:5173';
 
-/** Únicos orígenes que se pueden abrir en el navegador del sistema (shell.openExternal). */
-export const EXTERNAL_OPEN_ORIGINS: readonly string[] = YALEH_WEB_ORIGINS;
-
 // ─── Herramientas visibles en la interfaz ────────────────────────────────────
 
 export interface ToolLink {
@@ -94,6 +91,10 @@ export const LIMITS = {
   minSessionMinutes: 1,
   /** Duración máxima de una sesión de concentración, en minutos. */
   maxSessionMinutes: 180,
+  /** Tamaño máximo de un archivo de sesión .yaleh (incluye el texto de las fuentes). */
+  maxSessionFileBytes: 50 * 1024 * 1024,
+  /** Validez de un archivo de sesión .yaleh desde que se crea, en horas. */
+  sessionFileTtlHours: 24,
 } as const;
 
 // ─── Conexión ────────────────────────────────────────────────────────────────

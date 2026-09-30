@@ -1,15 +1,12 @@
 /**
  * @file auth.ts
- * @description Autenticación con Google (brief, secciones 4.5 y 5.1).
- * - Web: signInWithPopup.
- * - Escritorio: el ID token de Google llega por yaleh://auth desde el navegador
- *   del sistema y se usa con signInWithCredential.
+ * @description Autenticación con Google en la web (brief, sección 5.1): signInWithPopup.
+ * El escritorio no inicia sesión con Google (revisión 1.5): recibe las fuentes en el .yaleh.
  */
 
 import {
   GoogleAuthProvider,
   onAuthStateChanged,
-  signInWithCredential,
   signInWithPopup,
   signOut as firebaseSignOut,
   type User,
@@ -25,23 +22,6 @@ function googleProvider(): GoogleAuthProvider {
 /** Web: ventana emergente de Google. */
 export async function signInWithGoogle(): Promise<User> {
   const result = await signInWithPopup(getFirebaseAuth(), googleProvider());
-  return result.user;
-}
-
-/**
- * Página auth-desktop: inicia sesión y devuelve el ID token de Google
- * (no el de Firebase), que es el que acepta signInWithCredential.
- */
-export async function getGoogleIdTokenWithPopup(): Promise<string> {
-  const result = await signInWithPopup(getFirebaseAuth(), googleProvider());
-  const idToken = GoogleAuthProvider.credentialFromResult(result)?.idToken;
-  if (!idToken) throw new Error('Google no devolvió un ID token.');
-  return idToken;
-}
-
-/** Escritorio: inicia sesión en Firebase con el ID token de Google. */
-export async function signInWithGoogleIdToken(idToken: string): Promise<User> {
-  const result = await signInWithCredential(getFirebaseAuth(), GoogleAuthProvider.credential(idToken));
   return result.user;
 }
 

@@ -5,12 +5,10 @@
  * y permite cerrar la aplicación.
  */
 
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Calendar } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { markSessionFinished } from '../firebase/sessions';
-import { closeApp, isElectron } from '../lib/electron';
+import { closeApp } from '../lib/electron';
 
 /**
  * Formatea la fecha/hora actual en español.
@@ -40,14 +38,6 @@ function formatMinutes(seconds: number): number {
 export default function SessionCompletePhase() {
   const { state } = useApp();
 
-  // Sesión online en el escritorio: se marca como terminada en Firestore.
-  useEffect(() => {
-    const uid = state.session.uid;
-    if (isElectron() && state.sessionMode === 'online' && uid && state.workspaceId) {
-      markSessionFinished(uid, state.workspaceId).catch(err => console.warn('No se pudo cerrar la sesión en Firestore:', err));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Extraer métricas del estado global
   const studyMinutes = formatMinutes(state.sessionDuration);

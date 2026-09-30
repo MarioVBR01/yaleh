@@ -2,8 +2,10 @@
 
 YALEH es un entorno de estudio para estudiantes del TECBA con problemas de concentración (proyecto de grado de Mario Víctor Brañez Rodriguez). Tiene dos aplicaciones sobre una misma base de código:
 
-- **Web** (Firebase Hosting): login con Google, carga de materiales, asistente de IA estilo NotebookLM y preparación de la sesión.
-- **Escritorio** (Electron): bloquea el sistema operativo durante la sesión (kiosko), con o sin internet.
+- **Web** (Firebase Hosting): login con Google, carga de materiales, asistente de IA estilo NotebookLM y preparación de la sesión, que termina con la descarga de un **archivo de sesión `.yaleh`**.
+- **Escritorio** (Electron): bloquea el sistema operativo durante la sesión (kiosko), con o sin internet. No inicia sesión con Google: abre el `.yaleh` o empieza una sesión local.
+
+Las dos aplicaciones funcionan por separado y se unen solo con el archivo `.yaleh` (como Safe Exam Browser; brief, revisión 1.5). El diseño anterior (enlaces `yaleh://`) queda en el tag de git `demo-antes-archivo`.
 
 **Fuente de verdad:** [docs/BRIEF_YALEH.md](docs/BRIEF_YALEH.md). Si el código contradice el brief, gana el brief. El análisis del MVP de partida ("Safe Research Browser") está en [docs/INFORME_ANALISIS_SRB.md](docs/INFORME_ANALISIS_SRB.md).
 
@@ -52,7 +54,7 @@ Al cerrar cada fase deben pasar `typecheck`, `build` y `test` (y conviene `smoke
 
 ```
 electron/                   Proceso principal (TypeScript → esbuild → dist-electron/*.cjs)
-  main.ts                   Ventana, IPC, enlaces yaleh://, guardias de red y navegación, arranque
+  main.ts                   Ventana, IPC, apertura de .yaleh, guardias de red y navegación, arranque
   preload.ts                contextBridge → window.electronAPI (un único archivo CommonJS por sandbox)
   connectivity.ts           Detección del modo online/offline (net.isOnline + petición HTTPS a la web de YALEH)
   session/controller.ts     Controlador de sesión: idle → active → finished (+ resumable). Única autoridad del tiempo
@@ -63,10 +65,9 @@ electron/                   Proceso principal (TypeScript → esbuild → dist-e
   db/import-json.ts         Importación única de session.json / events.json de la fase 2
   kiosk/window.ts           Bloqueo y liberación de la ventana, recuperación del foco
   kiosk/shortcuts.ts        Atajos bloqueados y salida de desarrollo
-  ipc/validate.ts           Origen del remitente, duración, URL externas
+  ipc/validate.ts           Origen del remitente, duración, ids, fuentes y notas
   navigation-policy.ts      Qué páginas y marcos pueden cargarse
-  deeplink.ts               Análisis de yaleh://auth y yaleh://sesion
-  auth-state.ts             state del inicio de sesión del escritorio (único uso, 10 min)
+  session-file-service.ts   Abrir un .yaleh: validar, uso único, guardar fuentes en SQLite, empezar la sesión
   db/workspace-repository.ts  Fuentes (texto en partes) y notas del modo offline
   smoke.ts                  Prueba de humo (recorrido offline con extracción de PDF/TXT)
 shared/                     Usado por el proceso principal y la interfaz (sin Node ni DOM)
@@ -74,10 +75,12 @@ shared/                     Usado por el proceso principal y la interfaz (sin No
   allowlist.ts              isUrlAllowed()
   ipc-types.ts              Canales IPC y tipo ElectronAPI
   text.ts                   splitText(): partes de 200 000 caracteres (límite de 1 MiB de Firestore)
+  session-file.ts           Formato .yaleh: creación (web), checksum y validación (escritorio)
 src/                        Interfaz React (web y escritorio). Alias: @/ → src, @shared/ → shared
-  App.tsx                   Fases. Web: login → dropzone → timer-select → confirm-session → kiosk → session-complete.
-                            Escritorio: desktop-start (según la conexión) → dropzone → … (nunca login).
-                            + resume-offer al abrir con una sesión interrumpida
+  App.tsx                   Fases. Web: login → dropzone → kiosk (espacio de trabajo, sin tiempo) → timer-select → confirm-session (descarga .yaleh).
+                            Escritorio: desktop-start (bienvenida) → dropzone → timer-select → confirm-session → kiosk → session-complete,
+                            o desktop-start → .yaleh → kiosk. Nunca login. + resume-offer con una sesión interrumpida
+  lib/session-file.ts       Web: generar y descargar el .yaleh. Escritorio: aplicar al estado un .yaleh abierto
   lib/mode.ts               useModeFlags(): qué se muestra según plataforma y modo (herramientas online, IA, aviso)
   firebase/                 app.ts (inicialización + App Check), auth.ts (Google), sessions.ts (users/{uid}/sessions)
   data/                     workspace.ts (Firestore / SQLite por IPC / memoria), sources.ts (Firestore),
@@ -85,7 +88,6 @@ src/                        Interfaz React (web y escritorio). Alias: @/ → src
   ai/                       gemini.ts (AI Logic, respaldo de modelos), search.ts (Wikipedia, SearchProvider),
                             study-items.ts (esquemas y validación), errors.ts (429, App Check, red)
   workspace/                WorkspaceView (Fuentes · Chat · Estudio), columnas, NotesBox, Markdown
-  auth-desktop/main.ts      Página auth-desktop.html (login del escritorio en el navegador del sistema)
   store/appStore.ts         Estado global y reducer
   context/AppContext.tsx    Provider + useApp (acepta `initial` para pruebas)
   lib/electron.ts           isElectron(), getElectronAPI(), closeApp()
@@ -98,26 +100,32 @@ docs/                       Brief e informe del MVP
 
 Una sola compilación de la interfaz (`dist/`, `base: './'`) sirve para Firebase Hosting y para `file://` en Electron.
 
-## Firebase y paso web → escritorio (fase 4)
+## Archivo de sesión .yaleh (revisión 1.5)
 
-- Configuración en `.env` (no versionado; plantilla en `.env.example`). Proyecto `yaleh-fbe1c`. Reglas: `firestore.rules` (cada usuario solo `users/{su uid}/**`).
-- **Web:** login solo con Google (`signInWithPopup`) → dropzone → espacio de trabajo o sesión de concentración. Confirmar la sesión la guarda en Firestore (`pending`) y abre `yaleh://sesion?id=…`.
-- **Escritorio:** `yaleh://sesion` → `online-handoff`. Si no hay cuenta, `beginDesktopAuth` abre `auth-desktop.html?state=…` en el navegador; la página devuelve `yaleh://auth?token=<ID token de Google>&state=…`; el proceso principal valida el state (`auth-state.ts`) y la interfaz usa `signInWithCredential`. Luego `prepareOnlineSession` bloquea el equipo (sin tiempo), se lee la sesión y sus fuentes y se confirma; `startSession(…, 'online', id)` empieza el tiempo. `cancelOnlineSession` solo antes de empezar.
-- La interfaz del kiosko online es la **compilación local**, no la web publicada.
+- **Web** (independiente; `npm run dev` o Hosting): login con Google → dropzone → espacio de trabajo con IA → "Iniciar sesión de concentración" → tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones. La web nunca bloquea nada ni abre el escritorio.
+- **Formato** (`shared/session-file.ts`): JSON con `format` "yaleh-session", `version` 1, `sessionId` (nuevo en cada descarga), `createdAt`, `expiresAt` (24 h), `createdBy`, `durationSeconds`, `sources` [{id, name, type, size, text}] y `checksum` SHA-256 de `canonicalPayload()` (orden de campos fijo; solo integridad). Máximo 50 MB (`LIMITS`).
+- **Escritorio:** bienvenida con "Iniciar" (flujo local) y "Abrir archivo de sesión (.yaleh)". El archivo también se abre arrastrándolo a la bienvenida, por los argumentos de arranque o por `second-instance`. `openSessionFile` (proceso principal) valida, rechaza si hay sesión en curso o si el `sessionId` ya está en SQLite (uso único), guarda las fuentes en SQLite y llama a `controller.start`: **bloquea y empieza el tiempo de inmediato**. Los rechazos se registran como `session-file-rejected`.
+- **Modo:** lo decide el proceso principal según la conexión al empezar (archivo o flujo local). En el escritorio los datos van siempre a SQLite.
+- **Pendiente (fase 11):** asociar `.yaleh` con la app en el instalador (doble clic).
+
+## Firebase (fase 4)
+
+- Configuración en `.env` (no versionado; plantilla en `.env.example`). Proyecto `yaleh-fbe1c`. Reglas: `firestore.rules` (cada usuario solo `users/{su uid}/**`). Firestore solo lo usa la web.
+- Web: login solo con Google (`signInWithPopup`). El escritorio no inicia sesión.
 - **App Check:** AI Logic lo exige. Web publicada: reCAPTCHA Enterprise (clave en `.env`). Escritorio y localhost: token de depuración `VITE_APPCHECK_DEBUG_TOKEN`, registrado en la consola como "YALEH escritorio demo (borrar)". `VITE_APPCHECK_DEBUG_ON_WEB=false`.
 
 ## Espacio de trabajo, fuentes e IA (fases 5 a 7)
 
-- `WorkspaceView` reemplaza al Dashboard: Fuentes · Chat · Estudio (pestañas en pantallas angostas). `state.workspaceId` es el id de la sesión (Firestore online, id local offline) y agrupa fuentes, notas y resultados.
-- **Fuentes:** PDF/DOCX/TXT validados por extensión + MIME + firma; texto extraído en el cliente (pdf.js 6, mammoth) y guardado en partes: Firestore `sources/{id}/chunks/{n}` o SQLite `source_chunks` (migración 2). En el escritorio no se agregan fuentes dentro del kiosko.
+- `WorkspaceView` reemplaza al Dashboard: Fuentes · Chat · Estudio (pestañas en pantallas angostas). `state.workspaceId` agrupa fuentes, notas y resultados: en la web, un borrador en Firestore; en el escritorio, el id de la sesión (local o el `sessionId` del `.yaleh`) en SQLite.
+- **Fuentes:** PDF/DOCX/TXT validados por extensión + MIME + firma; texto extraído en el cliente (pdf.js 6, mammoth) y guardado en partes: Firestore `sources/{id}/chunks/{n}` (web) o SQLite `source_chunks` (escritorio, migración 2). En el escritorio no se agregan fuentes dentro del kiosko.
 - **IA:** `AI.models` en `shared/config.ts` (`gemini-3.5-flash-lite` → `gemini-3.8-flash` si hay 429/500/503). Chat con streaming basado en las fuentes; Wikipedia opcional (fuentes como texto). Resumen/cuestionario/tarjetas con esquema JSON validado; informe en markdown (`react-markdown`, sin HTML, enlaces como texto). En Firestore se guardan como `studyItems`.
 - Offline o sin conexión: chat y herramientas de IA muestran "Disponible próximamente"; las notas funcionan.
 
 ## Modos online / offline (fase 3)
 
 - **Detección (proceso principal, `connectivity.ts`):** online si `net.isOnline()` y la web de YALEH responde una petición HEAD en menos de 5 s (cualquier código HTTP cuenta). Se repite cada 30 s, al volver de la suspensión (`powerMonitor`) y cuando la interfaz ve eventos `online`/`offline` (solo piden una nueva comprobación; decide el proceso principal). Parámetros en `CONNECTIVITY` (`shared/config.ts`).
-- **Escritorio sin login propio:** arranca en `desktop-start`: "Comprobando conexión…", luego "No estás conectado…" (offline) o "Inicia tu sesión desde la web" (online, con "Usar modo offline"). La web sigue con `LoginPhase` hasta la fase 4.
-- **Modo de la sesión** (`sessionMode`, guardado en `sessions.mode`): offline desde las pantallas de inicio. Las sesiones online llegarán desde la web (fase 4); hasta entonces solo existe el botón "Probar sesión online (solo desarrollo)" sin empaquetar, y el proceso principal rechaza sesiones online en la versión empaquetada.
+- **Escritorio sin login:** arranca en la bienvenida (`desktop-start`), que indica si hay conexión.
+- **Modo de la sesión** (`sessionMode`, guardado en `sessions.mode`): online si hay conexión al empezar, offline si no. Lo decide el proceso principal.
 - **Qué se muestra (`useModeFlags`):** en la web, todo. En el escritorio, las herramientas online y la IA solo en una sesión online con conexión. Si se corta la red en una sesión online: aviso "Sin conexión: puedes seguir con los módulos locales"; el kiosko y el tiempo no cambian; el proceso principal registra `connection-lost` / `connection-restored`.
 
 ## SQLite (fase 3)
@@ -136,9 +144,9 @@ Todo el bloqueo vive en el proceso principal. La interfaz pide iniciar la sesió
 - **Sin salida anticipada:** no hay código ni salida de emergencia (brief, revisión 1.2).
 - **Sesión interrumpida:** al arrancar, `controller.recover()` detecta una sesión `active` guardada; la registra como interrumpida y, si queda tiempo, la interfaz ofrece retomarla (`resume-offer`).
 - **Red:** `webRequest.onBeforeRequest` bloquea `mainFrame` y `subFrame` fuera de `ALLOWED_SITES`. `will-navigate`: la ventana principal solo puede mostrar la interfaz propia. `setWindowOpenHandler` deniega todas las ventanas nuevas (en la fase 8 serán pestañas). Permisos: solo `fullscreen` y `clipboard-sanitized-write`.
-- **IPC:** cada handler comprueba que el mensaje venga del marco principal de la ventana con la interfaz propia (`dist/index.html` o `localhost:5173` con `--dev-server`). En la fase 4 se agregará la web de YALEH (`trustedWebOrigins`).
-- **Externo:** `shell.openExternal` solo acepta `https://yaleh-fbe1c.web.app` y `https://yaleh-fbe1c.firebaseapp.com`.
-- **yaleh://:** `requestSingleInstanceLock` antes de `whenReady`; solo `yaleh://auth?token=…[&state=…]` y `yaleh://sesion?id=…`; lo demás se ignora y se registra (sin el token). La validación del `state` llega en la fase 4.
+- **IPC:** cada handler comprueba que el mensaje venga del marco principal de la ventana con la interfaz propia (`dist/index.html` o `localhost:5173` con `--dev-server`).
+- **Sin salidas al exterior:** no hay `shell.openExternal` ni protocolo `yaleh://` (revisión 1.5). `requestSingleInstanceLock` antes de `whenReady`: una segunda instancia solo entrega su archivo `.yaleh`.
+- **Diálogo de archivos:** solo el de "Abrir archivo de sesión", desde el proceso principal y solo fuera de la sesión.
 - **Electron:** `contextIsolation`, `sandbox`, `webSecurity` activados; `nodeIntegration` desactivado; DevTools deshabilitadas cuando la app está empaquetada.
 - **CSP:** se inyecta en `index.html` solo al compilar (`vite.config.ts`), sin `'unsafe-inline'` para scripts; `frame-src` se genera desde `ALLOWED_SITES`. El servidor de desarrollo no tiene CSP porque Vite necesita un script en línea para la recarga en caliente.
 
@@ -171,17 +179,18 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 ## Datos clave
 
 - Firebase: proyecto `Yaleh`, ID `yaleh-fbe1c`, plan Spark.
-- Protocolo del escritorio: `yaleh://` (`yaleh://auth?...`, `yaleh://sesion?id=...`).
+- Unión web → escritorio: archivo de sesión `.yaleh` (24 h, uso único, máximo 50 MB).
 - IA: `gemini-3.5-flash-lite` (respaldo `gemini-3.8-flash`) vía Firebase AI Logic (API de desarrollador). Búsqueda: API de Wikipedia en español detrás de `SearchProvider`. App Check obligatorio para AI Logic: Fraud Defense (`ReCaptchaEnterpriseProvider`) en la web y token de depuración en el escritorio.
 - SQLite: `node:sqlite` en el proceso principal (Electron 42, Node 24).
 
 ## Pendientes conocidos
 
-- **Token de depuración de App Check** en el escritorio: provisional (se puede extraer del instalador). Borrarlo de la consola cuando exista la alternativa (cargar la web publicada en el kiosko online o proveedor propio).
-- El botón "Probar sesión online (solo desarrollo)" sigue como respaldo, solo sin empaquetar; sin cuenta usa almacenamiento en memoria.
-- El historial del chat vive en memoria (no se guarda en Firestore). Los `studyItems` se guardan pero no se vuelven a cargar al abrir el espacio de trabajo.
-- Sin pruebas de reglas con el emulador; sin pruebas automáticas del login de Google ni del flujo web → escritorio (se probó manualmente la infraestructura: páginas publicadas, App Check y Gemini por REST).
-- Las sesiones online del escritorio también se guardan en SQLite (tabla `sessions`), pero las fuentes online no se copian a SQLite: si se corta la red, el texto ya leído queda en memoria.
+- **Token de depuración de App Check** en el escritorio: provisional (se puede extraer del instalador). Borrarlo de la consola cuando exista una alternativa.
+- **Asociación de `.yaleh`** con la app (doble clic): en el instalador, fase 11.
+- **Sincronización (fase 10):** pendiente de redefinir; el escritorio ya no tiene cuenta de Google.
+- El registro de Windows puede conservar el protocolo `yaleh://` de ejecuciones anteriores (apunta a Electron en desarrollo); ya no se usa.
+- El historial del chat vive en memoria. Los `studyItems` de la web se guardan en Firestore pero no se vuelven a cargar.
+- Sin pruebas de reglas con el emulador ni del login de Google.
 - `local_profile` y `settings` existen, pero todavía nadie las lee (fase 10: cuenta de destino de la sincronización).
 - `WebViewPanel` sigue usando iframes (fase 8: `WebContentsView`). Muchos sitios de Google no se dejan mostrar en iframes.
 - El límite de 8 pestañas está en `shared/config.ts`, pero se aplica en la fase 8.

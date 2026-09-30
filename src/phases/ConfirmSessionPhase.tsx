@@ -1,118 +1,103 @@
 /**
  * @file ConfirmSessionPhase.tsx
- * @description Confirmación antes de entrar al kiosko.
+ * @description Confirmación antes de la sesión de concentración.
  * Muestra los archivos cargados y la duración, y advierte que no se puede
  * salir hasta que termine el tiempo. El estudiante confirma con un botón explícito.
  *
- * - Web: guarda la sesión en Firestore y abre el escritorio con yaleh://sesion?id=…
- * - Escritorio offline: inicia la sesión local.
- * - Escritorio online: la sesión llegó desde la web y el equipo ya está bloqueado;
- *   el tiempo empieza al confirmar (brief, sección 4.1).
+ * - Web: descarga el archivo de sesión .yaleh (brief, revisión 1.5) y explica
+ *   cómo abrirlo en la app de escritorio. La web nunca bloquea nada.
+ * - Escritorio: inicia la sesión local; el proceso principal bloquea el equipo.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Clock, FileText, Lock } from 'lucide-react';
+import { AlertTriangle, Clock, Download, FileText, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { markSessionActive, markSessionPending } from '../firebase/sessions';
+import { getWorkspaceStore } from '../data/workspace';
 import { getElectronAPI } from '../lib/electron';
-import { startPhase } from '../lib/mode';
+import { buildSessionFileBlob, downloadBlob } from '../lib/session-file';
 import { formatBytes, formatMinutes } from '../utils/format';
 
 export default function ConfirmSessionPhase() {
   const { state, dispatch, logActivity } = useApp();
-  const [starting, setStarting] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [handedOff, setHandedOff] = useState(false);
+  const [downloaded, setDownloaded] = useState<string | null>(null);
 
   const minutes = Math.round(state.sessionDuration / 60);
   const files = state.uploadedFiles;
   const api = getElectronAPI();
-  const uid = state.session.uid;
-  const workspaceId = state.workspaceId;
-  /** Escritorio con una sesión online recibida desde la web (equipo ya bloqueado). */
-  const heldOnline = Boolean(api) && state.onlineSessionHeld;
-  const sessionLink = workspaceId ? `yaleh://sesion?id=${encodeURIComponent(workspaceId)}` : null;
 
-  /** Web: guarda la sesión como pendiente y abre la app de escritorio. */
-  const handleHandOff = async () => {
-    if (!uid || !workspaceId || !sessionLink) {
-      setError('Tu espacio de trabajo aún se está creando. Espera un momento e inténtalo de nuevo.');
-      return;
-    }
-    setStarting(true);
+  /** Web: genera y descarga el .yaleh con el texto de las fuentes. */
+  const handleDownload = async () => {
+    setBusy(true);
     setError(null);
     try {
-      await markSessionPending(uid, workspaceId, state.sessionDuration);
-      window.location.href = sessionLink;
-      setHandedOff(true);
-      logActivity({ type: 'tool', label: `Sesión enviada al escritorio: ${minutes} minutos`, icon: '🔒' });
+      const { blob, fileName } = await buildSessionFileBlob(state, getWorkspaceStore(state));
+      downloadBlob(blob, fileName);
+      setDownloaded(fileName);
+      logActivity({ type: 'tool', label: `Archivo de sesión descargado: ${minutes} minutos`, icon: '📥' });
     } catch (err) {
-      console.error('No se pudo guardar la sesión:', err);
-      setError('No se pudo guardar la sesión. Revisa tu conexión e inténtalo de nuevo.');
+      console.error('No se pudo crear el archivo de sesión:', err);
+      const message = err instanceof Error && err.message.startsWith('El texto de tus fuentes') ? err.message : null;
+      setError(message ?? 'No se pudo crear el archivo de sesión. Inténtalo de nuevo.');
     } finally {
-      setStarting(false);
+      setBusy(false);
     }
   };
 
   /** Escritorio: pide al proceso principal que inicie la sesión y bloquee el equipo. */
-  const handleConfirm = async () => {
+  const handleStart = async () => {
     if (!api) return;
-    setStarting(true);
+    setBusy(true);
     setError(null);
     try {
-      const mode = state.sessionMode ?? 'offline';
-      // Online preparada: el id de Firestore. Offline: el id local. Prueba online sin cuenta: lo genera el proceso principal.
-      const sessionId = mode === 'offline' || heldOnline ? workspaceId ?? undefined : undefined;
-      const snapshot = await api.startSession(state.sessionDuration, mode, sessionId);
-      dispatch({ type: 'SET_ONLINE_SESSION_HELD', payload: false });
+      const snapshot = await api.startSession(state.sessionDuration, state.workspaceId ?? undefined);
+      dispatch({ type: 'SET_SESSION_MODE', payload: snapshot.mode });
       dispatch({ type: 'START_KIOSK' });
       dispatch({ type: 'SYNC_TIME', payload: snapshot.remainingSeconds });
-      if (heldOnline && uid && workspaceId) {
-        markSessionActive(uid, workspaceId).catch(err => console.warn('No se pudo marcar la sesión como activa:', err));
-      }
       logActivity({ type: 'tool', label: `Sesión de estudio iniciada: ${minutes} minutos`, icon: '🔒' });
     } catch (err) {
       console.error('No se pudo iniciar la sesión:', err);
       setError('No se pudo iniciar la sesión. Inténtalo de nuevo.');
-      setStarting(false);
+      setBusy(false);
     }
   };
 
-  /** Escritorio online: cancelar antes de que empiece el tiempo libera el equipo. */
-  const handleCancelOnline = async () => {
-    await api?.cancelOnlineSession();
-    dispatch({ type: 'SET_ONLINE_SESSION_HELD', payload: false });
-    dispatch({ type: 'SET_LINKED_SESSION', payload: null });
-    dispatch({ type: 'SET_PHASE', payload: startPhase(true) });
+  const backToWorkspace = () => {
+    // La web muestra el espacio de trabajo sin temporizador.
+    dispatch({ type: 'SET_SESSION_DURATION', payload: 0 });
+    dispatch({ type: 'START_KIOSK' });
   };
 
-  if (handedOff && sessionLink) {
+  if (downloaded) {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-8 text-center">
-          <Lock size={30} className="text-accent mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-ink mb-2">Abriendo YALEH en tu escritorio</h1>
-          <p className="text-ink-muted text-sm mb-6">
-            Tu navegador puede pedirte permiso para abrir YALEH. Si no se abre, verifica que la app de escritorio
-            esté instalada y vuelve a intentarlo.
+          <Download size={30} className="text-accent mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-ink mb-2">Archivo de sesión descargado</h1>
+          <p className="text-ink-soft text-sm mb-2">
+            <strong className="text-ink">Abre el archivo con la aplicación de escritorio YALEH.</strong>
           </p>
+          <ol className="text-ink-muted text-sm text-left list-decimal pl-5 space-y-1 mb-4">
+            <li>Abre YALEH en tu computadora.</li>
+            <li>
+              Pulsa <em>Abrir archivo de sesión (.yaleh)</em> y elige{' '}
+              <span className="text-ink-soft break-all">{downloaded}</span>, o arrastra el archivo a la ventana de YALEH.
+            </li>
+            <li>La sesión de {formatMinutes(minutes)} empieza de inmediato y el equipo queda bloqueado.</li>
+          </ol>
+          <p className="text-ink-subtle text-xs mb-6">El archivo vale 24 horas y se puede usar una sola vez.</p>
           <div className="flex flex-col gap-2">
-            <a
-              href={sessionLink}
-              className="w-full py-3 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors"
-            >
-              Abrir YALEH otra vez
-            </a>
             <button
-              onClick={() => {
-                // La sesión corre en el escritorio: la web solo muestra el espacio de trabajo, sin temporizador.
-                dispatch({ type: 'SET_SESSION_DURATION', payload: 0 });
-                dispatch({ type: 'START_KIOSK' });
-              }}
-              className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink transition-colors"
+              onClick={() => void handleDownload()}
+              disabled={busy}
+              className="w-full py-3 rounded-xl text-sm border border-line text-ink-soft hover:text-ink hover:border-line-strong disabled:opacity-60"
             >
-              Ir a mi espacio de trabajo en la web
+              Descargar otro archivo
+            </button>
+            <button onClick={backToWorkspace} className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink transition-colors">
+              Volver al espacio de trabajo
             </button>
           </div>
         </div>
@@ -133,7 +118,9 @@ export default function ConfirmSessionPhase() {
             <Lock size={30} className="text-ink" />
           </div>
           <h1 className="text-2xl font-bold text-ink mb-1">Confirma tu sesión</h1>
-          <p className="text-ink-muted text-sm">Revisa todo antes de bloquear el equipo.</p>
+          <p className="text-ink-muted text-sm">
+            {api ? 'Revisa todo antes de bloquear el equipo.' : 'Revisa todo antes de descargar tu archivo de sesión.'}
+          </p>
         </div>
 
         <div className="bg-surface border border-line rounded-2xl p-6 space-y-5">
@@ -145,10 +132,7 @@ export default function ConfirmSessionPhase() {
             {files.length > 0 ? (
               <ul className="max-h-40 overflow-y-auto space-y-1.5">
                 {files.map(file => (
-                  <li
-                    key={file.id}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-raised text-sm"
-                  >
+                  <li key={file.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-raised text-sm">
                     <FileText size={14} className="text-accent flex-shrink-0" />
                     <span className="text-ink-soft truncate flex-1">{file.name}</span>
                     <span className="text-ink-subtle text-xs">{formatBytes(file.size)}</span>
@@ -156,21 +140,17 @@ export default function ConfirmSessionPhase() {
                 ))}
               </ul>
             ) : (
-              <p className="text-ink-subtle text-sm px-3 py-2 rounded-lg bg-surface-raised">
-                No cargaste archivos.
-              </p>
+              <p className="text-ink-subtle text-sm px-3 py-2 rounded-lg bg-surface-raised">No cargaste archivos.</p>
             )}
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="text-ink-soft text-sm">¿Cargaste todos los archivos que necesitas?</p>
-              {!heldOnline && (
               <button
-                onClick={() => dispatch({ type: 'SET_PHASE', payload: 'dropzone' })}
-                disabled={starting}
+                onClick={() => (api ? dispatch({ type: 'SET_PHASE', payload: 'dropzone' }) : backToWorkspace())}
+                disabled={busy}
                 className="text-accent-soft hover:text-ink text-xs font-medium whitespace-nowrap disabled:opacity-50"
               >
                 Volver a cargar archivos
               </button>
-              )}
             </div>
           </section>
 
@@ -180,15 +160,13 @@ export default function ConfirmSessionPhase() {
               <Clock size={16} className="text-accent" />
               <span className="text-ink text-sm font-medium">Duración: {formatMinutes(minutes)}</span>
             </div>
-            {!heldOnline && (
             <button
               onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
-              disabled={starting}
+              disabled={busy}
               className="text-accent-soft hover:text-ink text-xs font-medium disabled:opacity-50"
             >
               Cambiar duración
             </button>
-            )}
           </section>
 
           {/* Aviso */}
@@ -198,14 +176,9 @@ export default function ConfirmSessionPhase() {
               <strong className="text-ink">
                 No podrás salir hasta que termine el tiempo. Solo apagando o reiniciando el equipo.
               </strong>
+              {!api && ' La sesión empezará en cuanto abras el archivo en la app de escritorio.'}
             </p>
           </section>
-
-          {!api && (
-            <p className="text-ink-subtle text-xs text-center">
-              La sesión se abrirá en la app de escritorio de YALEH, que bloqueará el equipo.
-            </p>
-          )}
 
           {error && (
             <p role="alert" className="text-danger text-sm text-center">
@@ -214,26 +187,18 @@ export default function ConfirmSessionPhase() {
           )}
 
           <button
-            onClick={api ? handleConfirm : handleHandOff}
-            disabled={starting}
-            className="w-full py-4 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors disabled:opacity-60"
+            onClick={() => void (api ? handleStart() : handleDownload())}
+            disabled={busy}
+            className="w-full py-4 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {starting
-              ? 'Iniciando sesión…'
-              : api
-                ? `Entiendo, iniciar sesión de ${formatMinutes(minutes)}`
-                : `Entiendo, abrir la sesión de ${formatMinutes(minutes)} en el escritorio`}
+            {api ? (
+              busy ? 'Iniciando sesión…' : `Entiendo, iniciar sesión de ${formatMinutes(minutes)}`
+            ) : (
+              <>
+                <Download size={16} /> {busy ? 'Preparando archivo…' : 'Descargar archivo de sesión'}
+              </>
+            )}
           </button>
-
-          {heldOnline && (
-            <button
-              onClick={handleCancelOnline}
-              disabled={starting}
-              className="w-full py-2 text-sm text-ink-muted hover:text-ink transition-colors"
-            >
-              Cancelar (el tiempo aún no empezó)
-            </button>
-          )}
         </div>
       </motion.div>
     </div>

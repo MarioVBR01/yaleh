@@ -186,9 +186,10 @@ export default function DropzonePhase() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <LayoutGrid size={16} /> Ir al espacio de trabajo
+                {extracting ? <Loader2 size={16} className="animate-spin" /> : <LayoutGrid size={16} />} Continuar al espacio de trabajo
               </motion.button>
             )}
+            {isElectron() && (
             <motion.button
               onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
               disabled={extracting}
@@ -206,6 +207,7 @@ export default function DropzonePhase() {
                 </>
               )}
             </motion.button>
+            )}
           </div>
         </div>
       </motion.div>

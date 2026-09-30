@@ -64,15 +64,6 @@ export default defineConfig({
   // Rutas relativas: la misma compilación sirve para Firebase Hosting y para file:// en Electron.
   base: "./",
   plugins: [react(), tailwindcss(), cspPlugin()],
-  build: {
-    rollupOptions: {
-      // auth-desktop.html: inicio de sesión del escritorio en el navegador del sistema (brief 4.5).
-      input: {
-        main: path.resolve(__dirname, "index.html"),
-        authDesktop: path.resolve(__dirname, "auth-desktop.html"),
-      },
-    },
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

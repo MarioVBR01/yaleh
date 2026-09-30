@@ -1,7 +1,7 @@
 /**
  * @file electron-mock.ts
  * @description `window.electronAPI` simulada para las pruebas de la interfaz.
- * Permite emitir los eventos del proceso principal (tiempo, fin, conexión).
+ * Permite emitir los eventos del proceso principal (tiempo, fin, conexión, .yaleh).
  */
 
 import { act } from '@testing-library/react';
@@ -10,6 +10,7 @@ import type {
   ConnectionChangedPayload,
   ConnectionMode,
   ElectronAPI,
+  OpenSessionFileResult,
   SessionEndedPayload,
   SessionSnapshot,
   SessionTickPayload,
@@ -19,15 +20,17 @@ export interface ElectronMockOptions {
   connection?: ConnectionMode;
   snapshot?: Partial<SessionSnapshot>;
   isPackaged?: boolean;
+  /** Resultado que devolverán el diálogo y la apertura por contenido. */
+  openResult?: OpenSessionFileResult;
 }
 
 export function createElectronMock(options: ElectronMockOptions = {}) {
   let tick: ((p: SessionTickPayload) => void) | null = null;
   let ended: ((p: SessionEndedPayload) => void) | null = null;
   let connectionListener: ((p: ConnectionChangedPayload) => void) | null = null;
+  let fileListener: ((r: OpenSessionFileResult) => void) | null = null;
   let connection: ConnectionMode = options.connection ?? 'offline';
-  let authTokenListener: ((token: string) => void) | null = null;
-  let sessionLinkListener: ((p: { sessionId: string }) => void) | null = null;
+  const openResult: OpenSessionFileResult = options.openResult ?? { ok: false, canceled: true, message: '' };
 
   const snapshot: SessionSnapshot = {
     status: 'idle',
@@ -41,16 +44,13 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
   const api: ElectronAPI = {
     version: 'test',
     getAppInfo: vi.fn(async () => ({ version: 'test', isPackaged: options.isPackaged ?? true })),
-    startSession: vi.fn(async (durationSeconds, mode, sessionId) => ({
+    startSession: vi.fn(async (durationSeconds: number, sessionId?: string) => ({
       status: 'active' as const,
       sessionId: sessionId ?? 's1',
-      mode,
+      mode: connection === 'online' ? ('online' as const) : ('offline' as const),
       durationSeconds,
       remainingSeconds: durationSeconds,
     })),
-    prepareOnlineSession: vi.fn(async () => {}),
-    cancelOnlineSession: vi.fn(async () => {}),
-    beginDesktopAuth: vi.fn(async () => {}),
     getSessionState: vi.fn(async () => snapshot),
     resumeSession: vi.fn(async () => ({ ...snapshot, status: 'active' as const })),
     discardResume: vi.fn(async () => ({ ...snapshot, status: 'idle' as const })),
@@ -66,6 +66,14 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
         ended = null;
       };
     }),
+    openSessionFileDialog: vi.fn(async () => openResult),
+    openSessionFileContent: vi.fn(async () => openResult),
+    onSessionFileResult: vi.fn(cb => {
+      fileListener = cb;
+      return () => {
+        fileListener = null;
+      };
+    }),
     getConnectionMode: vi.fn(async () => connection),
     recheckConnection: vi.fn(async () => connection),
     onConnectionChange: vi.fn(cb => {
@@ -75,19 +83,6 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       };
     }),
     closeApp: vi.fn(async () => {}),
-    openExternal: vi.fn(async () => true),
-    onAuthToken: vi.fn(cb => {
-      authTokenListener = cb;
-      return () => {
-        authTokenListener = null;
-      };
-    }),
-    onSessionLink: vi.fn(cb => {
-      sessionLinkListener = cb;
-      return () => {
-        sessionLinkListener = null;
-      };
-    }),
     workspace: {
       addSource: vi.fn(async () => {}),
       listSources: vi.fn(async () => []),
@@ -107,8 +102,8 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
     },
     emitTick: (remainingSeconds: number) => act(() => tick?.({ remainingSeconds })),
     emitEnded: () => act(() => ended?.({ reason: 'completed' })),
-    emitAuthToken: (token: string) => act(() => authTokenListener?.(token)),
-    emitSessionLink: (sessionId: string) => act(() => sessionLinkListener?.({ sessionId })),
+    /** Simula un .yaleh abierto por los argumentos de arranque o una segunda instancia. */
+    emitSessionFileResult: (result: OpenSessionFileResult) => act(() => fileListener?.(result)),
     /** Cambia la conexión que devolverá la API y avisa a la interfaz. */
     setConnection: (mode: ConnectionMode) =>
       act(() => {

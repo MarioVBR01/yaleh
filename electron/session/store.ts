@@ -31,6 +31,8 @@ export type SessionEventType =
   | 'dev-release'
   | 'connection-lost'
   | 'connection-restored'
+  | 'session-file-rejected'
+  /** Solo en datos anteriores a la revisión 1.5 (enlaces yaleh://, ya eliminados). */
   | 'invalid-deeplink';
 
 export interface SessionEvent {

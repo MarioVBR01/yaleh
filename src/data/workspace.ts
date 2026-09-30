@@ -2,9 +2,10 @@
  * @file workspace.ts
  * @description Dónde se guardan las fuentes, las notas y los resultados de la IA
  * (brief, sección 8.2):
- * - Web y escritorio online (con cuenta): Firestore.
- * - Escritorio offline: SQLite, por IPC (la interfaz nunca abre la base).
- * - Sin cuenta (sesión online de prueba en desarrollo): en memoria.
+ * - Web (con cuenta): Firestore.
+ * - Escritorio (online u offline): SQLite, por IPC (la interfaz nunca abre la base).
+ *   El escritorio no inicia sesión con Google; las fuentes llegan en el .yaleh.
+ * - Sin cuenta (pruebas): en memoria.
  */
 
 import { getElectronAPI, isElectron } from '../lib/electron';
@@ -142,7 +143,7 @@ function memoryStore(workspaceId: string): WorkspaceStore {
 export function getWorkspaceStore(state: AppState): WorkspaceStore | null {
   const workspaceId = state.workspaceId;
   if (!workspaceId) return null;
-  if (isElectron() && state.sessionMode === 'offline') return localStore(workspaceId);
+  if (isElectron()) return localStore(workspaceId);
   if (state.session.uid) return firestoreStore(state.session.uid, workspaceId);
   return memoryStore(workspaceId);
 }

@@ -3,8 +3,6 @@
  * @description Validación de los mensajes IPC: origen del remitente y argumentos.
  */
 
-import { EXTERNAL_OPEN_ORIGINS } from '../../shared/config';
-import type { SessionMode } from '../../shared/ipc-types';
 
 export interface SenderTrust {
   /** URL `file://` del index.html de la interfaz empaquetada. */
@@ -45,27 +43,6 @@ export function parseDurationSeconds(value: unknown, minSeconds: number, maxSeco
   }
   if (value < minSeconds || value > maxSeconds) {
     throw new Error('La duración está fuera del rango permitido.');
-  }
-  return value;
-}
-
-/** Solo se pueden abrir en el navegador del sistema las páginas HTTPS de la web de YALEH. */
-export function isAllowedExternalUrl(value: unknown): value is string {
-  if (typeof value !== 'string' || value.length > 2048) return false;
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    return false;
-  }
-  if (url.protocol !== 'https:' || url.username || url.password) return false;
-  return EXTERNAL_OPEN_ORIGINS.includes(url.origin);
-}
-
-/** Valida el modo de sesión pedido por la interfaz. */
-export function parseSessionMode(value: unknown): SessionMode {
-  if (value !== 'online' && value !== 'offline') {
-    throw new Error('Modo de sesión no válido.');
   }
   return value;
 }

@@ -2,23 +2,24 @@
  * @file App.tsx
  * @description Componente raíz de la aplicación YALEH.
  * Gestiona el flujo de fases:
- * - Web: Login → Dropzone → Tiempo → Confirmación → Kiosko → Resumen.
- * - Escritorio: Inicio según la conexión → Dropzone → Tiempo → Confirmación → Kiosko → Resumen.
- *   El escritorio no tiene login propio. Al arrancar consulta al proceso principal
+ * - Web: Login → Dropzone → Espacio de trabajo (IA) → Tiempo → Confirmación → descarga del .yaleh.
+ * - Escritorio: Bienvenida → Dropzone → Tiempo → Confirmación → Kiosko → Resumen,
+ *   o Bienvenida → archivo .yaleh → Kiosko (la sesión empieza de inmediato).
+ *   El escritorio no inicia sesión con Google. Al arrancar consulta al proceso principal
  *   si hay una sesión activa o interrumpida, y sigue el modo de conexión.
  */
 
-import { useEffect, useMemo, type ComponentType } from 'react';
+import { useEffect, useMemo, useRef, type ComponentType } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppProvider, useApp } from './context/AppContext';
 import { getElectronAPI, isElectron } from './lib/electron';
 import { watchUser } from './firebase/auth';
 import { createDraftSession } from './firebase/sessions';
 import { startPhase } from './lib/mode';
+import { applyOpenedSessionFile } from './lib/session-file';
 import { initialState, type AppPhase, type AppState } from './store/appStore';
 import LoginPhase from './phases/LoginPhase';
 import DesktopStartPhase from './phases/DesktopStartPhase';
-import OnlineHandoffPhase from './phases/OnlineHandoffPhase';
 import DropzonePhase from './phases/DropzonePhase';
 import TimerSelectPhase from './phases/TimerSelectPhase';
 import ConfirmSessionPhase from './phases/ConfirmSessionPhase';
@@ -34,7 +35,6 @@ const fadeOut = { opacity: 0, scale: 0.97 };
 const PHASE_COMPONENTS: Record<AppPhase, ComponentType> = {
   login: LoginPhase,
   'desktop-start': DesktopStartPhase,
-  'online-handoff': OnlineHandoffPhase,
   dropzone: DropzonePhase,
   'timer-select': TimerSelectPhase,
   'confirm-session': ConfirmSessionPhase,
@@ -162,19 +162,26 @@ function useWebWorkspace() {
   }, [uid, workspaceId, dispatch]);
 }
 
-/** Escritorio: una sesión enviada desde la web (yaleh://sesion) abre la pantalla de preparación. */
-function useSessionLinks() {
+/**
+ * Escritorio: un .yaleh abierto desde fuera de la app (argumentos de arranque o
+ * segunda instancia). Si es válido, la sesión ya empezó; si no, se muestra el
+ * motivo en la bienvenida.
+ */
+function useSessionFileResults() {
   const { state, dispatch } = useApp();
-  const inKiosk = state.phase === 'kiosk';
+  const phaseRef = useRef(state.phase);
+  phaseRef.current = state.phase;
 
   useEffect(() => {
     const api = getElectronAPI();
-    if (!api || inKiosk) return;
-    return api.onSessionLink(({ sessionId }) => {
-      dispatch({ type: 'SET_LINKED_SESSION', payload: sessionId });
-      dispatch({ type: 'SET_PHASE', payload: 'online-handoff' });
+    if (!api) return;
+    return api.onSessionFileResult(result => {
+      // Con una sesión en curso el proceso principal ya rechazó el archivo: no se sale del kiosko.
+      if (!result.ok && phaseRef.current === 'kiosk') return;
+      applyOpenedSessionFile(dispatch, result);
+      if (!result.ok) dispatch({ type: 'SET_PHASE', payload: 'desktop-start' });
     });
-  }, [inKiosk, dispatch]);
+  }, [dispatch]);
 }
 
 /**
@@ -186,7 +193,7 @@ function AppContent() {
   useConnectionMode();
   useAuthSync();
   useWebWorkspace();
-  useSessionLinks();
+  useSessionFileResults();
 
   // El escritorio nunca muestra el login de la web.
   const phase = getElectronAPI() && state.phase === 'login' ? 'desktop-start' : state.phase;

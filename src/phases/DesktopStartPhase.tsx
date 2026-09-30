@@ -1,35 +1,31 @@
 /**
  * @file DesktopStartPhase.tsx
- * @description Pantalla de inicio de la app de escritorio (brief, sección 4.2).
- * El escritorio no tiene login propio:
- * - Sin conexión: "No estás conectado. ¿Quieres iniciar sesión offline?"
- * - Con conexión: "Inicia tu sesión desde la web" (el flujo desde la web llega en la fase 4),
- *   con la opción de usar el modo offline.
+ * @description Bienvenida de la app de escritorio (brief, revisión 1.5), con o sin conexión.
+ * El escritorio no inicia sesión con Google:
+ * - "Iniciar": flujo local (dropzone → tiempo → confirmación → kiosko).
+ * - "Abrir archivo de sesión (.yaleh)": el proceso principal lo valida y, si es
+ *   válido, bloquea el equipo y empieza el tiempo de inmediato. También se puede
+ *   arrastrar el archivo a esta ventana.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, RefreshCw, WifiOff } from 'lucide-react';
-import { YALEH_WEB_ORIGINS } from '@shared/config';
-import type { SessionMode } from '@shared/ipc-types';
+import { FileUp, Loader2, Play, Wifi, WifiOff } from 'lucide-react';
+import { SESSION_FILE_EXTENSION } from '@shared/session-file';
 import { useApp } from '../context/AppContext';
 import { newId } from '../data/workspace';
 import { getElectronAPI } from '../lib/electron';
+import { applyOpenedSessionFile } from '../lib/session-file';
 
 export default function DesktopStartPhase() {
   const { state, dispatch } = useApp();
   const api = getElectronAPI();
-  const [retrying, setRetrying] = useState(false);
-  const [isPackaged, setIsPackaged] = useState(true);
+  const [opening, setOpening] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
-  useEffect(() => {
-    void api?.getAppInfo().then(info => setIsPackaged(info.isPackaged));
-  }, [api]);
-
-  /** Entra al flujo local: dropzone → tiempo → confirmación → kiosko. */
-  const startFlow = (mode: SessionMode) => {
-    dispatch({ type: 'SET_SESSION_MODE', payload: mode });
-    // Espacio de trabajo local nuevo (su id será el de la sesión).
+  /** Flujo local: espacio de trabajo nuevo en SQLite (su id será el de la sesión). */
+  const handleStart = () => {
+    dispatch({ type: 'SET_NOTICE', payload: null });
     dispatch({ type: 'SET_WORKSPACE', payload: newId() });
     dispatch({ type: 'SET_FILES', payload: [] });
     dispatch({
@@ -39,97 +35,96 @@ export default function DesktopStartPhase() {
     dispatch({ type: 'SET_PHASE', payload: 'dropzone' });
   };
 
-  const handleRetry = async () => {
+  const handleOpenFile = async () => {
     if (!api) return;
-    setRetrying(true);
+    setOpening(true);
+    dispatch({ type: 'SET_NOTICE', payload: null });
     try {
-      const mode = await api.recheckConnection();
-      dispatch({ type: 'SET_CONNECTION', payload: mode });
+      applyOpenedSessionFile(dispatch, await api.openSessionFileDialog());
     } finally {
-      setRetrying(false);
+      setOpening(false);
     }
   };
 
-  const handleOpenWeb = () => {
-    void api?.openExternal(`${YALEH_WEB_ORIGINS[0]}/`);
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = [...e.dataTransfer.files].find(f => f.name.toLowerCase().endsWith(SESSION_FILE_EXTENSION));
+    if (!api) return;
+    if (!file) {
+      dispatch({ type: 'SET_NOTICE', payload: 'Arrastra un archivo de sesión con extensión .yaleh.' });
+      return;
+    }
+    setOpening(true);
+    dispatch({ type: 'SET_NOTICE', payload: null });
+    try {
+      applyOpenedSessionFile(dispatch, await api.openSessionFileContent(await file.text()));
+    } finally {
+      setOpening(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
+    <div
+      className="min-h-screen bg-canvas flex items-center justify-center p-4"
+      onDragOver={e => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={e => void handleDrop(e)}
+    >
       <motion.div
-        className="w-full max-w-md bg-surface border border-line rounded-2xl p-8 text-center"
+        className={`w-full max-w-md bg-surface border rounded-2xl p-8 text-center ${
+          dragging ? 'border-accent' : 'border-line'
+        }`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-bold text-ink mb-1">YALEH</h1>
-        <p className="text-ink-subtle text-xs mb-8">Entorno de estudio · TECBA 2026</p>
+        <h1 className="text-3xl font-bold text-ink mb-1">Bienvenido a YALEH</h1>
+        <p className="text-ink-muted text-sm mb-6">Tu entorno de estudio sin distracciones.</p>
 
-        {state.connection === 'unknown' && (
-          <p className="text-ink-muted text-sm" role="status">
-            Comprobando conexión…
+        <p className="flex items-center justify-center gap-2 text-xs text-ink-subtle mb-6" role="status">
+          {state.connection === 'online' ? (
+            <>
+              <Wifi size={14} className="text-success" /> Con conexión: tendrás el asistente de IA y las herramientas.
+            </>
+          ) : state.connection === 'offline' ? (
+            <>
+              <WifiOff size={14} className="text-warning" /> Sin conexión: tendrás los módulos locales.
+            </>
+          ) : (
+            <>
+              <Loader2 size={14} className="animate-spin" /> Comprobando conexión…
+            </>
+          )}
+        </p>
+
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleStart}
+            disabled={opening}
+            className="w-full py-3 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            <Play size={16} /> Iniciar
+          </button>
+          <button
+            onClick={() => void handleOpenFile()}
+            disabled={opening}
+            className="w-full py-3 rounded-xl text-sm border border-line text-ink-soft hover:text-ink hover:border-line-strong transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {opening ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
+            Abrir archivo de sesión (.yaleh)
+          </button>
+        </div>
+        <p className="text-ink-subtle text-[11px] mt-3">
+          También puedes arrastrar el archivo .yaleh a esta ventana. Al abrirlo, la sesión empieza de inmediato.
+        </p>
+
+        {state.notice && (
+          <p role="alert" className="mt-4 p-3 rounded-xl border border-danger/40 bg-danger/10 text-sm text-ink-soft">
+            {state.notice}
           </p>
-        )}
-
-        {state.connection === 'offline' && (
-          <>
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-surface-raised mb-4">
-              <WifiOff size={26} className="text-warning" />
-            </div>
-            <h2 className="text-lg font-semibold text-ink mb-6">
-              No estás conectado. ¿Quieres iniciar sesión offline?
-            </h2>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => startFlow('offline')}
-                className="w-full py-3 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors"
-              >
-                Iniciar sesión offline
-              </button>
-              <button
-                onClick={handleRetry}
-                disabled={retrying}
-                className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
-              >
-                <RefreshCw size={14} className={retrying ? 'animate-spin' : ''} />
-                {retrying ? 'Comprobando…' : 'Reintentar conexión'}
-              </button>
-            </div>
-          </>
-        )}
-
-        {state.connection === 'online' && (
-          <>
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-surface-raised mb-4">
-              <Globe size={26} className="text-accent" />
-            </div>
-            <h2 className="text-lg font-semibold text-ink mb-2">Inicia tu sesión desde la web</h2>
-            <p className="text-ink-muted text-sm mb-6">
-              Inicia sesión en la web de YALEH, carga tus materiales y desde ahí abre la sesión de concentración.
-            </p>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={handleOpenWeb}
-                className="w-full py-3 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors"
-              >
-                Abrir la web de YALEH
-              </button>
-              <button
-                onClick={() => startFlow('offline')}
-                className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink transition-colors"
-              >
-                Usar modo offline
-              </button>
-              {!isPackaged && (
-                // TODO(fase 4): se reemplaza por el flujo real desde la web (yaleh://sesion).
-                <button
-                  onClick={() => startFlow('online')}
-                  className="w-full py-2 rounded-xl text-xs text-ink-subtle hover:text-ink border border-dashed border-line transition-colors"
-                >
-                  Probar sesión online (solo desarrollo)
-                </button>
-              )}
-            </div>
-          </>
         )}
       </motion.div>
     </div>
