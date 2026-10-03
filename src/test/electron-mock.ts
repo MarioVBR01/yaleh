@@ -92,6 +92,14 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       saveNote: vi.fn(async () => {}),
       deleteNote: vi.fn(async () => {}),
     },
+    tabs: {
+      open: vi.fn(async (url: string) => ({ ok: true as const, tabId: `tab-${url.length}`, url, title: '' })),
+      close: vi.fn(async () => {}),
+      show: vi.fn(async () => {}),
+      setBounds: vi.fn(async () => {}),
+      onUpdated: vi.fn(() => () => {}),
+      onOpenRequest: vi.fn(() => () => {}),
+    },
   };
 
   return {

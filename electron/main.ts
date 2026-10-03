@@ -25,7 +25,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
-import { CONNECTIVITY, DEV_SERVER_ORIGIN, LIMITS } from '../shared/config';
+import { CONNECTIVITY, DEV_SERVER_ORIGIN, LIMITS, YOUTUBE_PLAYER_URL } from '../shared/config';
 import {
   IPC_EVENT,
   IPC_INVOKE,
@@ -41,6 +41,7 @@ import { SqliteSessionStore } from './db/sqlite-session-store';
 import { WorkspaceRepository } from './db/workspace-repository';
 import {
   isTrustedSenderUrl,
+  parseBounds,
   parseDurationSeconds,
   parseId,
   parseNoteInput,
@@ -53,6 +54,7 @@ import { isFrameUrlAllowed, isMainWindowNavigationAllowed, type NavigationContex
 import { SessionController } from './session/controller';
 import { findSessionFileInArgv, openSessionFile } from './session-file-service';
 import { runSmokeTest } from './smoke';
+import { TabManager } from './tabs/tab-manager';
 
 const isPackaged = app.isPackaged;
 /** `electron . --dev-server` carga el servidor de Vite; sin la bandera, carga dist/. */
@@ -95,6 +97,7 @@ let store: SqliteSessionStore;
 let workspace: WorkspaceRepository;
 let controller: SessionController;
 let connectivity: ConnectivityMonitor;
+let tabs: TabManager;
 
 /** El equipo está bloqueado (sesión activa). */
 function isLocked(): boolean {
@@ -120,7 +123,11 @@ function createController(): SessionController {
     lock: () => mainWindow && lockWindow(mainWindow),
     unlock: () => mainWindow && unlockWindow(mainWindow),
     onTick: remainingSeconds => send(IPC_EVENT.sessionTick, { remainingSeconds }),
-    onEnded: reason => send(IPC_EVENT.sessionEnded, { reason }),
+    onEnded: reason => {
+      // Al terminar la sesión se cierran las pestañas internas.
+      tabs.closeAll();
+      send(IPC_EVENT.sessionEnded, { reason });
+    },
   });
 }
 
@@ -252,6 +259,12 @@ function registerIpcHandlers(): void {
     workspace.deleteNote(parseId(workspaceId, 'Sesión'), parseId(noteId, 'Nota'))
   );
 
+  // Pestañas internas (WebContentsView). La URL se valida aquí, no en la interfaz.
+  handle(IPC_INVOKE.tabsOpen, (_event, url) => tabs.open(typeof url === 'string' ? url : ''));
+  handle(IPC_INVOKE.tabsClose, (_event, tabId) => tabs.close(parseId(tabId, 'Pestaña')));
+  handle(IPC_INVOKE.tabsShow, (_event, tabId) => tabs.show(tabId === null ? null : parseId(tabId, 'Pestaña')));
+  handle(IPC_INVOKE.tabsSetBounds, (_event, tabId, bounds) => tabs.setBounds(parseId(tabId, 'Pestaña'), parseBounds(bounds)));
+
   handle(IPC_INVOKE.appClose, () => {
     if (isLocked()) {
       throw new Error('No puedes cerrar YALEH mientras la sesión está activa.');
@@ -292,7 +305,8 @@ function guardWebContents(contents: WebContents): void {
     }
   });
 
-  // Fase 8: las ventanas nuevas se abrirán como pestañas internas. Por ahora se deniegan.
+  // Ventanas nuevas: se deniegan. Las pestañas internas (tab-manager.ts) reemplazan este
+  // manejador para convertir las de sitios permitidos en pestañas.
   contents.setWindowOpenHandler(({ url }) => {
     console.warn(`[navegación] Ventana nueva denegada: ${url.slice(0, 120)}`);
     return { action: 'deny' };
@@ -418,6 +432,13 @@ function startConnectivityMonitor(): void {
 function bootstrap(): void {
   openStorage();
   controller = createController();
+  tabs = new TabManager({
+    window: () => mainWindow,
+    send,
+    playerPage: YOUTUBE_PLAYER_URL,
+    devTools: !isPackaged,
+    events: { updated: IPC_EVENT.tabsUpdated, openRequest: IPC_EVENT.tabsOpenRequest },
+  });
   if (isPackaged) Menu.setApplicationMenu(null);
 
   installSessionGuards();

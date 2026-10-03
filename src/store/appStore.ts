@@ -5,7 +5,11 @@
  * archivos cargados y tiempo de sesión.
  */
 
+import { LIMITS } from '@shared/config';
 import type { ConnectionMode, SessionMode } from '@shared/ipc-types';
+
+/** Mensaje al llegar al límite de pestañas (brief, sección 10). */
+export const TAB_LIMIT_MESSAGE = `Llegaste al máximo de ${LIMITS.maxTabs} pestañas. Cierra una para abrir otra.`;
 
 export type AppPhase =
   | 'login'
@@ -33,6 +37,8 @@ export interface Tab {
   url?: string;
   icon?: string;
   editorType?: 'docs' | 'sheets' | 'slides';
+  /** Pestañas internas (WebContentsView): error de carga informado por el proceso principal. */
+  error?: string;
 }
 
 export interface UploadedFile {
@@ -121,6 +127,7 @@ export type AppAction =
   | { type: 'SET_SESSION_MODE'; payload: SessionMode | null }
   | { type: 'SET_WORKSPACE'; payload: string | null }
   | { type: 'SET_NOTICE'; payload: string | null }
+  | { type: 'UPDATE_TAB'; payload: { id: string } & Partial<Pick<Tab, 'title' | 'error' | 'url'>> }
   | { type: 'SET_FILES'; payload: UploadedFile[] }
   | { type: 'UPDATE_FILE'; payload: { id: string } & Partial<UploadedFile> }
   | { type: 'END_SESSION' }
@@ -234,6 +241,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_WORKSPACE':
       return { ...state, workspaceId: action.payload };
 
+    case 'UPDATE_TAB':
+      return {
+        ...state,
+        tabs: state.tabs.map(t => (t.id === action.payload.id ? { ...t, ...action.payload } : t)),
+      };
+
     case 'SET_NOTICE':
       return { ...state, notice: action.payload };
 
@@ -261,6 +274,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       );
       if (exists) {
         return { ...state, activeTabId: exists.id };
+      }
+      if (state.tabs.length >= LIMITS.maxTabs) {
+        return { ...state, notice: TAB_LIMIT_MESSAGE };
       }
       return {
         ...state,

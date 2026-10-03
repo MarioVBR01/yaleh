@@ -17,6 +17,7 @@ import { TOOL_LINKS, WORKSPACE_LINKS, type ToolLink } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import { useModeFlags } from '../lib/mode';
 import { signOut } from '../firebase/auth';
+import { useOpenExternalTab } from './useExternalTabs';
 
 /** Estilo de cada app de Google Workspace; la lista viene de shared/config.ts. */
 const WORKSPACE_STYLES: Record<string, string> = {
@@ -118,6 +119,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
   const { state, dispatch, openTab, logActivity } = useApp();
   const [openDrawer, setOpenDrawer] = useState<string | null>(null);
   const { isDesktop, onlineTools } = useModeFlags();
+  const openExternal = useOpenExternalTab();
 
   /**
    * Alterna el panel desplegable de una categoría (Workspace/Offline).
@@ -134,7 +136,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
     if (!isDesktop) {
       window.open(app.url, '_blank', 'noopener,noreferrer');
     } else {
-      openTab({ type: 'workspace-url', title: app.name, url: app.url, icon: app.icon });
+      void openExternal(app.url, app.name, app.icon);
     }
     logActivity({ type: 'tool', label: `${app.name} abierto`, icon: app.icon });
   };

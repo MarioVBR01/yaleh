@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>YALEH | Reproductor</title>
+    <meta name="theme-color" content="#0f172a" />
+  </head>
+  <body class="bg-canvas text-ink">
+    <main class="min-h-screen flex flex-col items-center justify-center gap-3 p-4">
+      <div id="player" class="w-full max-w-5xl aspect-video bg-black rounded-xl overflow-hidden"></div>
+      <p id="message" class="text-ink-subtle text-xs text-center max-w-xl">
+        Si el video no se reproduce, puede que su autor haya desactivado la reproducción fuera de YouTube.
+      </p>
+    </main>
+    <script type="module" src="/src/youtube/main.ts"></script>
+  </body>
+</html>

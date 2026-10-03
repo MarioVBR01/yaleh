@@ -74,3 +74,14 @@ export function parseNoteInput(note: unknown) {
   if (typeof n.text !== 'string' || n.text.length > 100_000) throw new Error('Texto de la nota no válido.');
   return { id: parseId(n.id, 'Nota'), text: n.text };
 }
+
+/** Rectángulo de una pestaña interna: números finitos, sin negativos y de tamaño razonable. */
+export function parseBounds(value: unknown): { x: number; y: number; width: number; height: number } {
+  const b = value as Record<string, unknown> | null;
+  const keys = ['x', 'y', 'width', 'height'] as const;
+  if (!b || typeof b !== 'object' || !keys.every(k => typeof b[k] === 'number' && Number.isFinite(b[k] as number))) {
+    throw new Error('Posición de pestaña no válida.');
+  }
+  const [x, y, width, height] = keys.map(k => Math.max(0, Math.min(20_000, Math.round(b[k] as number))));
+  return { x, y, width, height };
+}

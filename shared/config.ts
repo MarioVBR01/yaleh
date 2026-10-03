@@ -53,6 +53,12 @@ export const ALLOWED_SITES: readonly AllowedSite[] = [
   { host: 'www.youtube-nocookie.com', reason: 'Reproductor de YouTube embebido (fase 8)' },
 ];
 
+/**
+ * Reproductor propio de YALEH (brief, sección 6.2): página publicada en Firebase Hosting que
+ * inserta youtube-nocookie.com/embed/<id>. Debe ser HTTPS: YouTube exige un Referer válido.
+ */
+export const YOUTUBE_PLAYER_URL = `${YALEH_WEB_ORIGINS[0]}/youtube.html`;
+
 /** Servidor de desarrollo de Vite. Solo se permite cuando la app no está empaquetada. */
 export const DEV_SERVER_ORIGIN = 'http://localhost:5173';
 

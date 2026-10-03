@@ -8,10 +8,12 @@
  *    y quedan registrados (session-file-rejected).
  * 4. Un recorrido local real: bienvenida → "Iniciar" → dropzone → extracción de un TXT y
  *    un PDF (pdf.js desde file://) → rechazo de un DOCX dañado (mammoth) → filas en SQLite.
+ * 5. Con conexión: pestañas internas reales (TabManager) — un enlace de youtube.com se abre
+ *    en el reproductor propio con el video cargado, y un sitio no permitido se rechaza.
  * No activa el kiosko.
  */
 
-import type { BrowserWindow } from 'electron';
+import { webContents, type BrowserWindow } from 'electron';
 import type { DatabaseSync } from 'node:sqlite';
 
 /**
@@ -106,6 +108,25 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
         const migrations = (db.prepare('SELECT version FROM schema_migrations').all() as { version: number }[]).map(
           r => r.version
         );
+        // Pestañas internas (solo con conexión: el reproductor está en Firebase Hosting).
+        let tabsCheck: Record<string, unknown> = { skipped: base.connection !== 'online' };
+        if (base.connection === 'online') {
+          const opened = await win.webContents.executeJavaScript(`(async () => ({
+            youtube: await window.electronAPI.tabs.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+            blocked: await window.electronAPI.tabs.open('https://es.wikipedia.org/'),
+          }))()`);
+          await new Promise(r => setTimeout(r, 6000));
+          const player = webContents.getAllWebContents().find(wc => wc.getURL().includes('/youtube.html?v=dQw4w9WgXcQ'));
+          const embed = player?.mainFrame.framesInSubtree.find(fr => fr.url.includes('youtube-nocookie.com/embed/'));
+          tabsCheck = {
+            playerTab: opened.youtube.ok && String(opened.youtube.url).includes('youtube.html'),
+            blocked: !opened.blocked.ok,
+            embedLoaded: Boolean(embed),
+          };
+          if (opened.youtube.ok) await win.webContents.executeJavaScript(`window.electronAPI.tabs.close('${opened.youtube.tabId}')`);
+        }
+        const tabsOk = tabsCheck.skipped === true || (tabsCheck.playerTab && tabsCheck.blocked && tabsCheck.embedLoaded);
+
         const sessionFile = await win.webContents.executeJavaScript(SESSION_FILE_SCRIPT);
         const rejectedEvents = (
           db.prepare("SELECT COUNT(*) AS n FROM session_events WHERE type = 'session-file-rejected'").get() as { n: number }
@@ -128,8 +149,9 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           migrations.length > 0 &&
           ingestOk &&
           sessionFileOk &&
+          tabsOk &&
           errors.length === 0;
-        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, sessionFile, rejectedEvents, ingest, sources, errors })}`);
+        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, tabs: tabsCheck, sessionFile, rejectedEvents, ingest, sources, errors })}`);
         finish(ok);
       } catch (error) {
         console.log(`[smoke] ${JSON.stringify({ ok: false, error: String(error), errors })}`);

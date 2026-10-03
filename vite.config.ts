@@ -64,6 +64,15 @@ export default defineConfig({
   // Rutas relativas: la misma compilación sirve para Firebase Hosting y para file:// en Electron.
   base: "./",
   plugins: [react(), tailwindcss(), cspPlugin()],
+  build: {
+    rollupOptions: {
+      // youtube.html: reproductor propio de YALEH (brief, sección 6.2), publicado en Hosting.
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        youtube: path.resolve(__dirname, "youtube.html"),
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

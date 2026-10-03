@@ -30,7 +30,7 @@ const timeout = setTimeout(() => {
   child.kill();
   cleanUp();
   process.exit(1);
-}, 30000);
+}, 60000);
 
 child.on('exit', code => {
   clearTimeout(timeout);

@@ -15,7 +15,7 @@ import { TOOL_LINKS } from '@shared/config';
 import SideBar from './SideBar';
 import BottomBar from './BottomBar';
 import WorkspaceView from '../workspace/WorkspaceView';
-import WebViewPanel from '../panels/WebViewPanel';
+import ExternalTabPanel from '../panels/ExternalTabPanel';
 import OfflineEditorPanel from '../panels/OfflineEditorPanel';
 import HistoryPanel from '../panels/HistoryPanel';
 import PomodoroPanel from '../panels/PomodoroPanel';
@@ -23,6 +23,7 @@ import DownloadsPanel from '../panels/DownloadsPanel';
 import StatsPanel from '../panels/StatsPanel';
 import { useApp } from '../context/AppContext';
 import { getElectronAPI } from '../lib/electron';
+import { useExternalTabsSync, useOpenExternalTab } from './useExternalTabs';
 import { useModeFlags } from '../lib/mode';
 import type { Tab } from '../store/appStore';
 
@@ -35,7 +36,7 @@ function TabContent({ tab }: { tab: Tab }) {
     case 'dashboard':
       return <WorkspaceView />;
     case 'workspace-url':
-      return <WebViewPanel url={tab.url ?? ''} title={tab.title} />;
+      return <ExternalTabPanel tab={tab} />;
     case 'offline-editor':
       return <OfflineEditorPanel editorType={tab.editorType || 'docs'} />;
     case 'history':
@@ -52,12 +53,15 @@ function TabContent({ tab }: { tab: Tab }) {
 }
 
 export default function KioskLayout() {
-  const { state, openTab, dispatch } = useApp();
+  const { state, dispatch } = useApp();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showNewTabDialog, setShowNewTabDialog] = useState(false);
 
   const api = getElectronAPI();
   const { onlineTools, offlineNotice } = useModeFlags();
+  // Las vistas de las pestañas internas se dibujan encima de la interfaz: se ocultan con el diálogo abierto.
+  useExternalTabsSync({ overlayOpen: showNewTabDialog, onlineTools });
+  const openExternal = useOpenExternalTab();
 
   /**
    * Escritorio: el proceso principal envía el tiempo restante cada segundo y
@@ -134,6 +138,22 @@ export default function KioskLayout() {
             </div>
           )}
 
+          {/* Avisos (por ejemplo, límite de pestañas o sitio no permitido). */}
+          {state.notice && (
+            <div
+              role="alert"
+              className="absolute top-0 inset-x-0 z-30 px-4 py-2 bg-danger/15 border-b border-danger/40 text-ink-soft text-sm flex items-center justify-center gap-3"
+            >
+              <span>{state.notice}</span>
+              <button
+                onClick={() => dispatch({ type: 'SET_NOTICE', payload: null })}
+                className="text-xs underline text-ink-muted hover:text-ink"
+              >
+                Entendido
+              </button>
+            </div>
+          )}
+
           {/*
            * Renderiza TODAS las pestañas pero solo muestra la activa.
            * Esto preserva el estado (editores, formularios, reproductores)
@@ -188,7 +208,7 @@ export default function KioskLayout() {
                   <motion.button
                     key={site.url}
                     onClick={() => {
-                      openTab({ type: 'workspace-url', title: site.name, url: site.url, icon: site.icon });
+                      void openExternal(site.url, site.name, site.icon);
                       setShowNewTabDialog(false);
                     }}
                     className="flex items-center gap-3 p-3 rounded-xl bg-slate-800 border border-slate-700 hover:border-blue-500/50 hover:bg-slate-700 text-left transition-all"

@@ -22,6 +22,10 @@ export const IPC_INVOKE = {
   workspaceListNotes: 'workspace:list-notes',
   workspaceSaveNote: 'workspace:save-note',
   workspaceDeleteNote: 'workspace:delete-note',
+  tabsOpen: 'tabs:open',
+  tabsClose: 'tabs:close',
+  tabsShow: 'tabs:show',
+  tabsSetBounds: 'tabs:set-bounds',
   appClose: 'app:close',
 } as const;
 
@@ -32,6 +36,10 @@ export const IPC_EVENT = {
   connectionChanged: 'connection:changed',
   /** Resultado de abrir un .yaleh que llegó por los argumentos de arranque o una segunda instancia. */
   sessionFileResult: 'session-file:result',
+  /** Título o error de una pestaña interna. */
+  tabsUpdated: 'tabs:updated',
+  /** Una pestaña pidió abrir otra (ventana nueva o enlace de YouTube). */
+  tabsOpenRequest: 'tabs:open-request',
 } as const;
 
 /**
@@ -107,6 +115,35 @@ export type OpenSessionFileResult =
     }
   | { ok: false; message: string; canceled?: boolean };
 
+/** Resultado de abrir una pestaña interna (WebContentsView). */
+export type OpenTabResult = { ok: true; tabId: string; url: string; title: string } | { ok: false; message: string };
+
+export interface TabUpdatedPayload {
+  tabId: string;
+  title?: string;
+  error?: string;
+}
+
+export interface TabBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Pestañas internas con WebContentsView, controladas por el proceso principal. */
+export interface TabsAPI {
+  /** Valida la URL (lista de sitios o YouTube) y crea la vista. */
+  open: (url: string) => Promise<OpenTabResult>;
+  close: (tabId: string) => Promise<void>;
+  /** Muestra la vista indicada sobre la interfaz, o ninguna (null). */
+  show: (tabId: string | null) => Promise<void>;
+  /** Dónde dibujar la vista (coordenadas de la ventana, en píxeles CSS). */
+  setBounds: (tabId: string, bounds: TabBounds) => Promise<void>;
+  onUpdated: (callback: (payload: TabUpdatedPayload) => void) => () => void;
+  onOpenRequest: (callback: (payload: { url: string }) => void) => () => void;
+}
+
 /** Datos del espacio de trabajo del escritorio, guardados por el proceso principal en SQLite. */
 export interface LocalWorkspaceAPI {
   addSource: (
@@ -154,4 +191,6 @@ export interface ElectronAPI {
   closeApp: () => Promise<void>;
   /** Fuentes y notas del escritorio (SQLite). */
   workspace: LocalWorkspaceAPI;
+  /** Pestañas internas (herramientas y YouTube). */
+  tabs: TabsAPI;
 }
