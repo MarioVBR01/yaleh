@@ -14,7 +14,8 @@ const common = {
   bundle: true,
   platform: 'node',
   target: 'node24',
-  external: ['electron'],
+  // Las librerías de ofimática se cargan desde node_modules (el instalador las incluye).
+  external: ['electron', 'docx', 'exceljs', 'pptxgenjs'],
   sourcemap: true,
   logLevel: 'info',
   define: { __YALEH_VERSION__: JSON.stringify(pkg.version) },

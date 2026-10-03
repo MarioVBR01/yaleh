@@ -22,6 +22,7 @@ export const IPC_INVOKE = {
   workspaceListNotes: 'workspace:list-notes',
   workspaceSaveNote: 'workspace:save-note',
   workspaceDeleteNote: 'workspace:delete-note',
+  officeExport: 'office:export',
   tabsOpen: 'tabs:open',
   tabsClose: 'tabs:close',
   tabsShow: 'tabs:show',
@@ -115,6 +116,31 @@ export type OpenSessionFileResult =
     }
   | { ok: false; message: string; canceled?: boolean };
 
+/** Nodo del documento de TipTap (formato JSON de ProseMirror). */
+export interface TipTapNode {
+  type: string;
+  text?: string;
+  attrs?: Record<string, unknown>;
+  marks?: { type: string; attrs?: Record<string, unknown> }[];
+  content?: TipTapNode[];
+}
+
+export interface OfficeSlide {
+  title: string;
+  content: string;
+  /** Color de fondo, #rrggbb. */
+  background: string;
+}
+
+/** Exportación de los editores de ofimática (brief, sección 6.1). */
+export type OfficeExportRequest =
+  | { kind: 'docx'; title: string; document: TipTapNode }
+  | { kind: 'xlsx'; title: string; rows: string[][] }
+  | { kind: 'pptx'; title: string; slides: OfficeSlide[] };
+
+/** Ruta del archivo guardado en Documentos\YALEH, o el motivo del error. */
+export type OfficeExportResult = { ok: true; path: string } | { ok: false; message: string };
+
 /** Resultado de abrir una pestaña interna (WebContentsView). */
 export type OpenTabResult = { ok: true; tabId: string; url: string; title: string } | { ok: false; message: string };
 
@@ -193,4 +219,6 @@ export interface ElectronAPI {
   workspace: LocalWorkspaceAPI;
   /** Pestañas internas (herramientas y YouTube). */
   tabs: TabsAPI;
+  /** Exporta un documento, hoja o presentación a Documentos\\YALEH (sin diálogo del sistema). */
+  exportOffice: (request: OfficeExportRequest) => Promise<OfficeExportResult>;
 }

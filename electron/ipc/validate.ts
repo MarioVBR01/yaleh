@@ -3,6 +3,7 @@
  * @description Validación de los mensajes IPC: origen del remitente y argumentos.
  */
 
+import type { OfficeExportRequest, OfficeSlide, TipTapNode } from '../../shared/ipc-types';
 
 export interface SenderTrust {
   /** URL `file://` del index.html de la interfaz empaquetada. */
@@ -84,4 +85,48 @@ export function parseBounds(value: unknown): { x: number; y: number; width: numb
   }
   const [x, y, width, height] = keys.map(k => Math.max(0, Math.min(20_000, Math.round(b[k] as number))));
   return { x, y, width, height };
+}
+
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const MAX_OFFICE_JSON = 10_000_000;
+
+/** Valida el pedido de exportación de ofimática (tipo, título, tamaño y forma de los datos). */
+export function parseOfficeRequest(value: unknown): OfficeExportRequest {
+  const req = value as Record<string, unknown> | null;
+  if (!req || typeof req !== 'object') throw new Error('Pedido de exportación no válido.');
+  if (JSON.stringify(req).length > MAX_OFFICE_JSON) throw new Error('El archivo es demasiado grande para exportarlo.');
+  const title = typeof req.title === 'string' ? req.title.slice(0, 100) : 'Archivo';
+
+  if (req.kind === 'docx') {
+    const doc = req.document as Record<string, unknown> | null;
+    if (!doc || doc.type !== 'doc') throw new Error('Documento no válido.');
+    return { kind: 'docx', title, document: doc as unknown as TipTapNode };
+  }
+  if (req.kind === 'xlsx') {
+    const rows = req.rows;
+    if (
+      !Array.isArray(rows) ||
+      rows.length > 5000 ||
+      !rows.every(r => Array.isArray(r) && r.length <= 200 && r.every(c => typeof c === 'string' && c.length <= 32767))
+    ) {
+      throw new Error('Hoja de cálculo no válida.');
+    }
+    return { kind: 'xlsx', title, rows: rows as string[][] };
+  }
+  if (req.kind === 'pptx') {
+    const slides = req.slides;
+    if (
+      !Array.isArray(slides) ||
+      slides.length === 0 ||
+      slides.length > 300 ||
+      !slides.every(s => {
+        const slide = s as Record<string, unknown>;
+        return typeof slide.title === 'string' && typeof slide.content === 'string' && typeof slide.background === 'string' && HEX_COLOR.test(slide.background);
+      })
+    ) {
+      throw new Error('Presentación no válida.');
+    }
+    return { kind: 'pptx', title, slides: slides as OfficeSlide[] };
+  }
+  throw new Error('Tipo de archivo no válido.');
 }

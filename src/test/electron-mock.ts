@@ -92,6 +92,7 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       saveNote: vi.fn(async () => {}),
       deleteNote: vi.fn(async () => {}),
     },
+    exportOffice: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Documento.docx' })),
     tabs: {
       open: vi.fn(async (url: string) => ({ ok: true as const, tabId: `tab-${url.length}`, url, title: '' })),
       close: vi.fn(async () => {}),

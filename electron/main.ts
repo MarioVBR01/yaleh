@@ -30,6 +30,7 @@ import {
   IPC_EVENT,
   IPC_INVOKE,
   type AppInfo,
+  type OfficeExportResult,
   type OpenSessionFileResult,
   type SessionMode,
 } from '../shared/ipc-types';
@@ -45,6 +46,7 @@ import {
   parseDurationSeconds,
   parseId,
   parseNoteInput,
+  parseOfficeRequest,
   parseSourceInput,
   type SenderTrust,
 } from './ipc/validate';
@@ -55,6 +57,7 @@ import { SessionController } from './session/controller';
 import { findSessionFileInArgv, openSessionFile } from './session-file-service';
 import { runSmokeTest } from './smoke';
 import { TabManager } from './tabs/tab-manager';
+import { exportOfficeFile } from './office/export';
 
 const isPackaged = app.isPackaged;
 /** `electron . --dev-server` carga el servidor de Vite; sin la bandera, carga dist/. */
@@ -66,6 +69,8 @@ const isSmokeTest = !isPackaged && process.env.YALEH_SMOKE === '1';
 // scripts/smoke-electron.mjs la crea y la borra al terminar.
 if (isSmokeTest) {
   app.setPath('userData', process.env.YALEH_SMOKE_USER_DATA ?? path.join(os.tmpdir(), `yaleh-smoke-${process.pid}`));
+  // Las exportaciones de ofimática de la prueba van a la carpeta temporal, no a Documentos.
+  app.setPath('documents', app.getPath('userData'));
 }
 
 // Se empaqueta como CommonJS (dist-electron/main.cjs): __dirname es dist-electron/.
@@ -258,6 +263,17 @@ function registerIpcHandlers(): void {
   handle(IPC_INVOKE.workspaceDeleteNote, (_event, workspaceId, noteId) =>
     workspace.deleteNote(parseId(workspaceId, 'Sesión'), parseId(noteId, 'Nota'))
   );
+
+  // Ofimática: se guarda directo en Documentos\\YALEH, sin diálogo del sistema (brief, sección 6.1).
+  handle(IPC_INVOKE.officeExport, async (_event, request): Promise<OfficeExportResult> => {
+    try {
+      const filePath = await exportOfficeFile(parseOfficeRequest(request), path.join(app.getPath('documents'), 'YALEH'));
+      return { ok: true, path: filePath };
+    } catch (error) {
+      console.error('[ofimática] No se pudo exportar:', error);
+      return { ok: false, message: error instanceof Error ? error.message : 'No se pudo exportar el archivo.' };
+    }
+  });
 
   // Pestañas internas (WebContentsView). La URL se valida aquí, no en la interfaz.
   handle(IPC_INVOKE.tabsOpen, (_event, url) => tabs.open(typeof url === 'string' ? url : ''));

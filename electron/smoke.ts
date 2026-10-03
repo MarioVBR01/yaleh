@@ -10,6 +10,7 @@
  *    un PDF (pdf.js desde file://) → rechazo de un DOCX dañado (mammoth) → filas en SQLite.
  * 5. Con conexión: pestañas internas reales (TabManager) — un enlace de youtube.com se abre
  *    en el reproductor propio con el video cargado, y un sitio no permitido se rechaza.
+ * 6. Exportación de ofimática real: .docx, .xlsx y .pptx en DocumentosYALEH (aquí, la carpeta temporal).
  * No activa el kiosko.
  */
 
@@ -36,6 +37,16 @@ const SESSION_FILE_SCRIPT = `(async () => {
   const r2 = await window.electronAPI.openSessionFileContent('esto no es un .yaleh');
   const state = await window.electronAPI.getSessionState();
   return { expiredRejected: !r1.ok && /caducó/.test(r1.message), invalidRejected: !r2.ok, stillIdle: state.status === 'idle' };
+})()`;
+
+/** Exporta un documento, una hoja y una presentación por IPC (los guarda el proceso principal). */
+const OFFICE_SCRIPT = `(async () => {
+  const api = window.electronAPI;
+  const doc = await api.exportOffice({ kind: 'docx', title: 'Prueba', document: { type: 'doc', content: [
+    { type: 'paragraph', content: [{ type: 'text', text: 'Hola YALEH' }] } ] } });
+  const sheet = await api.exportOffice({ kind: 'xlsx', title: 'Prueba', rows: [['1', '=A1*2']] });
+  const deck = await api.exportOffice({ kind: 'pptx', title: 'Prueba', slides: [{ title: 'Uno', content: 'Dos', background: '#1e293b' }] });
+  return { doc, sheet, deck };
 })()`;
 
 /** Código que se ejecuta en la página: genera archivos y los entrega a la dropzone. */
@@ -127,6 +138,11 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
         }
         const tabsOk = tabsCheck.skipped === true || (tabsCheck.playerTab && tabsCheck.blocked && tabsCheck.embedLoaded);
 
+        const office = await win.webContents.executeJavaScript(OFFICE_SCRIPT);
+        const officeOk = ['doc', 'sheet', 'deck'].every(
+          k => office[k].ok && /YALEH[\\/]Prueba .+\.(docx|xlsx|pptx)$/.test(office[k].path)
+        );
+
         const sessionFile = await win.webContents.executeJavaScript(SESSION_FILE_SCRIPT);
         const rejectedEvents = (
           db.prepare("SELECT COUNT(*) AS n FROM session_events WHERE type = 'session-file-rejected'").get() as { n: number }
@@ -150,8 +166,9 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           ingestOk &&
           sessionFileOk &&
           tabsOk &&
+          officeOk &&
           errors.length === 0;
-        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, tabs: tabsCheck, sessionFile, rejectedEvents, ingest, sources, errors })}`);
+        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, tabs: tabsCheck, officeOk, sessionFile, rejectedEvents, ingest, sources, errors })}`);
         finish(ok);
       } catch (error) {
         console.log(`[smoke] ${JSON.stringify({ ok: false, error: String(error), errors })}`);
