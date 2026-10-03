@@ -64,10 +64,15 @@ export default function ConfirmSessionPhase() {
     }
   };
 
-  const backToWorkspace = () => {
-    // La web muestra el espacio de trabajo sin temporizador.
+  /**
+   * Web: prepara una sesión nueva desde la dropzone. Se crea otro espacio en
+   * Firestore (useWebWorkspace) y se vacía la lista de archivos.
+   */
+  const prepareNewSession = () => {
+    dispatch({ type: 'SET_FILES', payload: [] });
+    dispatch({ type: 'SET_WORKSPACE', payload: null });
     dispatch({ type: 'SET_SESSION_DURATION', payload: 0 });
-    dispatch({ type: 'START_KIOSK' });
+    dispatch({ type: 'SET_PHASE', payload: 'dropzone' });
   };
 
   if (downloaded) {
@@ -96,8 +101,8 @@ export default function ConfirmSessionPhase() {
             >
               Descargar otro archivo
             </button>
-            <button onClick={backToWorkspace} className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink transition-colors">
-              Volver al espacio de trabajo
+            <button onClick={prepareNewSession} className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink transition-colors">
+              Preparar una nueva sesión
             </button>
           </div>
         </div>
@@ -145,7 +150,7 @@ export default function ConfirmSessionPhase() {
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="text-ink-soft text-sm">¿Cargaste todos los archivos que necesitas?</p>
               <button
-                onClick={() => (api ? dispatch({ type: 'SET_PHASE', payload: 'dropzone' }) : backToWorkspace())}
+                onClick={() => dispatch({ type: 'SET_PHASE', payload: 'dropzone' })}
                 disabled={busy}
                 className="text-accent-soft hover:text-ink text-xs font-medium whitespace-nowrap disabled:opacity-50"
               >

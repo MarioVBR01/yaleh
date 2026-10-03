@@ -2,13 +2,11 @@
  * @file WorkspaceView.tsx
  * @description Vista principal estilo NotebookLM (brief, sección 5.2):
  * Fuentes · Chat · Estudio. En pantallas angostas las columnas pasan a pestañas.
- * Reemplaza al Dashboard del MVP.
+ * Reemplaza al Dashboard del MVP. Solo existe en el kiosko del escritorio (revisión 1.6).
  */
 
 import { useState } from 'react';
 import { BookOpen, MessageSquare, FileText } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { useModeFlags } from '../lib/mode';
 import ChatColumn from './ChatColumn';
 import SourcesColumn from './SourcesColumn';
 import StudioColumn from './StudioColumn';
@@ -22,32 +20,13 @@ const COLUMNS: { id: Column; label: string; icon: typeof FileText }[] = [
 ];
 
 export default function WorkspaceView() {
-  const { state, dispatch } = useApp();
-  const { isDesktop } = useModeFlags();
   const [active, setActive] = useState<Column>('chat');
-  const firstName = (state.session.displayName ?? '').split(' ')[0];
 
   /** En pantallas anchas se ven las tres columnas; en angostas, solo la pestaña activa. */
   const visibility = (column: Column) => (active === column ? 'flex' : 'hidden lg:flex');
 
   return (
     <div className="h-full flex flex-col bg-canvas">
-      {!isDesktop && (
-        <header className="px-5 pt-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-ink text-lg font-bold">¡Hola{firstName ? `, ${firstName}` : ''}! 👋</h1>
-            <p className="text-ink-muted text-xs">
-              Carga tus materiales, pregúntale al asistente y prepara tu sesión de concentración.
-            </p>
-          </div>
-          <button
-            onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
-            className="px-4 py-2 rounded-xl text-sm font-semibold bg-accent-strong hover:bg-accent text-ink transition-colors"
-          >
-            Iniciar sesión de concentración
-          </button>
-        </header>
-      )}
 
       <nav className="lg:hidden flex gap-1 px-3 pt-3" role="tablist" aria-label="Columnas del espacio de trabajo">
         {COLUMNS.map(({ id, label, icon: Icon }) => (

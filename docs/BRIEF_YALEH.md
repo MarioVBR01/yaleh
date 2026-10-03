@@ -1,7 +1,7 @@
 # Brief — YALEH v1
 
 > Especificación de la versión 1. Autor: Mario Víctor Brañez Rodriguez (TECBA, Cochabamba).
-> Fecha: 29 de septiembre de 2026. **Revisión 1.5** (29/09/2026): la web y el escritorio funcionan por separado y se unen solo con un **archivo de sesión .yaleh**, al estilo de Safe Exam Browser. La 1.4 agregó Firebase, la vista NotebookLM, la extracción de texto y la IA; la 1.3, la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
+> Fecha: 29 de septiembre de 2026. **Revisión 1.6** (03/10/2026): la web ya no usa la IA; el espacio de trabajo con IA existe solo en el kiosko del escritorio. **Revisión 1.5** (29/09/2026): la web y el escritorio funcionan por separado y se unen solo con un **archivo de sesión .yaleh**, al estilo de Safe Exam Browser. La 1.4 agregó Firebase, la vista NotebookLM, la extracción de texto y la IA; la 1.3, la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
 > Documento complementario: `INFORME_ANALISIS_SRB.md` (análisis del MVP actual).
 > El diseño visual se define **después**; en esta versión no se rediseña la interfaz.
 > Este documento es la **fuente de verdad** del proyecto: si el código lo contradice, gana el brief.
@@ -99,12 +99,11 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 *Revisión 1.5:* la web y el escritorio funcionan por separado y se unen solo con un archivo de sesión, como Safe Exam Browser. La web ya no abre el escritorio (no hay enlaces `yaleh://`) y el escritorio no inicia sesión con Google.
 
 1. El estudiante inicia sesión en la web con Google (Firebase Authentication).
-2. Carga sus archivos en la dropzone; el texto se extrae y se guarda en Firestore.
-3. Trabaja con la IA en el espacio de trabajo (Fuentes · Chat · Estudio).
-4. Configura el tiempo (25, 50 o 90 minutos, o manual hasta 180) y confirma.
-5. Pulsa **"Descargar archivo de sesión"**. La web muestra: "Abre el archivo con la aplicación de escritorio YALEH".
-6. En el escritorio, el estudiante abre el archivo (botón "Abrir archivo de sesión (.yaleh)", arrastrándolo a la ventana, o con la app abierta por el archivo). El proceso principal lo valida; si es válido, guarda las fuentes en SQLite, **bloquea el equipo y empieza el tiempo de inmediato**. Si está caducado, dañado o ya se usó, muestra un mensaje claro y no bloquea.
-7. Modo: con conexión, el kiosko muestra las herramientas y la IA (AI Logic no necesita Firebase Auth); sin conexión, solo módulos locales.
+2. Carga sus archivos en la dropzone; el texto se extrae (y se guarda en Firestore) para incluirlo en el archivo. *Revisión 1.6:* la web no tiene espacio de trabajo ni IA.
+3. Configura el tiempo (25, 50 o 90 minutos, o manual hasta 180) y confirma.
+4. Pulsa **"Descargar archivo de sesión"**. La web muestra: "Abre el archivo con la aplicación de escritorio YALEH".
+5. En el escritorio, el estudiante abre el archivo (botón "Abrir archivo de sesión (.yaleh)", arrastrándolo a la ventana, o con la app abierta por el archivo). El proceso principal lo valida; si es válido, guarda las fuentes en SQLite, **bloquea el equipo y empieza el tiempo de inmediato**. Si está caducado, dañado o ya se usó, muestra un mensaje claro y no bloquea.
+6. Modo: con conexión, el kiosko muestra las herramientas y la IA (AI Logic no necesita Firebase Auth); sin conexión, solo módulos locales.
 
 **Formato del archivo `.yaleh` (JSON, versión 1):** `format` = "yaleh-session", `version` = 1, `sessionId` (nuevo en cada descarga), `createdAt`, `expiresAt` (24 horas), `createdBy` (nombre y correo, solo para mostrar), `durationSeconds` (1 a 180 minutos), `sources` [{ `id`, `name`, `type`, `size`, `text` }] con el texto ya extraído y `checksum` (SHA-256 del contenido, en un orden de campos fijo). Tamaño máximo: 50 MB. El checksum solo detecta archivos dañados: el propio estudiante crea su archivo, así que no hay amenaza de manipulación. El uso único se controla en el escritorio con el `sessionId` registrado en SQLite.
 
@@ -152,7 +151,7 @@ La web es independiente (se ejecuta sola con `npm run dev` o en Firebase Hosting
 
 ### 5.1 Flujo de entrada
 
-Inicio de sesión con Google → dropzone → espacio de trabajo con IA → configurar tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones para abrirlo en el escritorio.
+Inicio de sesión con Google → dropzone → configurar tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones para abrirlo en el escritorio, con "Descargar otro archivo" y "Preparar una nueva sesión" (vuelve a la dropzone). *Revisión 1.6:* la web no pasa por la IA; el espacio de trabajo (sección 5.2) existe solo en el kiosko del escritorio.
 
 ### 5.2 Vista principal (estilo NotebookLM)
 
@@ -517,3 +516,11 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 44 | Modo | Lo decide el proceso principal según la conexión al empezar (archivo o flujo local). Datos del escritorio siempre en SQLite |
 | 45 | Asociación de `.yaleh` | Doble clic para abrir el archivo: queda para el instalador (fase 11) |
 | 46 | Sincronización (fase 10) | Pendiente de redefinir: el escritorio ya no tiene cuenta de Google para subir sesiones a Firestore |
+
+### Revisión 1.6 — 03/10/2026 (la web sin IA)
+
+| # | Tema | Decisión |
+| --- | --- | --- |
+| 47 | Flujo de la web | Login con Google → dropzone → tiempo → confirmación → "Descargar archivo de sesión" → instrucciones. Sin espacio de trabajo ni IA. Tras la descarga: "Descargar otro archivo" y "Preparar una nueva sesión" |
+| 48 | Espacio de trabajo con IA | Solo en el kiosko del escritorio: con conexión, chat y Estudio; sin conexión, "Disponible próximamente" |
+| 49 | Extracción en la web | Se mantiene: el texto de los archivos va dentro del .yaleh |

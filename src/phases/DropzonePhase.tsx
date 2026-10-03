@@ -9,12 +9,11 @@
 
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, X, ArrowRight, CheckCircle, AlertTriangle, Shield, Loader2, LayoutGrid } from 'lucide-react';
+import { Upload, FileText, X, ArrowRight, CheckCircle, AlertTriangle, Shield, Loader2 } from 'lucide-react';
 import { LIMITS } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import { ACCEPT_ATTRIBUTE } from '../data/file-types';
 import { useIngest } from '../data/useIngest';
-import { isElectron } from '../lib/electron';
 import { formatBytes } from '../utils/format';
 
 const MAX_TOTAL_LABEL = formatBytes(LIMITS.maxUploadBytes);
@@ -49,12 +48,6 @@ export default function DropzonePhase() {
   const usagePercent = Math.min((totalSize / LIMITS.maxUploadBytes) * 100, 100);
   const extracting = state.uploadedFiles.some(f => f.status === 'extracting');
 
-  /** Web: ir al espacio de trabajo (Fuentes · Chat · Estudio) sin iniciar una sesión de concentración. */
-  const goToWorkspace = () => {
-    dispatch({ type: 'SET_SESSION_DURATION', payload: 0 });
-    dispatch({ type: 'START_KIOSK' });
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
       <motion.div
@@ -71,7 +64,7 @@ export default function DropzonePhase() {
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Material de Estudio</h1>
           <p className="text-slate-400 text-sm">
-            Carga tus documentos para trabajar con el asistente. Este paso es <strong className="text-blue-400">opcional</strong>.
+            Carga los documentos que usarás en tu sesión de concentración. Este paso es <strong className="text-blue-400">opcional</strong>.
           </p>
         </div>
 
@@ -178,18 +171,6 @@ export default function DropzonePhase() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
-            {!isElectron() && (
-              <motion.button
-                onClick={goToWorkspace}
-                disabled={!ready || extracting}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium transition-colors disabled:opacity-50"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {extracting ? <Loader2 size={16} className="animate-spin" /> : <LayoutGrid size={16} />} Continuar al espacio de trabajo
-              </motion.button>
-            )}
-            {isElectron() && (
             <motion.button
               onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
               disabled={extracting}
@@ -207,7 +188,6 @@ export default function DropzonePhase() {
                 </>
               )}
             </motion.button>
-            )}
           </div>
         </div>
       </motion.div>
