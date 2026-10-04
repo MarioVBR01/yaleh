@@ -45,6 +45,7 @@ const api: ElectronAPI = {
     deleteNote: (workspaceId, noteId) => ipcRenderer.invoke(IPC_INVOKE.workspaceDeleteNote, workspaceId, noteId),
   },
   exportOffice: request => ipcRenderer.invoke(IPC_INVOKE.officeExport, request),
+  listSessionHistory: () => ipcRenderer.invoke(IPC_INVOKE.historyList),
   tabs: {
     open: url => ipcRenderer.invoke(IPC_INVOKE.tabsOpen, url),
     close: tabId => ipcRenderer.invoke(IPC_INVOKE.tabsClose, tabId),

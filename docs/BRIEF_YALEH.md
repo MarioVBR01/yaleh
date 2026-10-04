@@ -1,7 +1,7 @@
 # Brief — YALEH v1
 
 > Especificación de la versión 1. Autor: Mario Víctor Brañez Rodriguez (TECBA, Cochabamba).
-> Fecha: 29 de septiembre de 2026. **Revisión 1.6** (03/10/2026): la web ya no usa la IA; el espacio de trabajo con IA existe solo en el kiosko del escritorio. **Revisión 1.5** (29/09/2026): la web y el escritorio funcionan por separado y se unen solo con un **archivo de sesión .yaleh**, al estilo de Safe Exam Browser. La 1.4 agregó Firebase, la vista NotebookLM, la extracción de texto y la IA; la 1.3, la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
+> Fecha: 29 de septiembre de 2026. **Revisión 1.7** (03/10/2026): pestañas internas, ofimática con exportación, historial y estadísticas desde SQLite; la sincronización con Firestore pasa a la versión 2. **Revisión 1.6** (03/10/2026): la web ya no usa la IA; el espacio de trabajo con IA existe solo en el kiosko del escritorio. **Revisión 1.5** (29/09/2026): la web y el escritorio funcionan por separado y se unen solo con un **archivo de sesión .yaleh**, al estilo de Safe Exam Browser. La 1.4 agregó Firebase, la vista NotebookLM, la extracción de texto y la IA; la 1.3, la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
 > Documento complementario: `INFORME_ANALISIS_SRB.md` (análisis del MVP actual).
 > El diseño visual se define **después**; en esta versión no se rediseña la interfaz.
 > Este documento es la **fuente de verdad** del proyecto: si el código lo contradice, gana el brief.
@@ -137,7 +137,7 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 1. Se cumple el tiempo y se muestra el resumen de la sesión.
 2. La sesión se guarda en SQLite.
 3. Se libera el sistema operativo.
-4. (Fase 10) Sincronización con Firestore: pendiente de redefinir, porque el escritorio ya no tiene cuenta de Google.
+4. La sesión aparece en el **Historial** y en las **Estadísticas** del escritorio (SQLite). No se sincroniza con Firestore en v1 (revisión 1.7, pasa a la versión 2).
 
 ### 4.5 Inicio de sesión dentro del kiosko
 
@@ -189,13 +189,13 @@ Barra superior completa (buscador y botón de configuración), Enciclopedia SRB,
 | --- | --- | --- |
 | Bloqueo del sistema operativo | Sí | Sí |
 | Inicio | Bienvenida: "Iniciar" (flujo local) o "Abrir archivo de sesión (.yaleh)" | Igual |
-| Vista principal | La interfaz de YALEH (Fuentes · Chat · Estudio) con los datos de Firestore | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
+| Vista principal | La interfaz de YALEH (Fuentes · Chat · Estudio) con las fuentes guardadas en SQLite | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
 | Asistente de IA | Sí (Gemini) | No en v1 |
 | Workspace, Canva, Gamma, Moodle, Classroom | Pestañas internas | No visibles |
 | Reproductor de YouTube | Sí | No |
 | Editores de ofimática | Sí | Sí |
 | Notas, archivos y Pomodoro | Sí | Sí |
-| Historial | Firestore | SQLite, se sube al reconectar |
+| Historial y estadísticas | SQLite (este equipo) | SQLite (este equipo) |
 
 ### 6.1 Editores de ofimática
 
@@ -203,11 +203,13 @@ Se construyen dentro de la aplicación con librerías web. **No se usa FreeOffic
 
 | Editor | Base | Exporta a |
 | --- | --- | --- |
-| Documento | Editor de texto enriquecido (TipTap), partiendo del editor actual del MVP | `.docx` (librería `docx`) y `.pdf` |
+| Documento | Editor de texto enriquecido (TipTap), partiendo del editor actual del MVP | `.docx` (librería `docx`). El `.pdf` pasa a la versión 2 (revisión 1.7) |
 | Hoja de cálculo | Cuadrícula de celdas en JavaScript, partiendo de la hoja actual del MVP | `.xlsx` (ExcelJS) |
 | Presentación | Editor simple de diapositivas, partiendo del **editor básico que ya tiene el MVP** | `.pptx` (PptxGenJS) |
 
 - La exportación la hace el **proceso principal** y guarda en una carpeta fija: `Documentos/YALEH`. El estudiante nunca ve el explorador de archivos durante la sesión.
+- Nombre del archivo: título + fecha y hora (`Título AAAA-MM-DD HH-mm-ss.docx`); nunca se sobrescribe un archivo existente. La interfaz muestra la ruta donde quedó guardado.
+- Funcionan igual con y sin conexión.
 - Los nombres "TextMaker" y "PlanMaker" son marcas de SoftMaker: se reemplazan por "Documento", "Hoja de cálculo" y "Presentación".
 
 ### 6.2 Reproductor de YouTube (modo online)
@@ -316,8 +318,8 @@ PDF con texto, DOCX y TXT. Los PDF escaneados quedan fuera. La extracción se ha
 - Los datos JSON de la fase 2 (`session.json` y `events.json`) se importan una sola vez en el primer arranque y se renombran a `.migrated`. Una sesión activa importada se sigue detectando como interrumpida.
 - `npm run db:inspect` muestra las últimas sesiones (con pérdidas de foco y cortes de red) y eventos, en solo lectura.
 - La interfaz accede a los datos solo por IPC; nunca abre la base.
-- Cada sesión offline tiene un identificador propio. Al detectar conexión y una cuenta iniciada, se sube a Firestore y se marca como sincronizada.
-- **Cuenta de destino:** las sesiones offline se suben a la **última cuenta que inició sesión en ese equipo**. Si nunca inició sesión ninguna cuenta, quedan como sesiones locales.
+- **Historial y estadísticas (fase 10):** se calculan solo con SQLite. Historial: fecha, duración, modo, estado, pérdidas de foco, cortes de red e interrupciones. Estadísticas: minutos de concentración por día y por semana (solo suman las sesiones completadas, con su duración completa), completadas frente a interrumpidas y pérdidas de foco promedio por sesión.
+- **Sincronización con Firestore: versión 2** (revisión 1.7). El escritorio no tiene cuenta de Google desde la revisión 1.5, así que no hay a qué cuenta subir las sesiones. `owner_uid` y `synced_at` quedan vacíos.
 
 ---
 
@@ -360,6 +362,8 @@ Todo el bloqueo se aplica en el **proceso principal**, nunca en la interfaz. Ver
 Cada función o página nueva se abre en una pestaña nueva, como en un navegador, para no perder el progreso.
 
 - Máximo **ocho pestañas**. Al llegar al límite se muestra un aviso.
+- Las ventanas nuevas que abre un sitio permitido (`target="_blank"`, `window.open`) se convierten en pestañas internas. Las de sitios no permitidos se descartan.
+- Los enlaces de YouTube (desde cualquier pestaña) se abren en el reproductor propio (sección 6.2), alojado en Firebase Hosting (`/youtube.html?v=<id>`), por lo que solo funciona con conexión. youtube.com no se puede abrir directamente.
 - En el escritorio, las páginas externas se cargan con **`WebContentsView`**, no con iframes. Google y Canva no permiten mostrarse en iframes, y ese es el error actual del MVP. Como `WebContentsView` se dibuja encima de la interfaz, la vista se oculta mientras haya un menú o diálogo de la interfaz abierto.
 - En el navegador web, las pestañas internas solo contienen vistas propias (chat, estudio, notas, estadísticas).
 - Cada pestaña conserva su estado al cambiar entre ellas.
@@ -391,9 +395,11 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | Pestañas internas (máximo 8) | Abrir enlaces desde las respuestas de la IA |
 | Editores de documento, hoja y presentación con exportación | Función del botón de configuración |
 | Reproductor de YouTube embebido | PDF escaneados (OCR) |
-| Firestore, SQLite y sincronización | Bloqueo más profundo del sistema (Ctrl+Alt+Supr, Alt+Tab, tecla Windows) |
+| Firestore (web), SQLite, historial y estadísticas locales | Bloqueo más profundo del sistema (Ctrl+Alt+Supr, Alt+Tab, tecla Windows) |
 | Confirmación previa y recuperación de sesiones interrumpidas | Plan de pago de Gemini si se supera el límite |
 | | Rediseño visual completo |
+| | Sincronización del historial con Firestore (requiere definir la cuenta del escritorio) |
+| | Exportación de documentos a `.pdf` |
 
 ---
 
@@ -524,3 +530,13 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 47 | Flujo de la web | Login con Google → dropzone → tiempo → confirmación → "Descargar archivo de sesión" → instrucciones. Sin espacio de trabajo ni IA. Tras la descarga: "Descargar otro archivo" y "Preparar una nueva sesión" |
 | 48 | Espacio de trabajo con IA | Solo en el kiosko del escritorio: con conexión, chat y Estudio; sin conexión, "Disponible próximamente" |
 | 49 | Extracción en la web | Se mantiene: el texto de los archivos va dentro del .yaleh |
+
+### Revisión 1.7 — 03/10/2026 (fases 8 a 10)
+
+| # | Tema | Decisión |
+| --- | --- | --- |
+| 50 | Pestañas (fase 8) | `WebContentsView` en el proceso principal, máximo 8. Ventanas nuevas de sitios permitidos → pestañas internas. Se elimina `WebViewPanel` (iframes) |
+| 51 | YouTube (fase 8) | Página propia `youtube.html` en Hosting con `youtube-nocookie.com/embed` y `referrerpolicy="strict-origin-when-cross-origin"`. youtube.com sigue bloqueado |
+| 52 | Ofimática (fase 9) | TipTap → `.docx`, cuadrícula → `.xlsx` (ExcelJS), diapositivas → `.pptx` (PptxGenJS). Guarda el proceso principal en `Documentos/YALEH`, sin diálogo, con fecha y hora en el nombre. `.pdf` pasa a la versión 2 |
+| 53 | Historial y estadísticas (fase 10) | Solo SQLite, en el escritorio. Reemplazan los datos simulados del MVP. En el navegador muestran "Disponible en la aplicación de escritorio" |
+| 54 | Sincronización | Pasa a la versión 2 (reemplaza la decisión 46) |

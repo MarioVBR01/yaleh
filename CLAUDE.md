@@ -2,8 +2,8 @@
 
 YALEH es un entorno de estudio para estudiantes del TECBA con problemas de concentración (proyecto de grado de Mario Víctor Brañez Rodriguez). Tiene dos aplicaciones sobre una misma base de código:
 
-- **Web** (Firebase Hosting): login con Google, carga de materiales, asistente de IA estilo NotebookLM y preparación de la sesión, que termina con la descarga de un **archivo de sesión `.yaleh`**.
-- **Escritorio** (Electron): bloquea el sistema operativo durante la sesión (kiosko), con o sin internet. No inicia sesión con Google: abre el `.yaleh` o empieza una sesión local.
+- **Web** (Firebase Hosting): login con Google, carga de materiales (se extrae el texto) y preparación de la sesión, que termina con la descarga de un **archivo de sesión `.yaleh`**. Sin IA (revisión 1.6).
+- **Escritorio** (Electron): bloquea el sistema operativo durante la sesión (kiosko), con o sin internet. No inicia sesión con Google: abre el `.yaleh` o empieza una sesión local. Dentro del kiosko: espacio de trabajo con IA (con conexión), pestañas internas, ofimática, historial y estadísticas.
 
 Las dos aplicaciones funcionan por separado y se unen solo con el archivo `.yaleh` (como Safe Exam Browser; brief, revisión 1.5). El diseño anterior (enlaces `yaleh://`) queda en el tag de git `demo-antes-archivo`.
 
@@ -22,9 +22,9 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | 5. Vista principal estilo NotebookLM y sidebar | Hecha |
 | 6. Archivos (extracción de texto) | Hecha |
 | 7. IA (Gemini + búsqueda en Wikipedia) | Hecha |
-| 8. Pestañas con WebContentsView, herramientas y YouTube | Pendiente |
-| 9. Editores de ofimática con exportación | Pendiente |
-| 10. Sincronización, historial y estadísticas | Pendiente |
+| 8. Pestañas con WebContentsView, herramientas y YouTube | Hecha |
+| 9. Editores de ofimática con exportación | Hecha |
+| 10. Historial y estadísticas (SQLite; la sincronización pasa a v2) | Hecha |
 | 11. Pruebas y empaquetado | Pendiente |
 
 ## Comandos
@@ -40,7 +40,7 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | `npm test` | Pruebas con Vitest (una ejecución) |
 | `npm run test:watch` | Vitest en modo observación |
 | `npm run smoke:electron` | Compila y abre la app sin ventana visible, con una carpeta de datos temporal: comprueba que la interfaz carga con la CSP, que el preload expone `electronAPI`, que la IPC responde y que SQLite se crea con sus migraciones. No activa el kiosko ni toca la base real |
-| `firebase deploy --only hosting` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes) |
+| `firebase deploy --only hosting` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes). Incluye `youtube.html`, el reproductor que usan las pestañas del escritorio |
 | `firebase deploy --only firestore:rules` | Publica `firestore.rules` |
 | `npm run db:inspect` | Muestra las últimas sesiones y eventos de la base local (solo lectura; funciona con la app abierta). Opciones: `-- --sessions 20 --events 50 --db <ruta>` |
 
@@ -69,15 +69,20 @@ electron/                   Proceso principal (TypeScript → esbuild → dist-e
   navigation-policy.ts      Qué páginas y marcos pueden cargarse
   session-file-service.ts   Abrir un .yaleh: validar, uso único, guardar fuentes en SQLite, empezar la sesión
   db/workspace-repository.ts  Fuentes (texto en partes) y notas del modo offline
-  smoke.ts                  Prueba de humo (recorrido offline con extracción de PDF/TXT)
+  db/history.ts             Historial de sesiones con contadores de eventos (fase 10)
+  tabs/tab-manager.ts       Pestañas internas con WebContentsView (máximo 8, ventanas nuevas → pestañas)
+  tabs/resolve.ts           URL de una pestaña: sitio permitido, reproductor de YouTube o rechazo
+  office/export.ts          .docx / .xlsx / .pptx en Documentos\YALEH (docx, ExcelJS, PptxGenJS)
+  smoke.ts                  Prueba de humo (extracción, .yaleh, pestañas, ofimática, historial)
 shared/                     Usado por el proceso principal y la interfaz (sin Node ni DOM)
   config.ts                 Sitios permitidos, herramientas, límites (8 pestañas, 500 MB, 1–180 min)
   allowlist.ts              isUrlAllowed()
   ipc-types.ts              Canales IPC y tipo ElectronAPI
   text.ts                   splitText(): partes de 200 000 caracteres (límite de 1 MiB de Firestore)
   session-file.ts           Formato .yaleh: creación (web), checksum y validación (escritorio)
+  youtube.ts                extractYouTubeId() y URL del reproductor propio
 src/                        Interfaz React (web y escritorio). Alias: @/ → src, @shared/ → shared
-  App.tsx                   Fases. Web: login → dropzone → kiosk (espacio de trabajo, sin tiempo) → timer-select → confirm-session (descarga .yaleh).
+  App.tsx                   Fases. Web: login → dropzone → timer-select → confirm-session (descarga .yaleh; luego "Descargar otro archivo" o "Preparar una nueva sesión").
                             Escritorio: desktop-start (bienvenida) → dropzone → timer-select → confirm-session → kiosk → session-complete,
                             o desktop-start → .yaleh → kiosk. Nunca login. + resume-offer con una sesión interrumpida
   lib/session-file.ts       Web: generar y descargar el .yaleh. Escritorio: aplicar al estado un .yaleh abierto
@@ -91,18 +96,25 @@ src/                        Interfaz React (web y escritorio). Alias: @/ → src
   store/appStore.ts         Estado global y reducer
   context/AppContext.tsx    Provider + useApp (acepta `initial` para pruebas)
   lib/electron.ts           isElectron(), getElectronAPI(), closeApp()
+  lib/stats.ts              computeStats(): minutos por día/semana, completadas, interrumpidas, foco
+  lib/useSessionHistory.ts  Historial por IPC (vacío en el navegador)
+  kiosk/useExternalTabs.ts  Abrir pestañas externas y sincronizar su visibilidad con el proceso principal
+  panels/ExternalTabPanel.tsx  Hueco donde se dibuja la WebContentsView (informa sus límites)
+  panels/OfflineEditorPanel.tsx  Documento (TipTap), hoja y presentación con exportación
+  panels/HistoryPanel.tsx, StatsPanel.tsx  Historial y estadísticas desde SQLite (recharts)
+  youtube/main.ts           Página del reproductor (youtube.html, entrada propia de Vite)
   test/electron-mock.ts     window.electronAPI simulada para las pruebas de la interfaz
   phases/ kiosk/ panels/    Pantallas, layout del kiosko y paneles
   index.css                 Tokens de color (@theme) y estilos globales
 scripts/                    build-electron.mjs, smoke-electron.mjs, db-inspect.mjs
-docs/                       Brief e informe del MVP
+docs/                       Brief, informe del MVP y BUGS.md (registro de errores con plantilla)
 ```
 
-Una sola compilación de la interfaz (`dist/`, `base: './'`) sirve para Firebase Hosting y para `file://` en Electron.
+Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.html` y `youtube.html`) sirve para Firebase Hosting y para `file://` en Electron.
 
 ## Archivo de sesión .yaleh (revisión 1.5)
 
-- **Web** (independiente; `npm run dev` o Hosting): login con Google → dropzone → espacio de trabajo con IA → "Iniciar sesión de concentración" → tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones. La web nunca bloquea nada ni abre el escritorio.
+- **Web** (independiente; `npm run dev` o Hosting): login con Google → dropzone → tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones (revisión 1.6). La web nunca bloquea nada ni abre el escritorio.
 - **Formato** (`shared/session-file.ts`): JSON con `format` "yaleh-session", `version` 1, `sessionId` (nuevo en cada descarga), `createdAt`, `expiresAt` (24 h), `createdBy`, `durationSeconds`, `sources` [{id, name, type, size, text}] y `checksum` SHA-256 de `canonicalPayload()` (orden de campos fijo; solo integridad). Máximo 50 MB (`LIMITS`).
 - **Escritorio:** bienvenida con "Iniciar" (flujo local) y "Abrir archivo de sesión (.yaleh)". El archivo también se abre arrastrándolo a la bienvenida, por los argumentos de arranque o por `second-instance`. `openSessionFile` (proceso principal) valida, rechaza si hay sesión en curso o si el `sessionId` ya está en SQLite (uso único), guarda las fuentes en SQLite y llama a `controller.start`: **bloquea y empieza el tiempo de inmediato**. Los rechazos se registran como `session-file-rejected`.
 - **Modo:** lo decide el proceso principal según la conexión al empezar (archivo o flujo local). En el escritorio los datos van siempre a SQLite.
@@ -116,10 +128,17 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`) sirve para Firebase
 
 ## Espacio de trabajo, fuentes e IA (fases 5 a 7)
 
-- `WorkspaceView` reemplaza al Dashboard: Fuentes · Chat · Estudio (pestañas en pantallas angostas). `state.workspaceId` agrupa fuentes, notas y resultados: en la web, un borrador en Firestore; en el escritorio, el id de la sesión (local o el `sessionId` del `.yaleh`) en SQLite.
+- `WorkspaceView` reemplaza al Dashboard: Fuentes · Chat · Estudio (pestañas en pantallas angostas). **Solo en el kiosko del escritorio** (revisión 1.6). `state.workspaceId` es el id de la sesión (local o el `sessionId` del `.yaleh`) en SQLite; en la web es un borrador en Firestore donde se guardan las fuentes extraídas antes de descargar el `.yaleh`.
 - **Fuentes:** PDF/DOCX/TXT validados por extensión + MIME + firma; texto extraído en el cliente (pdf.js 6, mammoth) y guardado en partes: Firestore `sources/{id}/chunks/{n}` (web) o SQLite `source_chunks` (escritorio, migración 2). En el escritorio no se agregan fuentes dentro del kiosko.
 - **IA:** `AI.models` en `shared/config.ts` (`gemini-3.5-flash-lite` → `gemini-3.8-flash` si hay 429/500/503). Chat con streaming basado en las fuentes; Wikipedia opcional (fuentes como texto). Resumen/cuestionario/tarjetas con esquema JSON validado; informe en markdown (`react-markdown`, sin HTML, enlaces como texto). En Firestore se guardan como `studyItems`.
 - Offline o sin conexión: chat y herramientas de IA muestran "Disponible próximamente"; las notas funcionan.
+
+## Pestañas, ofimática, historial (fases 8 a 10)
+
+- **Pestañas (`TabManager`):** cada página externa es una `WebContentsView` con sandbox, dibujada encima del hueco de `ExternalTabPanel` (la interfaz informa los límites; se oculta mientras hay un diálogo). Máximo `LIMITS.maxTabs` (8): al llegar, aviso en la interfaz. Ventanas nuevas de sitios permitidos → `tabs:open-request` → pestaña nueva. Los enlaces de YouTube se convierten en `YOUTUBE_PLAYER_URL?v=<id>` (página propia en Hosting con `youtube-nocookie` y `referrerpolicy`); youtube.com sigue bloqueado. Al terminar la sesión se cierran todas.
+- **Ofimática:** la interfaz envía el contenido (JSON de TipTap, filas o diapositivas) por `office:export`; el proceso principal valida (`parseOfficeRequest`) y guarda en `Documentos\YALEH` como `Título AAAA-MM-DD HH-mm-ss.ext`, sin sobrescribir. Sin diálogo. Funciona sin conexión. `docx`, `exceljs` y `pptxgenjs` son externos en esbuild (se cargan de `node_modules`).
+- **Historial y estadísticas:** `history:list` → `listSessionHistory(db)` (contadores de `focus-lost`, `connection-lost`, `session-interrupted` y motivo del fin). `computeStats` en la interfaz. Solo suman minutos las sesiones completadas (no se registra cuánto duró una interrumpida). En el navegador: "Disponible en la aplicación de escritorio".
+- **Sincronización con Firestore:** versión 2 (revisión 1.7).
 
 ## Modos online / offline (fase 3)
 
@@ -143,7 +162,7 @@ Todo el bloqueo vive en el proceso principal. La interfaz pide iniciar la sesió
 - **Mientras la sesión está activa:** se rechaza `app:close`, se cancela el evento `close` de la ventana (salvo cuando Windows se apaga o cierra la sesión), se bloquean atajos con `before-input-event` y `globalShortcut`, y la ventana está en kiosko, pantalla completa, sin menú y siempre al frente (`screen-saver`). Si pierde el foco, lo recupera y registra la pérdida.
 - **Sin salida anticipada:** no hay código ni salida de emergencia (brief, revisión 1.2).
 - **Sesión interrumpida:** al arrancar, `controller.recover()` detecta una sesión `active` guardada; la registra como interrumpida y, si queda tiempo, la interfaz ofrece retomarla (`resume-offer`).
-- **Red:** `webRequest.onBeforeRequest` bloquea `mainFrame` y `subFrame` fuera de `ALLOWED_SITES`. `will-navigate`: la ventana principal solo puede mostrar la interfaz propia. `setWindowOpenHandler` deniega todas las ventanas nuevas (en la fase 8 serán pestañas). Permisos: solo `fullscreen` y `clipboard-sanitized-write`.
+- **Red:** `webRequest.onBeforeRequest` bloquea `mainFrame` y `subFrame` fuera de `ALLOWED_SITES`. `will-navigate`: la ventana principal solo puede mostrar la interfaz propia. `setWindowOpenHandler` deniega todas las ventanas nuevas; en las pestañas, las de sitios permitidos se convierten en pestañas internas. Permisos: solo `fullscreen` y `clipboard-sanitized-write`.
 - **IPC:** cada handler comprueba que el mensaje venga del marco principal de la ventana con la interfaz propia (`dist/index.html` o `localhost:5173` con `--dev-server`).
 - **Sin salidas al exterior:** no hay `shell.openExternal` ni protocolo `yaleh://` (revisión 1.5). `requestSingleInstanceLock` antes de `whenReady`: una segunda instancia solo entrega su archivo `.yaleh`.
 - **Diálogo de archivos:** solo el de "Abrir archivo de sesión", desde el proceso principal y solo fuera de la sesión.
@@ -187,12 +206,17 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 
 - **Token de depuración de App Check** en el escritorio: provisional (se puede extraer del instalador). Borrarlo de la consola cuando exista una alternativa.
 - **Asociación de `.yaleh`** con la app (doble clic): en el instalador, fase 11.
-- **Sincronización (fase 10):** pendiente de redefinir; el escritorio ya no tiene cuenta de Google.
+- **Sincronización:** pasa a la versión 2 (el escritorio no tiene cuenta de Google).
+- **Exportación a PDF** de documentos: versión 2.
+- **Errores encontrados al probar:** en [docs/BUGS.md](docs/BUGS.md); se corrigen antes de la fase 11.
+- `npm audit`: quedan avisos sin uso explotable (`@grpc/grpc-js` del SDK de Firestore para Node, `image-size` de PptxGenJS, que solo afecta a imágenes y no se usan). `uuid` se fuerza a ^11.1.1 con `overrides`.
+- El reproductor de YouTube vive en Hosting: sin conexión o sin publicar `youtube.html`, la pestaña muestra un error.
+- Iniciar sesión de Google dentro de una pestaña (Classroom, Drive) puede abrir ventanas emergentes que se descartan si no son de sitios permitidos.
 - El registro de Windows puede conservar el protocolo `yaleh://` de ejecuciones anteriores (apunta a Electron en desarrollo); ya no se usa.
-- El historial del chat vive en memoria. Los `studyItems` de la web se guardan en Firestore pero no se vuelven a cargar.
+- El historial del chat vive en memoria.
+- Las estadísticas solo cuentan minutos de las sesiones completadas.
 - Sin pruebas de reglas con el emulador ni del login de Google.
-- `local_profile` y `settings` existen, pero todavía nadie las lee (fase 10: cuenta de destino de la sincronización).
-- `WebViewPanel` sigue usando iframes (fase 8: `WebContentsView`). Muchos sitios de Google no se dejan mostrar en iframes.
-- El límite de 8 pestañas está en `shared/config.ts`, pero se aplica en la fase 8.
+- `local_profile` y `settings` existen, pero todavía nadie las lee (serán la cuenta de destino de la sincronización, versión 2).
+- `state.activityHistory` (registro de actividad del MVP) sigue en el reducer pero ya no se muestra.
 - El bundle de la interfaz pesa ~900 KB (Vite avisa); dividirlo con carga diferida queda para más adelante.
 - `public/ai-banner.jpg` no se usa en ningún componente.

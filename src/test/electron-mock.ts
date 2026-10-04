@@ -12,6 +12,7 @@ import type {
   ElectronAPI,
   OpenSessionFileResult,
   SessionEndedPayload,
+  SessionHistoryEntry,
   SessionSnapshot,
   SessionTickPayload,
 } from '@shared/ipc-types';
@@ -20,6 +21,8 @@ export interface ElectronMockOptions {
   connection?: ConnectionMode;
   snapshot?: Partial<SessionSnapshot>;
   isPackaged?: boolean;
+  /** Historial de sesiones que devolverá listSessionHistory. */
+  history?: SessionHistoryEntry[];
   /** Resultado que devolverán el diálogo y la apertura por contenido. */
   openResult?: OpenSessionFileResult;
 }
@@ -92,6 +95,7 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       saveNote: vi.fn(async () => {}),
       deleteNote: vi.fn(async () => {}),
     },
+    listSessionHistory: vi.fn(async () => options.history ?? []),
     exportOffice: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Documento.docx' })),
     tabs: {
       open: vi.fn(async (url: string) => ({ ok: true as const, tabId: `tab-${url.length}`, url, title: '' })),

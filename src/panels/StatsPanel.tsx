@@ -1,309 +1,128 @@
 /**
  * @file StatsPanel.tsx
- * @description Dashboard Analítico de Estadísticas de la sesión de YALEH.
- * Muestra gráficas de uso de tiempo, actividades y herramientas utilizadas.
- * Utiliza Recharts para visualizaciones interactivas.
+ * @description Estadísticas de concentración (fase 10), calculadas con el historial de SQLite:
+ * minutos por día y por semana, completadas frente a interrumpidas y pérdidas de foco promedio.
  */
 
 import { useMemo } from 'react';
-import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
-} from 'recharts';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { motion } from 'framer-motion';
-import { Clock, Target, FileText, Globe, Brain, TrendingUp } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { Clock, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
+import { computeStats, formatDuration } from '@/lib/stats';
+import { useSessionHistory } from '@/lib/useSessionHistory';
 
-/**
- * Formatea segundos a formato HH:MM:SS.
- */
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
-
-/** Colores para gráficas */
-const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
-
-/** Tooltip personalizado para las gráficas */
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-2xl text-xs">
-        <p className="text-slate-400 mb-1">{label}</p>
-        {payload.map((p: any, i: number) => (
-          <p key={i} style={{ color: p.color }} className="font-semibold">
-            {p.name}: {p.value}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
+/** Mismos valores que los tokens de src/index.css (recharts necesita colores literales). */
+const COLORS = {
+  accent: '#3b82f6',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  grid: '#1e293b',
+  axis: '#64748b',
+  muted: '#94a3b8',
+  surface: '#0f172a',
+  line: '#334155',
 };
 
+const tooltipStyle = {
+  contentStyle: { background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 12, fontSize: 12 },
+  labelStyle: { color: COLORS.muted },
+};
+
+function MinutesChart({ title, data }: { title: string; data: { label: string; minutes: number }[] }) {
+  return (
+    <div className="p-4 rounded-2xl bg-surface border border-line">
+      <h3 className="text-ink font-semibold text-sm mb-4">{title}</h3>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
+          <XAxis dataKey="label" tick={{ fill: COLORS.axis, fontSize: 11 }} />
+          <YAxis tick={{ fill: COLORS.axis, fontSize: 11 }} allowDecimals={false} />
+          <Tooltip {...tooltipStyle} cursor={{ fill: COLORS.grid }} />
+          <Bar dataKey="minutes" name="Minutos" fill={COLORS.accent} radius={[6, 6, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export default function StatsPanel() {
-  const { state } = useApp();
+  const { available, entries, loading, error } = useSessionHistory();
+  const stats = useMemo(() => computeStats(entries), [entries]);
 
-  const timeElapsed = state.sessionDuration - state.timeRemaining;
-  const progressPercent = state.sessionDuration > 0
-    ? Math.round((timeElapsed / state.sessionDuration) * 100)
-    : 0;
+  const outcome = [
+    { name: 'Completadas', value: stats.completed, color: COLORS.success },
+    { name: 'Interrumpidas', value: stats.interrupted, color: COLORS.danger },
+    { name: 'Liberadas (desarrollo)', value: stats.other, color: COLORS.warning },
+  ].filter(d => d.value > 0);
 
-  /**
-   * Calcula las estadísticas de actividad por tipo.
-   */
-  const activityStats = useMemo(() => {
-    const counts = { file: 0, tool: 0, site: 0, search: 0 };
-    state.activityHistory.forEach(r => {
-      counts[r.type] = (counts[r.type] || 0) + 1;
-    });
-    return [
-      { name: 'Sitios web', value: counts.site, color: '#3b82f6', icon: '🌐' },
-      { name: 'Herramientas', value: counts.tool, color: '#10b981', icon: '🔧' },
-      { name: 'Archivos', value: counts.file, color: '#f59e0b', icon: '📄' },
-      { name: 'Búsquedas', value: counts.search, color: '#8b5cf6', icon: '🔍' },
-    ].filter(s => s.value > 0);
-  }, [state.activityHistory]);
+  const kpis = [
+    { label: 'Minutos de concentración', value: formatDuration(stats.totalMinutes * 60), icon: <Clock size={18} />, color: 'bg-accent' },
+    { label: 'Completadas', value: stats.completed, icon: <CheckCircle2 size={18} />, color: 'bg-success' },
+    { label: 'Interrumpidas', value: stats.interrupted, icon: <AlertTriangle size={18} />, color: 'bg-danger' },
+    { label: 'Pérdidas de foco por sesión', value: stats.avgFocusLost, icon: <Eye size={18} />, color: 'bg-warning' },
+  ];
 
-  /**
-   * Genera datos de timeline de actividad por grupos de 5 minutos.
-   */
-  const timelineData = useMemo(() => {
-    const data: { time: string; actividades: number }[] = [];
-    const now = Date.now();
-    const sessionStart = now - timeElapsed * 1000;
-
-    // Generar 12 puntos de datos cada 5 minutos
-    for (let i = 0; i < 12; i++) {
-      const windowStart = sessionStart + i * 5 * 60 * 1000;
-      const windowEnd = windowStart + 5 * 60 * 1000;
-      const count = state.activityHistory.filter(r => {
-        const t = new Date(r.timestamp).getTime();
-        return t >= windowStart && t < windowEnd;
-      }).length;
-
-      const minuteLabel = `${i * 5}m`;
-      data.push({ time: minuteLabel, actividades: count });
-    }
-    return data;
-  }, [state.activityHistory, timeElapsed]);
-
-  /**
-   * Identifica las herramientas más utilizadas.
-   */
-  const topTools = useMemo(() => {
-    const toolCounts: Record<string, number> = {};
-    state.activityHistory
-      .filter(r => r.type === 'tool' || r.type === 'site')
-      .forEach(r => {
-        const key = r.label.split(':')[0].trim();
-        toolCounts[key] = (toolCounts[key] || 0) + 1;
-      });
-    return Object.entries(toolCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([name, value]) => ({ name: name.length > 20 ? name.slice(0, 20) + '...' : name, value }));
-  }, [state.activityHistory]);
+  const showCharts = available && !error && (loading || stats.sessions > 0);
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-950 p-5">
+    <div className="h-full overflow-y-auto bg-canvas p-5">
       <div className="max-w-4xl mx-auto space-y-6">
-
-        {/* Header */}
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">📊 Estadísticas de Sesión</h1>
-          <p className="text-slate-400 text-sm">
-            Análisis detallado del tiempo efectivo de estudio y uso de recursos
+          <h1 className="text-xl font-bold text-ink mb-1">📊 Estadísticas</h1>
+          <p className="text-ink-muted text-sm">
+            {available
+              ? 'Calculadas con las sesiones guardadas en este equipo. Solo suman minutos las sesiones completadas.'
+              : 'Disponible en la aplicación de escritorio.'}
           </p>
         </div>
 
-        {/* KPIs principales */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            {
-              label: 'Tiempo activo',
-              value: formatTime(timeElapsed),
-              icon: <Clock size={18} />,
-              color: 'from-blue-500 to-blue-600',
-              bg: 'bg-blue-500/10',
-              border: 'border-blue-500/20',
-            },
-            {
-              label: 'Progreso',
-              value: `${progressPercent}%`,
-              icon: <Target size={18} />,
-              color: 'from-emerald-500 to-emerald-600',
-              bg: 'bg-emerald-500/10',
-              border: 'border-emerald-500/20',
-            },
-            {
-              label: 'Archivos',
-              value: state.uploadedFiles.length,
-              icon: <FileText size={18} />,
-              color: 'from-amber-500 to-amber-600',
-              bg: 'bg-amber-500/10',
-              border: 'border-amber-500/20',
-            },
-            {
-              label: 'Actividades',
-              value: state.activityHistory.length,
-              icon: <Brain size={18} />,
-              color: 'from-purple-500 to-purple-600',
-              bg: 'bg-purple-500/10',
-              border: 'border-purple-500/20',
-            },
-          ].map((kpi, i) => (
-            <motion.div
-              key={kpi.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`p-4 rounded-2xl border ${kpi.bg} ${kpi.border}`}
-            >
-              <div className={`inline-flex p-2 rounded-xl bg-gradient-to-br ${kpi.color} text-white mb-3`}>
-                {kpi.icon}
-              </div>
-              <p className="text-2xl font-bold text-white">{kpi.value}</p>
-              <p className="text-slate-400 text-xs mt-0.5">{kpi.label}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Barra de progreso de sesión */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="p-4 rounded-2xl bg-slate-900 border border-slate-800"
-        >
-          <div className="flex justify-between text-sm mb-3">
-            <span className="text-slate-300 font-medium flex items-center gap-1.5">
-              <TrendingUp size={14} className="text-blue-400" />
-              Progreso de sesión
-            </span>
-            <span className="text-blue-400 font-bold">{progressPercent}%</span>
-          </div>
-          <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPercent}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-slate-500 mt-2">
-            <span>Inicio</span>
-            <span>{formatTime(state.timeRemaining)} restante</span>
-            <span>{formatTime(state.sessionDuration)} total</span>
-          </div>
-        </motion.div>
-
-        {/* Gráfica de actividad en el tiempo */}
-        {timelineData.some(d => d.actividades > 0) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-2xl bg-slate-900 border border-slate-800"
-          >
-            <h3 className="text-white font-semibold text-sm mb-4 flex items-center gap-2">
-              <Globe size={15} className="text-blue-400" />
-              Actividad a lo largo de la sesión
-            </h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={timelineData}>
-                <defs>
-                  <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="time" tick={{ fill: '#64748b', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="actividades"
-                  name="Actividades"
-                  stroke="#3b82f6"
-                  fill="url(#actGrad)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </motion.div>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        {available && !error && !loading && stats.sessions === 0 && (
+          <p className="text-sm text-ink-subtle">Todavía no hay sesiones terminadas.</p>
         )}
 
-        {/* Distribución de actividades */}
-        {activityStats.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Pie chart */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="p-4 rounded-2xl bg-slate-900 border border-slate-800"
-            >
-              <h3 className="text-white font-semibold text-sm mb-4">Distribución por tipo</h3>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie
-                    data={activityStats}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {activityStats.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    formatter={(value) => <span className="text-slate-400 text-xs">{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </motion.div>
+        {showCharts && (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {kpis.map((kpi, i) => (
+                <motion.div
+                  key={kpi.label}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08 }}
+                  className="p-4 rounded-2xl border bg-surface border-line"
+                >
+                  <div className={`inline-flex p-2 rounded-xl ${kpi.color} text-ink mb-3`}>{kpi.icon}</div>
+                  <p className="text-2xl font-bold text-ink">{kpi.value}</p>
+                  <p className="text-ink-muted text-xs mt-0.5">{kpi.label}</p>
+                </motion.div>
+              ))}
+            </div>
 
-            {/* Top herramientas */}
-            {topTools.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="p-4 rounded-2xl bg-slate-900 border border-slate-800"
-              >
-                <h3 className="text-white font-semibold text-sm mb-4">Recursos más usados</h3>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={topTools} layout="vertical">
-                    <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
-                    <YAxis dataKey="name" type="category" tick={{ fill: '#64748b', fontSize: 10 }} width={100} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="value" name="Usos" radius={[0, 4, 4, 0]}>
-                      {topTools.map((_, index) => (
-                        <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <MinutesChart title="Minutos por día (últimos 7 días)" data={stats.perDay} />
+              <MinutesChart title="Minutos por semana (últimas 8 semanas)" data={stats.perWeek} />
+            </div>
+
+            {outcome.length > 0 && (
+              <div className="p-4 rounded-2xl bg-surface border border-line">
+                <h3 className="text-ink font-semibold text-sm mb-4">Sesiones completadas e interrumpidas</h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={outcome} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                      {outcome.map(d => (
+                        <Cell key={d.name} fill={d.color} stroke="none" />
                       ))}
-                    </Bar>
-                  </BarChart>
+                    </Pie>
+                    <Tooltip {...tooltipStyle} itemStyle={{ color: '#ffffff' }} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: COLORS.axis }} />
+                  </PieChart>
                 </ResponsiveContainer>
-              </motion.div>
+              </div>
             )}
-          </div>
+          </>
         )}
-
-        {/* Estado vacío */}
-        {activityStats.length === 0 && (
-          <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 text-center">
-            <Brain size={40} className="text-slate-700 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm">Las estadísticas aparecerán mientras navegas y usas las herramientas del sistema.</p>
-          </div>
-        )}
-
       </div>
     </div>
   );

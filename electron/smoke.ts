@@ -11,6 +11,7 @@
  * 5. Con conexión: pestañas internas reales (TabManager) — un enlace de youtube.com se abre
  *    en el reproductor propio con el video cargado, y un sitio no permitido se rechaza.
  * 6. Exportación de ofimática real: .docx, .xlsx y .pptx en DocumentosYALEH (aquí, la carpeta temporal).
+ * 7. Que el historial de sesiones (fase 10) responde por IPC.
  * No activa el kiosko.
  */
 
@@ -114,6 +115,7 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
             version: window.electronAPI?.version ?? null,
             state: window.electronAPI ? await window.electronAPI.getSessionState() : null,
             connection: window.electronAPI ? await window.electronAPI.getConnectionMode() : null,
+            history: window.electronAPI ? Array.isArray(await window.electronAPI.listSessionHistory()) : false,
           }))()`
         );
         const migrations = (db.prepare('SELECT version FROM schema_migrations').all() as { version: number }[]).map(
@@ -162,6 +164,7 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           base.hasApi &&
           base.state !== null &&
           base.connection !== null &&
+          base.history &&
           migrations.length > 0 &&
           ingestOk &&
           sessionFileOk &&

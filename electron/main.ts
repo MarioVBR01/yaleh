@@ -58,6 +58,7 @@ import { findSessionFileInArgv, openSessionFile } from './session-file-service';
 import { runSmokeTest } from './smoke';
 import { TabManager } from './tabs/tab-manager';
 import { exportOfficeFile } from './office/export';
+import { listSessionHistory } from './db/history';
 
 const isPackaged = app.isPackaged;
 /** `electron . --dev-server` carga el servidor de Vite; sin la bandera, carga dist/. */
@@ -263,6 +264,9 @@ function registerIpcHandlers(): void {
   handle(IPC_INVOKE.workspaceDeleteNote, (_event, workspaceId, noteId) =>
     workspace.deleteNote(parseId(workspaceId, 'Sesión'), parseId(noteId, 'Nota'))
   );
+
+  // Historial y estadísticas (fase 10): solo lectura de SQLite.
+  handle(IPC_INVOKE.historyList, () => listSessionHistory(db));
 
   // Ofimática: se guarda directo en Documentos\\YALEH, sin diálogo del sistema (brief, sección 6.1).
   handle(IPC_INVOKE.officeExport, async (_event, request): Promise<OfficeExportResult> => {

@@ -2,7 +2,7 @@
  * @file SideBar.tsx
  * @description Barra Lateral Izquierda del entorno Kiosko de YALEH.
  * Brief, sección 5.3: Espacio de trabajo, Estadísticas, Pomodoro, Herramientas
- * (solo con conexión), Actividades recientes y Configuración (próximamente).
+ * (solo con conexión), Historial de sesiones y Configuración (próximamente).
  * En el escritorio agrega los editores de ofimática. Se oculta con el botón lateral.
  * Soporta menús desplegables internos (App Drawers).
  */
@@ -157,8 +157,8 @@ export default function SideBar({ collapsed }: SideBarProps) {
 
   /** Abre la vista de historial de actividad */
   const handleHistory = () => {
-    openTab({ type: 'history', title: 'Actividades recientes', icon: '📋' });
-    logActivity({ type: 'tool', label: 'Actividades recientes consultadas', icon: '📋' });
+    openTab({ type: 'history', title: 'Historial de sesiones', icon: '📋' });
+    logActivity({ type: 'tool', label: 'Historial de sesiones consultado', icon: '📋' });
   };
 
   /** Abre el temporizador Pomodoro */
@@ -292,14 +292,13 @@ export default function SideBar({ collapsed }: SideBarProps) {
         </div>
         )}
 
-        {/* Actividades recientes */}
+        {/* Historial de sesiones (SQLite, fase 10) */}
         <NavItem
           icon={<History size={18} />}
-          label="Actividades recientes"
+          label="Historial de sesiones"
           active={activeTab?.type === 'history'}
           onClick={handleHistory}
           collapsed={collapsed}
-          badge={state.activityHistory.length > 0 ? state.activityHistory.length : undefined}
         />
 
         {/* Ofimática: solo en el escritorio (brief, secciones 5.5 y 6.1) */}

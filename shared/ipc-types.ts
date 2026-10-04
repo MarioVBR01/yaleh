@@ -23,6 +23,7 @@ export const IPC_INVOKE = {
   workspaceSaveNote: 'workspace:save-note',
   workspaceDeleteNote: 'workspace:delete-note',
   officeExport: 'office:export',
+  historyList: 'history:list',
   tabsOpen: 'tabs:open',
   tabsClose: 'tabs:close',
   tabsShow: 'tabs:show',
@@ -115,6 +116,23 @@ export type OpenSessionFileResult =
       createdBy: { name: string; email: string };
     }
   | { ok: false; message: string; canceled?: boolean };
+
+/** Una sesión del historial del escritorio (SQLite). */
+export interface SessionHistoryEntry {
+  id: string;
+  mode: SessionMode;
+  /** Epoch en milisegundos. */
+  startedAt: number;
+  endsAt: number;
+  durationSeconds: number;
+  status: 'active' | 'finished' | 'interrupted';
+  focusLost: number;
+  connectionLost: number;
+  /** Veces que la sesión se interrumpió (apagado, reinicio o cierre forzado). */
+  interruptions: number;
+  /** Cómo terminó: tiempo cumplido o salida de desarrollo (null si no terminó). */
+  endReason: SessionEndReason | null;
+}
 
 /** Nodo del documento de TipTap (formato JSON de ProseMirror). */
 export interface TipTapNode {
@@ -221,4 +239,6 @@ export interface ElectronAPI {
   tabs: TabsAPI;
   /** Exporta un documento, hoja o presentación a Documentos\\YALEH (sin diálogo del sistema). */
   exportOffice: (request: OfficeExportRequest) => Promise<OfficeExportResult>;
+  /** Historial de sesiones (SQLite), de la más reciente a la más antigua. */
+  listSessionHistory: () => Promise<SessionHistoryEntry[]>;
 }
