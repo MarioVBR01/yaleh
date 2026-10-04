@@ -40,8 +40,8 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | `npm test` | Pruebas con Vitest (una ejecución) |
 | `npm run test:watch` | Vitest en modo observación |
 | `npm run smoke:electron` | Compila y abre la app sin ventana visible, con una carpeta de datos temporal: comprueba que la interfaz carga con la CSP, que el preload expone `electronAPI`, que la IPC responde y que SQLite se crea con sus migraciones. No activa el kiosko ni toca la base real |
-| `firebase deploy --only hosting` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes). Incluye `youtube.html`, el reproductor que usan las pestañas del escritorio |
-| `firebase deploy --only firestore:rules` | Publica `firestore.rules` |
+| `firebase deploy --only hosting --project yaleh-fbe1c` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes). Incluye `youtube.html`, el reproductor que usan las pestañas del escritorio |
+| `firebase deploy --only firestore:rules --project yaleh-fbe1c` | Publica `firestore.rules` |
 | `npm run db:inspect` | Muestra las últimas sesiones y eventos de la base local (solo lectura; funciona con la app abierta). Opciones: `-- --sessions 20 --events 50 --db <ruta>` |
 
 Al cerrar cada fase deben pasar `typecheck`, `build` y `test` (y conviene `smoke:electron`).
