@@ -12,6 +12,8 @@
  *    en el reproductor propio con el video cargado, y un sitio no permitido se rechaza.
  * 6. Exportación de ofimática real: .docx, .xlsx y .pptx en DocumentosYALEH (aquí, la carpeta temporal).
  * 7. Que el historial de sesiones (fase 10) responde por IPC.
+ * 8. Asistente sin conexión sin el modelo (carpeta temporal): el estado llega por IPC, la bienvenida
+ *    muestra el aviso correspondiente (descargar, conectarse o requisitos) y no hay errores.
  * No activa el kiosko.
  */
 
@@ -116,6 +118,16 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
             state: window.electronAPI ? await window.electronAPI.getSessionState() : null,
             connection: window.electronAPI ? await window.electronAPI.getConnectionMode() : null,
             history: window.electronAPI ? Array.isArray(await window.electronAPI.listSessionHistory()) : false,
+            localAi: window.electronAPI ? (await window.electronAPI.localAi.getStatus()).state : null,
+            localAiCard: (() => {
+              const card = document.querySelector('[aria-label="Asistente sin conexión"]');
+              if (!card) return null;
+              const t = card.textContent;
+              if (t.includes('Descargar asistente sin conexión')) return 'download';
+              if (t.includes('Conéctate a internet')) return 'connect';
+              if (t.includes('no puede usar el asistente')) return 'unsupported';
+              return 'other';
+            })(),
           }))()`
         );
         const migrations = (db.prepare('SELECT version FROM schema_migrations').all() as { version: number }[]).map(
@@ -165,6 +177,8 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           base.state !== null &&
           base.connection !== null &&
           base.history &&
+          ['not-installed', 'unsupported'].includes(base.localAi) &&
+          (base.localAiCard === 'download' || base.localAiCard === 'connect' || base.localAiCard === 'unsupported') &&
           migrations.length > 0 &&
           ingestOk &&
           sessionFileOk &&

@@ -12,12 +12,13 @@
     "build:electron": "node scripts/build-electron.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "node scripts/test.mjs run",
+    "test:watch": "node scripts/test.mjs",
     "electron:dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron . --dev-server\"",
     "electron:preview": "npm run build && electron .",
     "smoke:electron": "npm run build && node scripts/smoke-electron.mjs",
-    "db:inspect": "node scripts/db-inspect.mjs"
+    "db:inspect": "node scripts/db-inspect.mjs",
+    "bench:local-ai": "npm run build:electron && node scripts/bench-local-ai.mjs"
   },
   "dependencies": {
     "@tiptap/extension-text-align": "^3.31.4",
@@ -31,6 +32,7 @@
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.18.0",
     "mammoth": "^1.13.0",
+    "node-llama-cpp": "^3.22.1",
     "pdfjs-dist": "^6.3.289",
     "pptxgenjs": "^4.0.1",
     "react": "19.2.6",

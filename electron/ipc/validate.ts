@@ -3,7 +3,7 @@
  * @description Validación de los mensajes IPC: origen del remitente y argumentos.
  */
 
-import type { OfficeExportRequest, OfficeSlide, TipTapNode } from '../../shared/ipc-types';
+import type { LocalAiRequest, LocalAiTask, LocalAiTurn, OfficeExportRequest, OfficeSlide, TipTapNode } from '../../shared/ipc-types';
 
 export interface SenderTrust {
   /** URL `file://` del index.html de la interfaz empaquetada. */
@@ -74,6 +74,34 @@ export function parseNoteInput(note: unknown) {
   if (!n || typeof n !== 'object') throw new Error('Nota no válida.');
   if (typeof n.text !== 'string' || n.text.length > 100_000) throw new Error('Texto de la nota no válido.');
   return { id: parseId(n.id, 'Nota'), text: n.text };
+}
+
+const LOCAL_AI_TASKS: readonly LocalAiTask[] = ['chat', 'summary', 'flashcards'];
+
+/** Pedido al asistente sin conexión. */
+export function parseLocalAiRequest(value: unknown): LocalAiRequest {
+  const r = value as Partial<Record<keyof LocalAiRequest, unknown>> | null;
+  if (!r || typeof r !== 'object') throw new Error('Pedido no válido.');
+  if (!LOCAL_AI_TASKS.includes(r.task as LocalAiTask)) throw new Error('Tarea no válida.');
+  const task = r.task as LocalAiTask;
+  let question: string | undefined;
+  if (task === 'chat') {
+    if (typeof r.question !== 'string' || r.question.trim().length === 0 || r.question.length > 4_000) {
+      throw new Error('Pregunta no válida.');
+    }
+    question = r.question;
+  }
+  const history: LocalAiTurn[] = [];
+  if (r.history !== undefined) {
+    if (!Array.isArray(r.history) || r.history.length > 100) throw new Error('Historial no válido.');
+    for (const turn of r.history as { role?: unknown; text?: unknown }[]) {
+      if ((turn?.role !== 'user' && turn?.role !== 'assistant') || typeof turn.text !== 'string' || turn.text.length > 50_000) {
+        throw new Error('Historial no válido.');
+      }
+      history.push({ role: turn.role, text: turn.text });
+    }
+  }
+  return { requestId: parseId(r.requestId, 'Pedido'), task, workspaceId: parseId(r.workspaceId, 'Sesión'), question, history };
 }
 
 /** Rectángulo de una pestaña interna: números finitos, sin negativos y de tamaño razonable. */

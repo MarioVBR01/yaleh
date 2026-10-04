@@ -96,6 +96,18 @@ function useConnectionMode() {
   }, [dispatch]);
 }
 
+/** Escritorio: estado del asistente sin conexión (requisitos, descarga, instalación). */
+function useLocalAiStatus() {
+  const { dispatch } = useApp();
+
+  useEffect(() => {
+    const api = getElectronAPI();
+    if (!api) return;
+    void api.localAi.getStatus().then(status => dispatch({ type: 'SET_LOCAL_AI', payload: status }));
+    return api.localAi.onStatus(status => dispatch({ type: 'SET_LOCAL_AI', payload: status }));
+  }, [dispatch]);
+}
+
 /**
  * Sincroniza el usuario de Google (Firebase Auth) con el estado global.
  * Web: al iniciar sesión pasa a la dropzone; al cerrarla vuelve al login.
@@ -191,6 +203,7 @@ function AppContent() {
   const { state } = useApp();
   useSessionRecovery();
   useConnectionMode();
+  useLocalAiStatus();
   useAuthSync();
   useWebWorkspace();
   useSessionFileResults();

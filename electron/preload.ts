@@ -46,6 +46,16 @@ const api: ElectronAPI = {
   },
   exportOffice: request => ipcRenderer.invoke(IPC_INVOKE.officeExport, request),
   listSessionHistory: () => ipcRenderer.invoke(IPC_INVOKE.historyList),
+  localAi: {
+    getStatus: () => ipcRenderer.invoke(IPC_INVOKE.localAiStatus),
+    startDownload: () => ipcRenderer.invoke(IPC_INVOKE.localAiDownload),
+    pauseDownload: () => ipcRenderer.invoke(IPC_INVOKE.localAiPause),
+    removeModel: () => ipcRenderer.invoke(IPC_INVOKE.localAiRemove),
+    generate: request => ipcRenderer.invoke(IPC_INVOKE.localAiGenerate, request),
+    abort: requestId => ipcRenderer.invoke(IPC_INVOKE.localAiAbort, requestId),
+    onStatus: callback => subscribe(IPC_EVENT.localAiStatusChanged, callback),
+    onChunk: callback => subscribe(IPC_EVENT.localAiChunk, callback),
+  },
   tabs: {
     open: url => ipcRenderer.invoke(IPC_INVOKE.tabsOpen, url),
     close: tabId => ipcRenderer.invoke(IPC_INVOKE.tabsClose, tabId),

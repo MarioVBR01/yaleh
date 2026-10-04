@@ -10,8 +10,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * node:sqlite necesita --experimental-sqlite en Node < 22.13 (las pruebas corren
- * con el Node del sistema; Electron 42 trae Node 24 y no lo necesita).
+ * node:sqlite necesita --experimental-sqlite en Node < 22.13. npm test corre con el Node de
+ * Electron 42 (Node 24, con FTS5; scripts/test.mjs), que no lo necesita; esto queda por si se
+ * ejecuta Vitest directamente con un Node más viejo (las pruebas de FTS5 fallarían).
  */
 const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
 const sqliteExecArgv =

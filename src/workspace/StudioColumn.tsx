@@ -3,19 +3,20 @@
  * @description Columna "Estudio" (brief, secciones 5.2 y 7.3): resumen, cuestionario,
  * tarjetas e informe generados por la IA, y el recuadro de notas.
  * Los resultados se guardan en Firestore (studyItems) cuando hay cuenta.
- * Sin conexión o en modo offline, la IA muestra "Disponible próximamente"; las notas funcionan.
+ * Sin conexión, el modelo local (si está instalado) hace el resumen y las tarjetas; el cuestionario y
+ * el informe siguen solo con conexión (revisión 1.8). Sin asistente: "Disponible próximamente"; las notas funcionan.
  */
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, FileBarChart, HelpCircle, Layers, ListChecks, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { describeAIError } from '../ai/errors';
-import { generateStudyItem } from '../ai/gemini';
+import type { AssistantProvider } from '../ai/provider';
 import { STUDY_LABELS, type QuizQuestion, type StudyContent, type StudyKind } from '../ai/study-items';
 import { useSourceTexts } from '../ai/useSourceTexts';
 import { getWorkspaceStore, newId } from '../data/workspace';
-import { useModeFlags } from '../lib/mode';
-import AIUnavailable from './AIUnavailable';
+import { useAssistant, useModeFlags } from '../lib/mode';
+import AIUnavailable, { AssistantBadge } from './AIUnavailable';
 import Markdown from './Markdown';
 import NotesBox from './NotesBox';
 
@@ -32,28 +33,37 @@ interface Item {
 }
 
 export default function StudioColumn() {
-  const { ai } = useModeFlags();
+  const { assistant } = useModeFlags();
+  const provider = useAssistant();
   return (
     <div className="h-full flex flex-col gap-3 min-h-0 overflow-y-auto pr-1">
-      <h2 className="text-ink font-semibold text-sm">Estudio</h2>
-      {ai ? <StudyTools /> : <AIUnavailable compact />}
+      <h2 className="text-ink font-semibold text-sm flex items-center gap-2">
+        Estudio {provider && <AssistantBadge label={provider.label} local={provider.kind === 'local'} />}
+      </h2>
+      {provider ? (
+        <StudyTools provider={provider} />
+      ) : (
+        <AIUnavailable compact reason={assistant.kind === 'none' ? assistant.reason : undefined} />
+      )}
       <NotesBox />
     </div>
   );
 }
 
-function StudyTools() {
+function StudyTools({ provider }: { provider: AssistantProvider }) {
   const { state, logActivity } = useApp();
   const { load, count } = useSourceTexts();
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState<StudyKind | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tokens, setTokens] = useState(0);
 
   const generate = async (kind: StudyKind) => {
     setBusy(kind);
     setError(null);
+    setTokens(0);
     try {
-      const content = await generateStudyItem(kind, await load());
+      const content = await provider.study(kind, { loadSources: load, workspaceId: state.workspaceId }, setTokens);
       const item = { id: newId(), content };
       setItems(prev => [item, ...prev]);
       logActivity({ type: 'tool', label: `${STUDY_LABELS[kind]} generado`, icon: '✨' });
@@ -75,7 +85,8 @@ function StudyTools() {
           <button
             key={kind}
             onClick={() => void generate(kind)}
-            disabled={busy !== null || count === 0}
+            disabled={busy !== null || count === 0 || !provider.supports(kind)}
+            title={provider.supports(kind) ? undefined : 'Solo disponible con conexión'}
             className="flex items-center gap-2 px-3 py-2 rounded-xl border border-line bg-surface-raised text-xs text-ink-soft hover:text-ink hover:border-line-strong disabled:opacity-50"
           >
             {busy === kind ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} className="text-accent" />}
@@ -84,6 +95,15 @@ function StudyTools() {
         ))}
       </div>
       {count === 0 && <p className="text-ink-subtle text-[11px]">Agrega una fuente para generar material de estudio.</p>}
+      {provider.kind === 'local' && (
+        <p className="text-ink-subtle text-[11px]">Sin conexión: resumen y tarjetas. El cuestionario y el informe necesitan conexión.</p>
+      )}
+      {busy && provider.kind === 'local' && (
+        <p className="text-ink-muted text-[11px] flex items-center gap-2" aria-live="polite">
+          <Loader2 size={12} className="animate-spin" />
+          Generando en este equipo… {tokens > 0 ? `${tokens} tokens` : 'leyendo las fuentes'}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-danger text-xs">
           {error}

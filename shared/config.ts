@@ -136,6 +136,50 @@ export const AI = {
   maxSourceChars: 400_000,
 } as const;
 
+/**
+ * Asistente sin conexión (brief, revisión 1.8): llama.cpp (node-llama-cpp) en un utilityProcess.
+ * El modelo no va en el instalador: se descarga desde la bienvenida del escritorio, con conexión
+ * y fuera de la sesión, a userData/models. Solo el modelo de texto (sin el módulo de visión, mmproj).
+ */
+export const LOCAL_AI = {
+  displayName: 'Qwen3.5-4B',
+  author: 'equipo Qwen (Alibaba Cloud)',
+  license: 'Apache 2.0',
+  licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
+  fileName: 'Qwen3.5-4B-Q4_K_M.gguf',
+  /** Revisión fija del repositorio: el archivo y su SHA-256 no cambian. */
+  url: 'https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/e87f176479d0855a907a41277aca2f8ee7a09523/Qwen3.5-4B-Q4_K_M.gguf',
+  sha256: '00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4',
+  sizeBytes: 2_740_937_888,
+  /**
+   * Mínimo de 8 GB de RAM. Windows informa algo menos de lo instalado (memoria reservada
+   * para el hardware y la gráfica integrada), así que el umbral real es 7,5 GiB.
+   */
+  minRamBytes: 7.5 * 1024 ** 3,
+  minRamLabel: '8 GB',
+  /** Espacio libre que se exige además del archivo. */
+  diskMarginBytes: 512 * 1024 ** 2,
+  /**
+   * Aceleración por GPU de llama.cpp: 'auto' usa la GPU si hay (Vulkan, CUDA) y si no la CPU; false = solo CPU.
+   * Medido en el equipo de desarrollo (i7-1255U, Iris Xe; docs/MEDICIONES_IA_LOCAL.md): con Vulkan el
+   * primer texto llega en ~18 s (CPU: ~55 s) y el chat termina antes, aunque genera más lento (4 frente
+   * a 6 tokens/s). Si el proceso del modelo se cae, el siguiente intento usa solo la CPU.
+   */
+  gpu: 'auto' as false | 'auto',
+  /** Tokens de contexto del modelo cargado (sistema + fragmentos + historial + respuesta). */
+  contextSize: 8192,
+  /**
+   * Caracteres de las fuentes que se envían al modelo (~1 700 tokens). Leer el contexto es lo más
+   * lento en CPU (~36 tokens/s en el i7-1255U): con 12 000 caracteres tardaba ~110 s en empezar a responder.
+   */
+  sourceBudgetChars: 6_000,
+  /** Tamaño de los fragmentos indexados con FTS5. */
+  passageChars: 1_000,
+  /** Turnos anteriores del chat que se envían (los más recientes). */
+  historyTurns: 6,
+  maxTokens: { chat: 700, summary: 1_200, flashcards: 1_200 },
+} as const;
+
 /** Búsqueda de información (brief, sección 7.2): API pública de Wikipedia en español. */
 export const WIKIPEDIA = {
   apiUrl: 'https://es.wikipedia.org/w/api.php',

@@ -3,7 +3,7 @@
 YALEH es un entorno de estudio para estudiantes del TECBA con problemas de concentración (proyecto de grado de Mario Víctor Brañez Rodriguez). Tiene dos aplicaciones sobre una misma base de código:
 
 - **Web** (Firebase Hosting): login con Google, carga de materiales (se extrae el texto) y preparación de la sesión, que termina con la descarga de un **archivo de sesión `.yaleh`**. Sin IA (revisión 1.6).
-- **Escritorio** (Electron): bloquea el sistema operativo durante la sesión (kiosko), con o sin internet. No inicia sesión con Google: abre el `.yaleh` o empieza una sesión local. Dentro del kiosko: espacio de trabajo con IA (con conexión), pestañas internas, ofimática, historial y estadísticas.
+- **Escritorio** (Electron): bloquea el sistema operativo durante la sesión (kiosko), con o sin internet. No inicia sesión con Google: abre el `.yaleh` o empieza una sesión local. Dentro del kiosko: espacio de trabajo con IA (Gemini con conexión; modelo local sin conexión, revisión 1.8), pestañas internas, ofimática, historial y estadísticas.
 
 Las dos aplicaciones funcionan por separado y se unen solo con el archivo `.yaleh` (como Safe Exam Browser; brief, revisión 1.5). El diseño anterior (enlaces `yaleh://`) queda en el tag de git `demo-antes-archivo`.
 
@@ -25,6 +25,7 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | 8. Pestañas con WebContentsView, herramientas y YouTube | Hecha |
 | 9. Editores de ofimática con exportación | Hecha |
 | 10. Historial y estadísticas (SQLite; la sincronización pasa a v2) | Hecha |
+| 10b. IA sin conexión (Qwen3.5-4B con node-llama-cpp, FTS5; revisión 1.8) | Hecha |
 | 11. Pruebas y empaquetado | Pendiente |
 
 ## Comandos
@@ -37,8 +38,9 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | `npm run build` | Compila la interfaz (`dist/`) y el proceso principal (`dist-electron/`) |
 | `npm run build:electron` | Solo el proceso principal y el preload, con esbuild |
 | `npm run typecheck` | `tsc --noEmit` (interfaz, `shared/` y `electron/`) |
-| `npm test` | Pruebas con Vitest (una ejecución) |
-| `npm run test:watch` | Vitest en modo observación |
+| `npm test` | Pruebas con Vitest (una ejecución), **con el Node de Electron** (`scripts/test.mjs`): el SQLite de Node 22 no tiene FTS5 |
+| `npm run test:watch` | Vitest en modo observación (también con el Node de Electron) |
+| `npm run bench:local-ai` | Mide el asistente sin conexión con el modelo real (chat, resumen, tarjetas) y escribe `docs/mediciones/ia-local-{gpu,cpu}.md` (`BENCH_GPU=off` o `auto`). Necesita el modelo descargado en `%APPDATA%\yaleh\models` |
 | `npm run smoke:electron` | Compila y abre la app sin ventana visible, con una carpeta de datos temporal: comprueba que la interfaz carga con la CSP, que el preload expone `electronAPI`, que la IPC responde y que SQLite se crea con sus migraciones. No activa el kiosko ni toca la base real |
 | `firebase deploy --only hosting --project yaleh-fbe1c` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes). Incluye `youtube.html`, el reproductor que usan las pestañas del escritorio |
 | `firebase deploy --only firestore:rules --project yaleh-fbe1c` | Publica `firestore.rules` |
@@ -46,7 +48,7 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 
 Al cerrar cada fase deben pasar `typecheck`, `build` y `test` (y conviene `smoke:electron`).
 
-**Node del sistema:** las pruebas usan `node:sqlite`. Con Node < 22.13 hace falta `--experimental-sqlite`, que `vite.config.ts` agrega solo cuando corresponde (hoy el equipo tiene Node 22.12). Se recomienda Node 24 LTS, la misma versión que trae Electron 42. `db:inspect` usa el Node de Electron.
+**Node del sistema:** `npm test`, `db:inspect` y `bench:local-ai` usan el Node de Electron 42 (Node 24.19), así que no dependen del Node instalado (hoy 22.12, cuyo SQLite no trae FTS5). Ejecutar `npx vitest` directamente con Node 22 hace fallar las pruebas de FTS5.
 
 **Problema conocido:** si `ELECTRON_RUN_AS_NODE` está definida en el entorno (la heredan, por ejemplo, los procesos lanzados por extensiones de VS Code), Electron arranca como Node y falla con `Cannot read properties of undefined (reading 'isPackaged')`. `smoke:electron` la quita automáticamente; para los demás comandos, ejecútalos desde una terminal normal.
 
@@ -70,6 +72,13 @@ electron/                   Proceso principal (TypeScript → esbuild → dist-e
   session-file-service.ts   Abrir un .yaleh: validar, uso único, guardar fuentes en SQLite, empezar la sesión
   db/workspace-repository.ts  Fuentes (texto en partes) y notas del modo offline
   db/history.ts             Historial de sesiones con contadores de eventos (fase 10)
+  local-ai/service.ts       Asistente sin conexión: estado, requisitos, descarga, worker y generación (revisión 1.8)
+  local-ai/worker.ts        utilityProcess con node-llama-cpp (→ dist-electron/ai-worker.mjs, ESM)
+  local-ai/downloader.ts    Descarga reanudable (Range) con verificación SHA-256
+  local-ai/retrieval.ts     Fragmentos relevantes con FTS5 (chat) o repartidos (resumen y tarjetas)
+  local-ai/prompts.ts       Instrucciones y esquemas JSON del modelo local
+  local-ai/requirements.ts  RAM mínima y espacio en disco
+  local-ai/bench.ts         Medición (npm run bench:local-ai)
   tabs/tab-manager.ts       Pestañas internas con WebContentsView (máximo 8, ventanas nuevas → pestañas)
   tabs/resolve.ts           URL de una pestaña: sitio permitido, reproductor de YouTube o rechazo
   office/export.ts          .docx / .xlsx / .pptx en Documentos\YALEH (docx, ExcelJS, PptxGenJS)
@@ -90,7 +99,8 @@ src/                        Interfaz React (web y escritorio). Alias: @/ → src
   firebase/                 app.ts (inicialización + App Check), auth.ts (Google), sessions.ts (users/{uid}/sessions)
   data/                     workspace.ts (Firestore / SQLite por IPC / memoria), sources.ts (Firestore),
                             file-types.ts + extract.ts + useIngest.ts (validación y extracción de PDF/DOCX/TXT)
-  ai/                       gemini.ts (AI Logic, respaldo de modelos), search.ts (Wikipedia, SearchProvider),
+  ai/                       provider.ts (proveedor común: Gemini y modelo local, selectAssistant),
+                            gemini.ts (AI Logic, respaldo de modelos), search.ts (Wikipedia, SearchProvider),
                             study-items.ts (esquemas y validación), errors.ts (429, App Check, red)
   workspace/                WorkspaceView (Fuentes · Chat · Estudio), columnas, NotesBox, Markdown
   store/appStore.ts         Estado global y reducer
@@ -104,9 +114,9 @@ src/                        Interfaz React (web y escritorio). Alias: @/ → src
   panels/HistoryPanel.tsx, StatsPanel.tsx  Historial y estadísticas desde SQLite (recharts)
   youtube/main.ts           Página del reproductor (youtube.html, entrada propia de Vite)
   test/electron-mock.ts     window.electronAPI simulada para las pruebas de la interfaz
-  phases/ kiosk/ panels/    Pantallas, layout del kiosko y paneles
+  phases/ kiosk/ panels/    Pantallas, layout del kiosko y paneles (phases/LocalAiCard.tsx: descarga del modelo en la bienvenida)
   index.css                 Tokens de color (@theme) y estilos globales
-scripts/                    build-electron.mjs, smoke-electron.mjs, db-inspect.mjs
+scripts/                    build-electron.mjs, smoke-electron.mjs, db-inspect.mjs, test.mjs, bench-local-ai.mjs
 docs/                       Brief, informe del MVP y BUGS.md (registro de errores con plantilla)
 ```
 
@@ -131,7 +141,18 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 - `WorkspaceView` reemplaza al Dashboard: Fuentes · Chat · Estudio (pestañas en pantallas angostas). **Solo en el kiosko del escritorio** (revisión 1.6). `state.workspaceId` es el id de la sesión (local o el `sessionId` del `.yaleh`) en SQLite; en la web es un borrador en Firestore donde se guardan las fuentes extraídas antes de descargar el `.yaleh`.
 - **Fuentes:** PDF/DOCX/TXT validados por extensión + MIME + firma; texto extraído en el cliente (pdf.js 6, mammoth) y guardado en partes: Firestore `sources/{id}/chunks/{n}` (web) o SQLite `source_chunks` (escritorio, migración 2). En el escritorio no se agregan fuentes dentro del kiosko.
 - **IA:** `AI.models` en `shared/config.ts` (`gemini-3.5-flash-lite` → `gemini-3.8-flash` si hay 429/500/503). Chat con streaming basado en las fuentes; Wikipedia opcional (fuentes como texto). Resumen/cuestionario/tarjetas con esquema JSON validado; informe en markdown (`react-markdown`, sin HTML, enlaces como texto). En Firestore se guardan como `studyItems`.
-- Offline o sin conexión: chat y herramientas de IA muestran "Disponible próximamente"; las notas funcionan.
+- Sin conexión: responde el modelo local si está instalado (ver abajo); si no, "Disponible próximamente" con la indicación para descargarlo. Las notas funcionan siempre.
+
+## Asistente sin conexión (revisión 1.8)
+
+- **Modelo:** Qwen3.5-4B, GGUF Q4_K_M (2,74 GB), Apache 2.0, solo texto (sin `mmproj`). URL con revisión fija y SHA-256 en `LOCAL_AI` (`shared/config.ts`). Se guarda en `userData/models` (desarrollo: `%APPDATA%\yaleh\models`). **No va en el instalador.**
+- **Motor:** node-llama-cpp 3.22 (binarios precompilados para Windows; **primer módulo nativo del proyecto**) en un `utilityProcess` (`dist-electron/ai-worker.mjs`, ESM, `node-llama-cpp` externo en esbuild). Se crea con el primer pedido y se cierra al terminar la sesión (libera ~4 GB). `QwenChatWrapper({ variation: '3.5', thoughts: 'discourage' })`: sin "pensamiento". GPU automática (`LOCAL_AI.gpu = 'auto'`: Vulkan en la Iris Xe, CPU si no hay); tras una caída del proceso, solo CPU.
+- **Descarga:** solo desde la bienvenida, con conexión y fuera de la sesión (`LocalAiService` lo vuelve a comprobar); al empezar una sesión se pausa (`lock` del controlador). `.part` + Range para reanudar; SHA-256 al terminar; si no coincide, se borra. Al arrancar se considera instalado si el archivo final tiene el tamaño exacto (no se vuelve a calcular el hash).
+- **Requisitos:** RAM ≥ 7,5 GiB (equipos de "8 GB") y espacio libre ≥ lo que falta descargar + 512 MB. Si no, estado `unsupported` con el motivo y sin botón.
+- **Recuperación:** migración 3: `source_passages` (fragmentos de 1 000 caracteres de cada fuente) + `source_passages_fts` (FTS5, `unicode61 remove_diacritics 2`, con triggers). `WorkspaceRepository` los mantiene; `indexMissingPassages()` indexa al arrancar las fuentes anteriores. Chat: consulta con prefijos de las palabras de la pregunta, ranking bm25; resumen y tarjetas: fragmentos repartidos. Presupuesto: `LOCAL_AI.sourceBudgetChars`.
+- **Proveedor común** (`src/ai/provider.ts`): `selectAssistant` → web o sesión online con conexión: Gemini; si no, local si está instalado; si no, ninguno (`needs-download` / `unsupported`). Local: chat, resumen y tarjetas (JSON con gramática de llama.cpp). Cuestionario, informe y Wikipedia: solo en línea (botones deshabilitados).
+- **Interfaz:** etiqueta "Asistente en línea" / "Asistente sin conexión"; el chat muestra el texto a medida que se genera y tiene botón para detener; Estudio muestra los tokens generados.
+- **Tiempos medidos:** `docs/MEDICIONES_IA_LOCAL.md` (resumen y decisión CPU/GPU) y `docs/mediciones/` (cada corrida). Presupuesto de fragmentos: 6 000 caracteres (leer el contexto es lo más lento).
 
 ## Pestañas, ofimática, historial (fases 8 a 10)
 
@@ -200,6 +221,7 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 - Firebase: proyecto `Yaleh`, ID `yaleh-fbe1c`, plan Spark.
 - Unión web → escritorio: archivo de sesión `.yaleh` (24 h, uso único, máximo 50 MB).
 - IA: `gemini-3.5-flash-lite` (respaldo `gemini-3.8-flash`) vía Firebase AI Logic (API de desarrollador). Búsqueda: API de Wikipedia en español detrás de `SearchProvider`. App Check obligatorio para AI Logic: Fraud Defense (`ReCaptchaEnterpriseProvider`) en la web y token de depuración en el escritorio.
+- IA sin conexión: Qwen3.5-4B Q4_K_M (Apache 2.0) con node-llama-cpp en un `utilityProcess`; descarga aparte (2,74 GB) desde la bienvenida; FTS5 para los fragmentos (migración 3). Requisito: 8 GB de RAM.
 - SQLite: `node:sqlite` en el proceso principal (Electron 42, Node 24).
 
 ## Pendientes conocidos
@@ -207,6 +229,8 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 - **Token de depuración de App Check** en el escritorio: provisional (se puede extraer del instalador). Borrarlo de la consola cuando exista una alternativa.
 - **Asociación de `.yaleh`** con la app (doble clic): en el instalador, fase 11.
 - **Sincronización:** pasa a la versión 2 (el escritorio no tiene cuenta de Google).
+- **Empaquetado del asistente sin conexión (fase 11):** `node-llama-cpp` y `@node-llama-cpp/win-x64` deben quedar fuera del asar (`asarUnpack`); incluir solo los binarios de Windows x64 (no CUDA ni ARM) para no inflar el instalador.
+- **Asistente sin conexión:** responde más lento que Gemini (ver mediciones); con documentos largos solo lee una parte (presupuesto de fragmentos); el historial del chat local también vive en memoria.
 - **Exportación a PDF** de documentos: versión 2.
 - **Errores encontrados al probar:** en [docs/BUGS.md](docs/BUGS.md); se corrigen antes de la fase 11.
 - `npm audit`: quedan avisos sin uso explotable (`@grpc/grpc-js` del SDK de Firestore para Node, `image-size` de PptxGenJS, que solo afecta a imágenes y no se usan). `uuid` se fuerza a ^11.1.1 con `overrides`.

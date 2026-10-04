@@ -6,6 +6,7 @@
  * - "Abrir archivo de sesión (.yaleh)": el proceso principal lo valida y, si es
  *   válido, bloquea el equipo y empieza el tiempo de inmediato. También se puede
  *   arrastrar el archivo a esta ventana.
+ * - Asistente sin conexión (revisión 1.8): descarga del modelo local, solo aquí (fuera de la sesión).
  */
 
 import { useState } from 'react';
@@ -16,6 +17,7 @@ import { useApp } from '../context/AppContext';
 import { newId } from '../data/workspace';
 import { getElectronAPI } from '../lib/electron';
 import { applyOpenedSessionFile } from '../lib/session-file';
+import LocalAiCard from './LocalAiCard';
 
 export default function DesktopStartPhase() {
   const { state, dispatch } = useApp();
@@ -126,6 +128,8 @@ export default function DesktopStartPhase() {
             {state.notice}
           </p>
         )}
+
+        <LocalAiCard />
       </motion.div>
     </div>
   );

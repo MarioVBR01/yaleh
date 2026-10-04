@@ -5,6 +5,7 @@
  */
 
 import type { DatabaseSync } from 'node:sqlite';
+import { LOCAL_AI } from '../../shared/config';
 import { splitText } from '../../shared/text';
 import type { LocalNote, LocalSourceInfo } from '../../shared/ipc-types';
 
@@ -25,6 +26,7 @@ export class WorkspaceRepository {
       this.db.prepare('DELETE FROM source_chunks WHERE source_id = ?').run(source.id);
       const insert = this.db.prepare('INSERT INTO source_chunks (source_id, idx, text) VALUES (?, ?, ?)');
       splitText(text).forEach((chunk, index) => insert.run(source.id, index, chunk));
+      this.indexPassages(workspaceId, source.id, text);
       this.db.exec('COMMIT');
     } catch (error) {
       this.db.exec('ROLLBACK');
@@ -53,7 +55,39 @@ export class WorkspaceRepository {
     return rows.map(r => r.text).join('');
   }
 
+  /** Fragmentos cortos para la búsqueda FTS5 del asistente sin conexión (migración 3). */
+  private indexPassages(workspaceId: string, sourceId: string, text: string): void {
+    this.db.prepare('DELETE FROM source_passages WHERE source_id = ?').run(sourceId);
+    const insert = this.db.prepare('INSERT INTO source_passages (source_id, workspace_id, idx, text) VALUES (?, ?, ?, ?)');
+    splitText(text, LOCAL_AI.passageChars).forEach((passage, index) => insert.run(sourceId, workspaceId, index, passage));
+  }
+
+  /**
+   * Indexa las fuentes guardadas antes de la migración 3 (sin fragmentos).
+   * Se llama al arrancar; devuelve cuántas fuentes indexó.
+   */
+  indexMissingPassages(): number {
+    const pending = this.db
+      .prepare(
+        `SELECT s.id, s.workspace_id FROM sources s
+         WHERE NOT EXISTS (SELECT 1 FROM source_passages p WHERE p.source_id = s.id)`
+      )
+      .all() as { id: string; workspace_id: string }[];
+    for (const source of pending) {
+      this.db.exec('BEGIN');
+      try {
+        this.indexPassages(source.workspace_id, source.id, this.getSourceText(source.workspace_id, source.id));
+        this.db.exec('COMMIT');
+      } catch (error) {
+        this.db.exec('ROLLBACK');
+        throw error;
+      }
+    }
+    return pending.length;
+  }
+
   removeSource(workspaceId: string, sourceId: string): void {
+    this.db.prepare('DELETE FROM source_passages WHERE source_id IN (SELECT id FROM sources WHERE id = ? AND workspace_id = ?)').run(sourceId, workspaceId);
     this.db.prepare('DELETE FROM source_chunks WHERE source_id IN (SELECT id FROM sources WHERE id = ? AND workspace_id = ?)').run(sourceId, workspaceId);
     this.db.prepare('DELETE FROM sources WHERE id = ? AND workspace_id = ?').run(sourceId, workspaceId);
   }

@@ -3,7 +3,12 @@
  * @description Mensajes claros para los errores del asistente (brief, sección 7.3).
  */
 
+import { AssistantError } from './provider';
+import { InvalidStudyOutputError } from './study-items';
+
 export function describeAIError(error: unknown): string {
+  if (error instanceof AssistantError) return error.message;
+  if (error instanceof InvalidStudyOutputError) return 'El asistente devolvió un resultado incompleto. Inténtalo de nuevo.';
   const text = `${(error as { message?: string })?.message ?? ''} ${JSON.stringify(
     (error as { customErrorData?: unknown })?.customErrorData ?? ''
   )}`;

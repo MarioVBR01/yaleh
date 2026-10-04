@@ -88,6 +88,37 @@ export const MIGRATIONS: readonly Migration[] = [
       CREATE INDEX idx_notes_workspace ON notes (workspace_id);
     `,
   },
+  {
+    version: 3,
+    name: 'passages-fts',
+    sql: `
+      -- Asistente sin conexión (revisión 1.8): el texto de source_chunks (partes de 200 000
+      -- caracteres) se vuelve a dividir en fragmentos cortos indexados con FTS5, para enviar
+      -- al modelo local solo los más relevantes. Los rellena WorkspaceRepository.
+      CREATE TABLE source_passages (
+        id           INTEGER PRIMARY KEY,
+        source_id    TEXT NOT NULL,
+        workspace_id TEXT NOT NULL,
+        idx          INTEGER NOT NULL,
+        text         TEXT NOT NULL
+      );
+      CREATE INDEX idx_passages_source ON source_passages (source_id);
+      CREATE INDEX idx_passages_workspace ON source_passages (workspace_id);
+
+      CREATE VIRTUAL TABLE source_passages_fts USING fts5(
+        text,
+        content = 'source_passages',
+        content_rowid = 'id',
+        tokenize = 'unicode61 remove_diacritics 2'
+      );
+      CREATE TRIGGER source_passages_ai AFTER INSERT ON source_passages BEGIN
+        INSERT INTO source_passages_fts (rowid, text) VALUES (new.id, new.text);
+      END;
+      CREATE TRIGGER source_passages_ad AFTER DELETE ON source_passages BEGIN
+        INSERT INTO source_passages_fts (source_passages_fts, rowid, text) VALUES ('delete', old.id, old.text);
+      END;
+    `,
+  },
 ];
 
 /**

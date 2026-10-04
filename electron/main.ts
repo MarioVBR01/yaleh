@@ -17,6 +17,7 @@ import {
   net,
   powerMonitor,
   session,
+  utilityProcess,
   type IpcMainInvokeEvent,
   type WebContents,
 } from 'electron';
@@ -46,6 +47,7 @@ import {
   parseDurationSeconds,
   parseId,
   parseNoteInput,
+  parseLocalAiRequest,
   parseOfficeRequest,
   parseSourceInput,
   type SenderTrust,
@@ -59,6 +61,7 @@ import { runSmokeTest } from './smoke';
 import { TabManager } from './tabs/tab-manager';
 import { exportOfficeFile } from './office/export';
 import { listSessionHistory } from './db/history';
+import { LocalAiError, LocalAiService, type WorkerHandle } from './local-ai/service';
 
 const isPackaged = app.isPackaged;
 /** `electron . --dev-server` carga el servidor de Vite; sin la bandera, carga dist/. */
@@ -76,6 +79,8 @@ if (isSmokeTest) {
 
 // Se empaqueta como CommonJS (dist-electron/main.cjs): __dirname es dist-electron/.
 const PRELOAD_PATH = path.join(__dirname, 'preload.cjs');
+/** Proceso del modelo local (utilityProcess, ESM). */
+const AI_WORKER = path.join(__dirname, 'ai-worker.mjs');
 const INDEX_HTML = path.join(__dirname, '..', 'dist', 'index.html');
 const APP_INDEX_URL = pathToFileURL(INDEX_HTML).href;
 
@@ -104,6 +109,7 @@ let workspace: WorkspaceRepository;
 let controller: SessionController;
 let connectivity: ConnectivityMonitor;
 let tabs: TabManager;
+let localAi: LocalAiService;
 
 /** El equipo está bloqueado (sesión activa). */
 function isLocked(): boolean {
@@ -126,12 +132,18 @@ function createController(): SessionController {
     store,
     minSeconds: LIMITS.minSessionMinutes * 60,
     maxSeconds: LIMITS.maxSessionMinutes * 60,
-    lock: () => mainWindow && lockWindow(mainWindow),
+    lock: () => {
+      // Nunca se descarga el asistente durante el kiosko (revisión 1.8).
+      localAi.onSessionStarted();
+      if (mainWindow) lockWindow(mainWindow);
+    },
     unlock: () => mainWindow && unlockWindow(mainWindow),
     onTick: remainingSeconds => send(IPC_EVENT.sessionTick, { remainingSeconds }),
     onEnded: reason => {
       // Al terminar la sesión se cierran las pestañas internas.
       tabs.closeAll();
+      // Libera la memoria del modelo local (~4 GB).
+      localAi.releaseModel();
       send(IPC_EVENT.sessionEnded, { reason });
     },
   });
@@ -267,6 +279,22 @@ function registerIpcHandlers(): void {
 
   // Historial y estadísticas (fase 10): solo lectura de SQLite.
   handle(IPC_INVOKE.historyList, () => listSessionHistory(db));
+
+  // Asistente sin conexión (revisión 1.8). La descarga solo con conexión y fuera de la sesión.
+  const localAiAction = (run: () => unknown) => {
+    try {
+      return run();
+    } catch (error) {
+      if (error instanceof LocalAiError) throw new Error(error.message);
+      throw error;
+    }
+  };
+  handle(IPC_INVOKE.localAiStatus, () => localAi.status());
+  handle(IPC_INVOKE.localAiDownload, () => localAiAction(() => localAi.startDownload()));
+  handle(IPC_INVOKE.localAiPause, () => localAi.pauseDownload());
+  handle(IPC_INVOKE.localAiRemove, () => localAiAction(() => localAi.removeModel()));
+  handle(IPC_INVOKE.localAiGenerate, (_event, request) => localAi.generate(parseLocalAiRequest(request)));
+  handle(IPC_INVOKE.localAiAbort, (_event, requestId) => localAi.abort(parseId(requestId, 'Pedido')));
 
   // Ofimática: se guarda directo en Documentos\\YALEH, sin diálogo del sistema (brief, sección 6.1).
   handle(IPC_INVOKE.officeExport, async (_event, request): Promise<OfficeExportResult> => {
@@ -427,6 +455,8 @@ function openStorage(): void {
     console.log(`[db] Importados de la fase 2: sesión=${imported.sessionImported}, eventos=${imported.eventsImported}`);
   }
   ensureLocalProfile(db);
+  const indexed = workspace.indexMissingPassages();
+  if (indexed > 0) console.log(`[db] Fuentes indexadas para el asistente sin conexión: ${indexed}`);
 }
 
 function startConnectivityMonitor(): void {
@@ -458,6 +488,19 @@ function bootstrap(): void {
     playerPage: YOUTUBE_PLAYER_URL,
     devTools: !isPackaged,
     events: { updated: IPC_EVENT.tabsUpdated, openRequest: IPC_EVENT.tabsOpenRequest },
+  });
+  localAi = new LocalAiService({
+    modelsDir: path.join(app.getPath('userData'), 'models'),
+    db,
+    isOnline: () => connectivity?.getMode() === 'online',
+    isSessionActive: isLocked,
+    sendStatus: status => send(IPC_EVENT.localAiStatusChanged, status),
+    sendChunk: chunk => send(IPC_EVENT.localAiChunk, chunk),
+    forkWorker: init =>
+      utilityProcess.fork(AI_WORKER, [JSON.stringify(init)], {
+        serviceName: 'YALEH asistente sin conexión',
+        stdio: 'inherit',
+      }) as unknown as WorkerHandle,
   });
   if (isPackaged) Menu.setApplicationMenu(null);
 
@@ -508,6 +551,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', () => {
     controller?.dispose();
+    localAi?.shutdown();
     connectivity?.stop();
     globalShortcut.unregisterAll();
     db?.close();

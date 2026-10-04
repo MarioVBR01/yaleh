@@ -1,20 +1,21 @@
 /**
  * @file ChatColumn.tsx
- * @description Columna "Chat" (brief, secciones 5.2 y 7): conversación con Gemini
- * sobre las fuentes del estudiante; opcionalmente busca en Wikipedia y muestra las
- * fuentes como texto. Sin conexión o en modo offline: "Disponible próximamente".
+ * @description Columna "Chat" (brief, secciones 5.2 y 7): conversación con el asistente
+ * sobre las fuentes del estudiante. Con conexión responde Gemini (y puede buscar en Wikipedia);
+ * sin conexión, el modelo local si está instalado (revisión 1.8). Sin ninguno: "Disponible próximamente".
  * TODO: guardar el historial del chat en Firestore (hoy vive en memoria).
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { BookOpenText, Loader2, Send } from 'lucide-react';
+import { BookOpenText, Loader2, Send, Square } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { describeAIError } from '../ai/errors';
-import { askTutor, type ChatTurn } from '../ai/gemini';
+import type { ChatTurn } from '../ai/gemini';
+import type { AssistantProvider } from '../ai/provider';
 import { searchProvider, type SearchResult } from '../ai/search';
 import { useSourceTexts } from '../ai/useSourceTexts';
-import { useModeFlags } from '../lib/mode';
-import AIUnavailable from './AIUnavailable';
+import { useAssistant, useModeFlags } from '../lib/mode';
+import AIUnavailable, { AssistantBadge } from './AIUnavailable';
 import Markdown from './Markdown';
 
 interface Message extends ChatTurn {
@@ -27,13 +28,16 @@ interface Message extends ChatTurn {
 const SUGGESTIONS = ['Explícame las ideas principales', '¿Qué conceptos debería repasar?', 'Dame un ejemplo práctico'];
 
 export default function ChatColumn() {
-  const { ai } = useModeFlags();
-  if (!ai) return <AIUnavailable />;
-  return <Chat />;
+  const { assistant } = useModeFlags();
+  const provider = useAssistant();
+  if (assistant.kind === 'none' || !provider) {
+    return <AIUnavailable reason={assistant.kind === 'none' ? assistant.reason : undefined} />;
+  }
+  return <Chat key={provider.kind} provider={provider} />;
 }
 
-function Chat() {
-  const { logActivity } = useApp();
+function Chat({ provider }: { provider: AssistantProvider }) {
+  const { state, logActivity } = useApp();
   const { load, count } = useSourceTexts();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -41,6 +45,8 @@ function Chat() {
   const [useWikipedia, setUseWikipedia] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
+  const abortRef = useRef<AbortController | null>(null);
+  const canSearch = provider.supports('wikipedia');
 
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ behavior: 'smooth' });
@@ -57,7 +63,7 @@ function Chat() {
 
     try {
       let results: SearchResult[] = [];
-      if (useWikipedia) {
+      if (useWikipedia && canSearch) {
         setBusy('searching');
         try {
           results = await searchProvider.search(question);
@@ -66,10 +72,13 @@ function Chat() {
         }
       }
       setBusy('thinking');
-      const sources = await load();
       setMessages(prev => [...prev, { id: answerId, role: 'assistant', text: '', sources: results }]);
-      await askTutor(question, history, sources, results, partial =>
-        setMessages(prev => prev.map(m => (m.id === answerId ? { ...m, text: partial } : m)))
+      abortRef.current = new AbortController();
+      await provider.chat(
+        { question, history, searchResults: results },
+        { loadSources: load, workspaceId: state.workspaceId },
+        partial => setMessages(prev => prev.map(m => (m.id === answerId ? { ...m, text: partial } : m))),
+        abortRef.current.signal
       );
       logActivity({ type: 'search', label: `Pregunta al asistente: ${question.slice(0, 60)}`, icon: '💬' });
     } catch (err) {
@@ -80,6 +89,7 @@ function Chat() {
         { id: answerId, role: 'assistant', text: errorText, error: true },
       ]);
     } finally {
+      abortRef.current = null;
       setBusy(false);
     }
   };
@@ -87,7 +97,9 @@ function Chat() {
   return (
     <div className="h-full flex flex-col min-h-0">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-ink font-semibold text-sm">Chat</h2>
+        <h2 className="text-ink font-semibold text-sm flex items-center gap-2">
+          Chat <AssistantBadge label={provider.label} local={provider.kind === 'local'} />
+        </h2>
         <span className="text-ink-subtle text-[11px]">
           {count > 0 ? `Basado en ${count} fuente(s)` : 'Sin fuentes: tutor general'}
         </span>
@@ -97,6 +109,12 @@ function Chat() {
         {messages.length === 0 && (
           <div className="text-center py-8">
             <p className="text-ink-muted text-sm mb-4">Pregúntale al asistente sobre tus materiales.</p>
+            {provider.kind === 'local' && (
+              <p className="text-ink-subtle text-[11px] mb-4">
+                Responde el modelo instalado en este equipo: tus documentos no salen de la computadora. Es más lento
+                que el asistente en línea.
+              </p>
+            )}
             <div className="flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map(s => (
                 <button
@@ -148,10 +166,16 @@ function Chat() {
           void send(input);
         }}
       >
-        <label className="flex items-center gap-2 text-xs text-ink-muted cursor-pointer select-none">
-          <input type="checkbox" checked={useWikipedia} onChange={e => setUseWikipedia(e.target.checked)} />
-          <BookOpenText size={13} /> Buscar también en Wikipedia
-        </label>
+        {canSearch ? (
+          <label className="flex items-center gap-2 text-xs text-ink-muted cursor-pointer select-none">
+            <input type="checkbox" checked={useWikipedia} onChange={e => setUseWikipedia(e.target.checked)} />
+            <BookOpenText size={13} /> Buscar también en Wikipedia
+          </label>
+        ) : (
+          <p className="text-[11px] text-ink-subtle flex items-center gap-2">
+            <BookOpenText size={13} /> La búsqueda en Wikipedia solo está disponible con conexión.
+          </p>
+        )}
         <div className="flex gap-2">
           <input
             value={input}
@@ -159,14 +183,25 @@ function Chat() {
             placeholder="Escribe tu pregunta…"
             className="flex-1 bg-canvas border border-line focus:border-accent rounded-xl px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none"
           />
-          <button
-            type="submit"
-            disabled={!input.trim() || busy !== false}
-            className="px-3 rounded-xl bg-accent-strong hover:bg-accent text-ink disabled:opacity-50"
-            title="Enviar"
-          >
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          </button>
+          {busy === 'thinking' && provider.kind === 'local' ? (
+            <button
+              type="button"
+              onClick={() => abortRef.current?.abort()}
+              className="px-3 rounded-xl border border-line text-ink-soft hover:text-ink"
+              title="Detener la respuesta"
+            >
+              <Square size={14} />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!input.trim() || busy !== false}
+              className="px-3 rounded-xl bg-accent-strong hover:bg-accent text-ink disabled:opacity-50"
+              title="Enviar"
+            >
+              {busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            </button>
+          )}
         </div>
       </form>
     </div>

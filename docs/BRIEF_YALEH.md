@@ -1,7 +1,7 @@
 # Brief — YALEH v1
 
 > Especificación de la versión 1. Autor: Mario Víctor Brañez Rodriguez (TECBA, Cochabamba).
-> Fecha: 29 de septiembre de 2026. **Revisión 1.7** (03/10/2026): pestañas internas, ofimática con exportación, historial y estadísticas desde SQLite; la sincronización con Firestore pasa a la versión 2. **Revisión 1.6** (03/10/2026): la web ya no usa la IA; el espacio de trabajo con IA existe solo en el kiosko del escritorio. **Revisión 1.5** (29/09/2026): la web y el escritorio funcionan por separado y se unen solo con un **archivo de sesión .yaleh**, al estilo de Safe Exam Browser. La 1.4 agregó Firebase, la vista NotebookLM, la extracción de texto y la IA; la 1.3, la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
+> Fecha: 29 de septiembre de 2026. **Revisión 1.8** (04/10/2026): asistente de IA sin conexión (modelo local Qwen3.5-4B) en la versión 1. **Revisión 1.7** (03/10/2026): pestañas internas, ofimática con exportación, historial y estadísticas desde SQLite; la sincronización con Firestore pasa a la versión 2. **Revisión 1.6** (03/10/2026): la web ya no usa la IA; el espacio de trabajo con IA existe solo en el kiosko del escritorio. **Revisión 1.5** (29/09/2026): la web y el escritorio funcionan por separado y se unen solo con un **archivo de sesión .yaleh**, al estilo de Safe Exam Browser. La 1.4 agregó Firebase, la vista NotebookLM, la extracción de texto y la IA; la 1.3, la detección del modo y SQLite; la 1.2 eliminó la salida de emergencia; la 1.1 incorporó las decisiones del plan de trabajo (sección 16).
 > Documento complementario: `INFORME_ANALISIS_SRB.md` (análisis del MVP actual).
 > El diseño visual se define **después**; en esta versión no se rediseña la interfaz.
 > Este documento es la **fuente de verdad** del proyecto: si el código lo contradice, gana el brief.
@@ -35,7 +35,7 @@ El proyecto parte del MVP existente ("Safe Research Browser"), que se **reorgani
 | Búsqueda de información en v1 | **API pública de Wikipedia en español** (`es.wikipedia.org`); los artículos se pasan a Gemini como contexto. Detrás de una interfaz de proveedor de búsqueda para agregar OpenAlex en v2 (sección 7) |
 | Búsqueda con Google | **Fuera de v1** (no está disponible en el nivel gratuito; ver sección 7) |
 | App Check | **Obligatorio para AI Logic** (verificado el 29/09/2026: sin token válido, la IA responde 401). Web publicada: Google Cloud Fraud Defense (reCAPTCHA Enterprise) con `ReCaptchaEnterpriseProvider`. Escritorio (`file://`) y `localhost`: token de depuración registrado (provisional, ver sección 7.4) |
-| IA local | v2 |
+| IA local | **v1** desde la revisión 1.8 (sección 7.5): Qwen3.5-4B con llama.cpp, descargado aparte desde la bienvenida del escritorio |
 | Backend | Firebase, plan gratuito **Spark**: Authentication, Firestore, Hosting, AI Logic y App Check. **Sin servidor propio**. Proyecto `Yaleh` (ID `yaleh-fbe1c`) |
 | Base de datos local | SQLite en el escritorio, con el módulo integrado `node:sqlite` |
 | Runtime | Node.js y Electron |
@@ -116,7 +116,7 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 3. Confirma la sesión en la pantalla de confirmación.
 4. Se activa el kiosko. El modo lo decide el proceso principal según la conexión en ese momento.
 
-**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Moodle, Canva, Gamma) no se muestran, y la IA muestra "Disponible próximamente".
+**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Moodle, Canva, Gamma) no se muestran. La IA la atiende el asistente sin conexión si está descargado (sección 7.5); si no, muestra "Disponible próximamente" con la indicación para descargarlo.
 
 ### 4.3 Durante la sesión (ambos modos)
 
@@ -190,7 +190,7 @@ Barra superior completa (buscador y botón de configuración), Enciclopedia SRB,
 | Bloqueo del sistema operativo | Sí | Sí |
 | Inicio | Bienvenida: "Iniciar" (flujo local) o "Abrir archivo de sesión (.yaleh)" | Igual |
 | Vista principal | La interfaz de YALEH (Fuentes · Chat · Estudio) con las fuentes guardadas en SQLite | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
-| Asistente de IA | Sí (Gemini) | No en v1 |
+| Asistente de IA | Sí (Gemini, "Asistente en línea") | Sí, si se descargó el modelo ("Asistente sin conexión"): chat, resumen y tarjetas. Cuestionario, informe y Wikipedia, solo con conexión |
 | Workspace, Canva, Gamma, Moodle, Classroom | Pestañas internas | No visibles |
 | Reproductor de YouTube | Sí | No |
 | Editores de ofimática | Sí | Sí |
@@ -265,7 +265,26 @@ En el nivel gratuito, Google puede usar el contenido para mejorar sus productos:
 - **AI Logic ya exige App Check** (el servicio no admite desactivar el enforcement). Firestore y Authentication siguen sin enforcement.
 - Clave del sitio registrada: `6LdbPtMtAAAAADFcG-cMeEb3tAOlEl51cu6dMBhX` (la única clave de Fraud Defense del proyecto; dominios: `yaleh-fbe1c.web.app`, `yaleh-fbe1c.firebaseapp.com`, `localhost`). El 29/09/2026 App Check tenía registrada por error otra clave inexistente; se corrigió con la API de App Check. Verificado: reCAPTCHA → App Check → Gemini responde en la web publicada.
 - **Escritorio (`file://`) y `localhost`:** reCAPTCHA solo funciona en los dominios registrados, así que usan un **token de depuración** registrado en la consola ("YALEH escritorio demo (borrar)"). Es provisional: el token viaja dentro del instalador y permite saltarse App Check. Alternativa definitiva pendiente: cargar la web publicada dentro del kiosko en modo online, o un proveedor personalizado.
-- App Check no se usa en modo offline (no hay IA).
+- App Check no se usa en modo offline: el asistente sin conexión no llama a ningún servicio.
+
+### 7.5 Asistente sin conexión (revisión 1.8)
+
+**Por qué en v1:** disponibilidad sin internet (el modo offline deja de quedar sin IA), privacidad (los documentos del estudiante no salen del equipo), sin cuota ni costo (no consume el nivel gratuito de Gemini) y sin depender de App Check.
+
+| Tema | Decisión |
+| --- | --- |
+| Modelo | **Qwen3.5-4B**, GGUF cuantizado Q4_K_M (2,74 GB), licencia **Apache 2.0** (permite redistribuirlo; el aviso se muestra junto a la descarga). Solo el modelo de texto, sin el módulo de visión (`mmproj`) |
+| Por qué ese modelo | La mejor calidad en español del rango evaluado (1 000 a 4 000 millones de parámetros), JSON fiable para las tarjetas y el resumen, y licencia que permite redistribuirlo. **Descartados:** Qwen3.5-2B (1,28 GB, 2 a 3 veces más rápido, pero menos preciso con documentos largos y con el JSON) y Gemma 4 E2B (3,46 GB para unos 2 300 millones de parámetros efectivos) |
+| Motor | **llama.cpp mediante node-llama-cpp**, en un `utilityProcess` de Electron para no bloquear la interfaz ni el proceso principal. Verificado con Electron 42 en Windows (03/10/2026). GPU automática (Vulkan en la gráfica integrada; si no hay, CPU): el primer texto llega en ~18 s frente a ~55 s solo con CPU. Si el proceso del modelo se cae, el siguiente intento usa solo la CPU |
+| Modo de "pensamiento" | Desactivado: responde directo |
+| Descarga | **No va en el instalador.** En la bienvenida del escritorio, con conexión y fuera de la sesión: "Descargar asistente sin conexión", a la carpeta de datos de la app, con barra de progreso, reanudación si se corta (petición Range) y verificación SHA-256. **Nunca se descarga durante el kiosko**: si empieza una sesión, la descarga se pausa |
+| Requisitos | Al menos **8 GB de RAM** y el espacio libre necesario. Si no se cumplen, aviso claro con el motivo y sin ofrecer la descarga |
+| Fragmentos | Búsqueda de texto completo con **FTS5** de SQLite (migración 3) sobre fragmentos de 1 000 caracteres del texto de `source_chunks`. Al modelo solo se envían los fragmentos más relevantes (chat) o repartidos a lo largo de las fuentes (resumen y tarjetas), hasta 6 000 caracteres (~1 700 tokens), dentro de su contexto de 8 192 tokens. Con 12 000, el primer texto tardaba ~110 s |
+| Funciones | Chat sobre los documentos, resumen y tarjetas de estudio (esquema JSON impuesto con una gramática de llama.cpp). Cuestionario, informe y Wikipedia siguen solo con conexión |
+| Proveedor común | Gemini y el modelo local detrás de una misma interfaz (como `SearchProvider`). Con conexión (sesión online), Gemini; sin conexión y con el modelo instalado, el local; sin modelo, "Disponible próximamente" con la indicación de cómo descargarlo |
+| Interfaz | Indica qué asistente responde ("Asistente en línea" / "Asistente sin conexión") y muestra las respuestas a medida que se generan |
+| Módulo nativo | node-llama-cpp **rompe la regla de "sin módulos nativos"** (sección 8.5): trae binarios precompilados de llama.cpp para Windows. En el empaquetado (fase 11) debe quedar fuera del asar |
+| Tiempos | Medidos en el equipo de desarrollo (i7-1255U, Iris Xe): chat de 70 a 110 s con el primer texto a los ~18 s, resumen ~99 s, 8 tarjetas ~191 s. Detalle en `docs/MEDICIONES_IA_LOCAL.md` (`npm run bench:local-ai`) |
 
 ---
 
@@ -309,7 +328,8 @@ PDF con texto, DOCX y TXT. Los PDF escaneados quedan fuera. La extracción se ha
 
 ### 8.5 SQLite y sincronización
 
-- SQLite vive en el proceso principal con el módulo integrado **`node:sqlite`** (disponible en Electron 42, Node 24.16). No necesita compilar módulos nativos en Windows.
+- SQLite vive en el proceso principal con el módulo integrado **`node:sqlite`** (disponible en Electron 42, Node 24.16). No necesita compilar módulos nativos en Windows. El SQLite de Electron trae FTS5 (el de Node 22 no): las pruebas corren con el Node de Electron.
+- **Migración 3 (revisión 1.8):** `source_passages` (fragmentos de cada fuente) y `source_passages_fts` (FTS5) para el asistente sin conexión.
 - Base: `app.getPath('userData')/yaleh.db`, en modo WAL, con migraciones versionadas registradas en `schema_migrations` (una migración publicada nunca se edita; los cambios van en una nueva).
 - Tablas (migración 1):
   - `sessions`: `id`, `mode` (online/offline), `started_at`, `ends_at` (epoch en ms), `duration_seconds`, `status` (active/finished/interrupted), `owner_uid` y `synced_at` (vacíos hasta la fase 10).
@@ -389,8 +409,9 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | Versión 1 (esta entrega) | Versión 2 |
 | --- | --- |
 | Web: login con Google, dropzone, tiempo, vista NotebookLM, sidebar, bienvenida | Mapas mentales generados por la IA |
-| IA en línea: chat, resumen, cuestionario, tarjetas, informe, búsqueda en Wikipedia | IA local privada para el modo offline |
+| IA en línea: chat, resumen, cuestionario, tarjetas, informe, búsqueda en Wikipedia | Cuestionario e informe con el asistente sin conexión |
 | App Check con Fraud Defense | Búsqueda en OpenAlex (mismo `SearchProvider`) |
+| Asistente sin conexión (Qwen3.5-4B, descarga aparte): chat, resumen y tarjetas | |
 | Escritorio: kiosko en ambos modos, pantalla "No estás conectado" | Búsqueda con Google (requiere plan de pago y resolver los requisitos de visualización) |
 | Pestañas internas (máximo 8) | Abrir enlaces desde las respuestas de la IA |
 | Editores de documento, hoja y presentación con exportación | Función del botón de configuración |
@@ -540,3 +561,14 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 52 | Ofimática (fase 9) | TipTap → `.docx`, cuadrícula → `.xlsx` (ExcelJS), diapositivas → `.pptx` (PptxGenJS). Guarda el proceso principal en `Documentos/YALEH`, sin diálogo, con fecha y hora en el nombre. `.pdf` pasa a la versión 2 |
 | 53 | Historial y estadísticas (fase 10) | Solo SQLite, en el escritorio. Reemplazan los datos simulados del MVP. En el navegador muestran "Disponible en la aplicación de escritorio" |
 | 54 | Sincronización | Pasa a la versión 2 (reemplaza la decisión 46) |
+
+### Revisión 1.8 — 04/10/2026 (asistente sin conexión)
+
+| # | Tema | Decisión |
+| --- | --- | --- |
+| 55 | IA local | Pasa de la versión 2 a la versión 1 (sección 7.5): disponibilidad sin internet, privacidad, sin cuota ni costo y sin App Check |
+| 56 | Modelo | Qwen3.5-4B Q4_K_M (Apache 2.0, solo texto). Motivos: mejor calidad en español del rango evaluado, JSON fiable para las tarjetas y licencia que permite redistribuirlo. Descartado: Qwen3.5-2B (más rápido, menos preciso) |
+| 57 | Motor | llama.cpp con node-llama-cpp en un `utilityProcess`. Primer módulo nativo del proyecto (excepción registrada) |
+| 58 | Descarga | Fuera del instalador; desde la bienvenida, con conexión y fuera de la sesión; progreso, reanudación y SHA-256; requisitos de 8 GB de RAM y espacio en disco |
+| 59 | Fragmentos | FTS5 de SQLite (migración 3); solo los fragmentos relevantes, dentro del contexto del modelo |
+| 60 | Funciones sin conexión | Chat, resumen y tarjetas. Cuestionario, informe y Wikipedia solo con conexión |

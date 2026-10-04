@@ -6,7 +6,7 @@
  */
 
 import { LIMITS } from '@shared/config';
-import type { ConnectionMode, SessionMode } from '@shared/ipc-types';
+import type { ConnectionMode, LocalAiStatus, SessionMode } from '@shared/ipc-types';
 
 /** Mensaje al llegar al límite de pestañas (brief, sección 10). */
 export const TAB_LIMIT_MESSAGE = `Llegaste al máximo de ${LIMITS.maxTabs} pestañas. Cierra una para abrir otra.`;
@@ -99,6 +99,8 @@ export interface AppState {
   workspaceId: string | null;
   /** Escritorio: mensaje para la pantalla de bienvenida (por ejemplo, un .yaleh caducado o ya usado). */
   notice: string | null;
+  /** Escritorio: estado del asistente sin conexión (null en la web o mientras se consulta). */
+  localAi: LocalAiStatus | null;
 }
 
 export interface ActivityRecord {
@@ -124,6 +126,7 @@ export type AppAction =
       payload: { durationSeconds: number; remainingSeconds: number; mode: SessionMode | null };
     }
   | { type: 'SET_CONNECTION'; payload: ConnectionMode }
+  | { type: 'SET_LOCAL_AI'; payload: LocalAiStatus }
   | { type: 'SET_SESSION_MODE'; payload: SessionMode | null }
   | { type: 'SET_WORKSPACE'; payload: string | null }
   | { type: 'SET_NOTICE'; payload: string | null }
@@ -171,6 +174,7 @@ export const initialState: AppState = {
   sessionMode: null,
   workspaceId: null,
   notice: null,
+  localAi: null,
 };
 
 /**
@@ -234,6 +238,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'SET_CONNECTION':
       return { ...state, connection: action.payload };
+    case 'SET_LOCAL_AI':
+      return { ...state, localAi: action.payload };
 
     case 'SET_SESSION_MODE':
       return { ...state, sessionMode: action.payload };
