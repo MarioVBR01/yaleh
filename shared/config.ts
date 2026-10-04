@@ -177,7 +177,12 @@ export const LOCAL_AI = {
   passageChars: 1_000,
   /** Turnos anteriores del chat que se envían (los más recientes). */
   historyTurns: 6,
-  maxTokens: { chat: 700, summary: 1_200, flashcards: 1_200 },
+  /**
+   * Límites de salida. Respuestas breves para que el estudiante no espere de más: el chat responde en
+   * ~150 tokens salvo que pida más detalle (chatDetailed). Resumen: 4 ideas clave; tarjetas: 5.
+   * Los límites de resumen y tarjetas dejan margen sobre el largo máximo del esquema (el JSON debe cerrar).
+   */
+  maxTokens: { chat: 160, chatDetailed: 500, summary: 600, flashcards: 700 },
 } as const;
 
 /** Búsqueda de información (brief, sección 7.2): API pública de Wikipedia en español. */

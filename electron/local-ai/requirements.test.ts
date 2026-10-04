@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { LOCAL_AI } from '../../shared/config';
 import { evaluateRequirements } from './requirements';
-import { buildWorkerRequest, LOCAL_SCHEMAS, trimHistory } from './prompts';
+import { buildWorkerRequest, LOCAL_SCHEMAS, trimHistory, wantsDetail } from './prompts';
 
 const GB = 1024 ** 3;
 
@@ -52,6 +52,19 @@ describe('buildWorkerRequest', () => {
   it('tarjetas y resumen usan su esquema JSON', () => {
     expect(buildWorkerRequest({ requestId: 'r', task: 'flashcards', workspaceId: 'w' }, 'F').schema).toBe(LOCAL_SCHEMAS.flashcards);
     expect(buildWorkerRequest({ requestId: 'r', task: 'summary', workspaceId: 'w' }, 'F').schema).toBe(LOCAL_SCHEMAS.summary);
+  });
+
+  it('chat breve (~150 tokens) salvo que el estudiante pida más detalle', () => {
+    const ask = (question: string) => buildWorkerRequest({ requestId: 'r', task: 'chat', workspaceId: 'w', question }, 'F').maxTokens;
+    expect(ask('¿Qué es la mitosis?')).toBe(LOCAL_AI.maxTokens.chat);
+    expect(ask('Explícame en detalle la mitosis')).toBe(LOCAL_AI.maxTokens.chatDetailed);
+    expect(wantsDetail('Desarrolla el tema paso a paso')).toBe(true);
+    expect(wantsDetail('¿Cuál es la capital de Bolivia?')).toBe(false);
+  });
+
+  it('resumen de 4 ideas clave y 5 tarjetas', () => {
+    expect(LOCAL_SCHEMAS.summary.properties.keyPoints).toMatchObject({ minItems: 4, maxItems: 4 });
+    expect(LOCAL_SCHEMAS.flashcards.properties.cards).toMatchObject({ minItems: 5, maxItems: 5 });
   });
 
   it('recorta turnos muy largos', () => {

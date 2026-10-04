@@ -1,23 +1,23 @@
 # Mediciones del asistente sin conexión
 
-Medido con `npm run bench:local-ai` el 3/10/2026, 11:16:24 p. m..
+Medido con `npm run bench:local-ai` el 4/10/2026, 12:03:59 a. m..
 
 - **Equipo:** 12th Gen Intel(R) Core(TM) i7-1255U, 12 hilos, 11,7 GB de RAM, Windows 11 Home.
 - **Modelo:** Qwen3.5-4B (GGUF Q4_K_M, 2,55 GB), llama.cpp vía node-llama-cpp en un utilityProcess de Electron, con GPU (Vulkan), contexto de 8192 tokens, "pensamiento" desactivado.
-- **Fuente:** `docs/BRIEF_YALEH.md` (49.465 caracteres). Al modelo se envían como máximo 6.000 caracteres de fragmentos (FTS5 para el chat; repartidos para resumen y tarjetas).
+- **Fuente:** `docs/BRIEF_YALEH.md` (49.751 caracteres). Al modelo se envían como máximo 6.000 caracteres de fragmentos (FTS5 para el chat; repartidos para resumen y tarjetas).
 
 | Prueba | Carga del modelo | Hasta el primer texto | Tokens generados | Tokens/s | Tiempo total | Fragmentos enviados | Salida válida |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Chat (primera pregunta, incluye cargar el modelo) | 23,8 s | 17,9 s | 280 | 4 | 110,9 s | 6 (5.986 car.) | sí |
-| Chat (segunda pregunta, modelo ya cargado) | — | 17,3 s | 218 | 4,1 | 70,3 s | 6 (5.975 car.) | sí |
-| Resumen | — | 18,3 s | 312 | 3,9 | 98,5 s | 6 (5.978 car.) | sí |
-| Tarjetas de estudio | — | 18,3 s | 677 | 3,9 | 191,0 s | 6 (5.978 car.) | sí |
+| Chat (primera pregunta, incluye cargar el modelo) | 20,0 s | 19,9 s | 79 | 3,8 | 61,0 s | 6 (5.973 car.) | sí |
+| Chat (segunda pregunta, modelo ya cargado) | — | 20,2 s | 91 | 3,8 | 44,4 s | 6 (5.967 car.) | sí |
+| Resumen | — | 21,4 s | 270 | 3,3 | 103,2 s | 6 (5.982 car.) | sí |
+| Tarjetas de estudio | — | 22,7 s | 420 | 3,5 | 143,5 s | 6 (5.982 car.) | sí |
 
 "Hasta el primer texto" incluye leer los fragmentos (procesar el contexto); "Tokens/s" es la velocidad de generación después del primer texto. "Tiempo total" va desde el pedido hasta la respuesta completa (incluye la carga del modelo en la primera prueba).
 
 ## Muestras de las respuestas
 
-- **Chat (primera pregunta, incluye cargar el modelo):** Basado en los fragmentos proporcionados, aquí tienes la información: * **¿Qué es YALEH?** * Es un **kiosco de estudio** (escritorio) diseñado para bloquear el equipo y facilitar la concentración. * Utiliza una arquitectura en dos capas: un **proceso principal bloqueante** (Electron) y
-- **Chat (segunda pregunta, modelo ya cargado):** Según los fragmentos de **BRIEF_YALEH.md**, la aplicación web y la de escritorio se unen de la siguiente manera: * **Vía archivo de sesión:** Ambas aplicaciones funcionan de forma independiente hasta que se genera un archivo de sesión llamado `.yaleh` (formato JSON). * **Contenido del archivo:*
-- **Resumen:** Evolución y Arquitectura Técnica de YALEH v1 — 6 puntos clave
-- **Tarjetas de estudio:** 8 tarjetas; primera: ¿Qué formato de archivo se usa para guardar las sesiones en la versión 1?
+- **Chat (primera pregunta, incluye cargar el modelo):** YALEH es una **aplicación educativa y de productividad** que bloquea el dispositivo para garantizar concentración en sesiones de estudio estructuradas (como Pomodoro). Está diseñada específicamente para **estudiantes universitarios** que necesitan un entorno controlado sin distracciones digitales. L
+- **Chat (segunda pregunta, modelo ya cargado):** Según la **Revisión 1.5** del documento *BRIEF_YALEH.md*, la web y el escritorio funcionan por separado y se unen exclusivamente mediante un **archivo de sesión `.yaleh`**. Este archivo JSON descarga los datos de la web (como la duración y el texto de las fuentes) para iniciar la sesión en el kiosko
+- **Resumen:** YALEH v1: Arquitectura y Funcionalidades — 4 puntos clave
+- **Tarjetas de estudio:** 5 tarjetas; primera: ¿Cómo se sincronizan la web y el escritorio en la versión 1?

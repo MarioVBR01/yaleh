@@ -284,7 +284,8 @@ En el nivel gratuito, Google puede usar el contenido para mejorar sus productos:
 | Proveedor común | Gemini y el modelo local detrás de una misma interfaz (como `SearchProvider`). Con conexión (sesión online), Gemini; sin conexión y con el modelo instalado, el local; sin modelo, "Disponible próximamente" con la indicación de cómo descargarlo |
 | Interfaz | Indica qué asistente responde ("Asistente en línea" / "Asistente sin conexión") y muestra las respuestas a medida que se generan |
 | Módulo nativo | node-llama-cpp **rompe la regla de "sin módulos nativos"** (sección 8.5): trae binarios precompilados de llama.cpp para Windows. En el empaquetado (fase 11) debe quedar fuera del asar |
-| Tiempos | Medidos en el equipo de desarrollo (i7-1255U, Iris Xe): chat de 70 a 110 s con el primer texto a los ~18 s, resumen ~99 s, 8 tarjetas ~191 s. Detalle en `docs/MEDICIONES_IA_LOCAL.md` (`npm run bench:local-ai`) |
+| Respuestas breves | Para que el estudiante no espere de más (04/10/2026): chat de ~150 tokens salvo que pida más detalle, resumen de 4 ideas clave y 5 tarjetas. Aviso fijo: "El asistente sin conexión es más lento; puede tardar hasta un minuto." |
+| Tiempos | Medidos en el equipo de desarrollo (i7-1255U, Iris Xe), con respuestas breves: chat de 44 a 61 s con el primer texto a los ~20 s, resumen ~103 s, 5 tarjetas ~144 s. Detalle en `docs/MEDICIONES_IA_LOCAL.md` (`npm run bench:local-ai`) |
 
 ---
 
@@ -572,3 +573,4 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 58 | Descarga | Fuera del instalador; desde la bienvenida, con conexión y fuera de la sesión; progreso, reanudación y SHA-256; requisitos de 8 GB de RAM y espacio en disco |
 | 59 | Fragmentos | FTS5 de SQLite (migración 3); solo los fragmentos relevantes, dentro del contexto del modelo |
 | 60 | Funciones sin conexión | Chat, resumen y tarjetas. Cuestionario, informe y Wikipedia solo con conexión |
+| 61 | Respuestas breves sin conexión | Chat de ~150 tokens (más si se pide detalle), 4 ideas clave, 5 tarjetas y aviso de que es más lento |

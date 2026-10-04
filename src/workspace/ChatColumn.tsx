@@ -15,7 +15,7 @@ import type { AssistantProvider } from '../ai/provider';
 import { searchProvider, type SearchResult } from '../ai/search';
 import { useSourceTexts } from '../ai/useSourceTexts';
 import { useAssistant, useModeFlags } from '../lib/mode';
-import AIUnavailable, { AssistantBadge } from './AIUnavailable';
+import AIUnavailable, { AssistantBadge, LocalSlowNotice } from './AIUnavailable';
 import Markdown from './Markdown';
 
 interface Message extends ChatTurn {
@@ -105,14 +105,19 @@ function Chat({ provider }: { provider: AssistantProvider }) {
         </span>
       </div>
 
+      {provider.kind === 'local' && (
+        <div className="mb-2">
+          <LocalSlowNotice />
+        </div>
+      )}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1" aria-live="polite">
         {messages.length === 0 && (
           <div className="text-center py-8">
             <p className="text-ink-muted text-sm mb-4">Pregúntale al asistente sobre tus materiales.</p>
             {provider.kind === 'local' && (
               <p className="text-ink-subtle text-[11px] mb-4">
-                Responde el modelo instalado en este equipo: tus documentos no salen de la computadora. Es más lento
-                que el asistente en línea.
+                Responde el modelo instalado en este equipo: tus documentos no salen de la computadora. Responde
+                breve; si necesitas más, pídele "explícame en detalle".
               </p>
             )}
             <div className="flex flex-wrap justify-center gap-2">

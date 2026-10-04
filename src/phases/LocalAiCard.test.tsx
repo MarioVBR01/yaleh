@@ -100,6 +100,7 @@ describe('chat y estudio sin conexión', () => {
   it('con el modelo: responde el "Asistente sin conexión" y la respuesta aparece', async () => {
     renderWith(offlineState({ state: 'installed' }), <ChatColumn />, 'La **fotosíntesis** ocurre en los cloroplastos.');
     expect(screen.getByTestId('assistant-badge').textContent).toContain('Asistente sin conexión');
+    expect(screen.getByText('El asistente sin conexión es más lento; puede tardar hasta un minuto.')).toBeTruthy();
     expect(screen.getByText(/búsqueda en Wikipedia solo está disponible con conexión/)).toBeTruthy();
     fireEvent.change(screen.getByPlaceholderText('Escribe tu pregunta…'), { target: { value: '¿Dónde ocurre la fotosíntesis?' } });
     fireEvent.click(screen.getByTitle('Enviar'));
@@ -109,6 +110,7 @@ describe('chat y estudio sin conexión', () => {
   it('con conexión responde el "Asistente en línea"', () => {
     renderWith({ sessionMode: 'online', connection: 'online', localAi: makeLocalAiStatus({ state: 'installed' }) }, <ChatColumn />);
     expect(screen.getByTestId('assistant-badge').textContent).toContain('Asistente en línea');
+    expect(screen.queryByText(/puede tardar hasta un minuto/)).toBeNull();
   });
 
   it('estudio sin conexión: cuestionario e informe deshabilitados', () => {

@@ -23,6 +23,17 @@ export default function AIUnavailable({ compact = false, reason = 'needs-downloa
   );
 }
 
+/** Aviso fijo del asistente sin conexión (revisión 1.8). */
+export const LOCAL_SLOW_NOTICE = 'El asistente sin conexión es más lento; puede tardar hasta un minuto.';
+
+export function LocalSlowNotice() {
+  return (
+    <p className="text-[11px] text-warning bg-warning/10 border border-warning/30 rounded-lg px-2 py-1" role="note">
+      {LOCAL_SLOW_NOTICE}
+    </p>
+  );
+}
+
 /** Etiqueta con el asistente que responde ("Asistente en línea" / "Asistente sin conexión"). */
 export function AssistantBadge({ label, local }: { label: string; local: boolean }) {
   return (

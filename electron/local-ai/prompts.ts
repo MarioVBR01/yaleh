@@ -11,7 +11,8 @@ import type { LocalAiRequest, LocalAiTask, LocalAiTurn } from '../../shared/ipc-
 import type { WorkerGenerate } from './worker-protocol';
 
 export const LOCAL_SYSTEM_PROMPT = `Eres el tutor de estudio de YALEH para estudiantes del TECBA (Bolivia).
-Responde siempre en español, con claridad y de forma breve, en markdown (listas y negritas).
+Responde siempre en español, con claridad y en markdown (listas y negritas). Sé breve: como máximo
+3 o 4 frases (unas 80 palabras), salvo que el estudiante pida más detalle.
 Usa la información de los FRAGMENTOS de las fuentes del estudiante. Si la respuesta no está en los
 fragmentos, dilo y responde con conocimiento general indicándolo. Menciona el nombre de la fuente que usas.
 No inventes datos ni citas. No incluyas enlaces.`;
@@ -21,8 +22,8 @@ export const LOCAL_SCHEMAS = {
     type: 'object',
     properties: {
       title: { type: 'string', maxLength: 80 },
-      overview: { type: 'string', maxLength: 900 },
-      keyPoints: { type: 'array', items: { type: 'string', maxLength: 200 }, minItems: 4, maxItems: 6 },
+      overview: { type: 'string', maxLength: 500 },
+      keyPoints: { type: 'array', items: { type: 'string', maxLength: 160 }, minItems: 4, maxItems: 4 },
     },
     required: ['title', 'overview', 'keyPoints'],
   },
@@ -31,11 +32,11 @@ export const LOCAL_SCHEMAS = {
     properties: {
       cards: {
         type: 'array',
-        minItems: 6,
-        maxItems: 8,
+        minItems: 5,
+        maxItems: 5,
         items: {
           type: 'object',
-          properties: { front: { type: 'string', maxLength: 150 }, back: { type: 'string', maxLength: 250 } },
+          properties: { front: { type: 'string', maxLength: 120 }, back: { type: 'string', maxLength: 200 } },
           required: ['front', 'back'],
         },
       },
@@ -46,10 +47,18 @@ export const LOCAL_SCHEMAS = {
 
 const STUDY_PROMPTS: Record<Exclude<LocalAiTask, 'chat'>, string> = {
   summary:
-    'Resume los fragmentos anteriores. Devuelve JSON con: "title" (título breve del tema), "overview" (síntesis breve, de 3 a 5 frases) y "keyPoints" (entre 4 y 6 ideas clave, una frase corta cada una).',
+    'Resume los fragmentos anteriores. Devuelve JSON con: "title" (título breve del tema), "overview" (síntesis breve, de 2 a 3 frases) y "keyPoints" (exactamente 4 ideas clave, una frase corta cada una).',
   flashcards:
-    'Crea tarjetas de estudio con los conceptos más importantes de los fragmentos anteriores. Devuelve JSON con "cards": entre 6 y 8 tarjetas, cada una con "front" (pregunta corta) y "back" (respuesta de una o dos frases).',
+    'Crea tarjetas de estudio con los conceptos más importantes de los fragmentos anteriores. Devuelve JSON con "cards": exactamente 5 tarjetas, cada una con "front" (pregunta corta) y "back" (respuesta de una frase).',
 };
+
+/** El estudiante pide una respuesta más larga ("explícame en detalle", "paso a paso", "desarrolla"…). */
+const DETAIL_REQUEST =
+  /\b(m[aá]s\s+(detalle|detallad[oa]|completo|largo|extens[oa])|en\s+detalle|detallad[oa]|paso\s+a\s+paso|desarroll[ae]|ampl[ií]a|profundiza|extens[oa]|explica(me)?\s+(todo|bien|mejor))\b/i;
+
+export function wantsDetail(question: string): boolean {
+  return DETAIL_REQUEST.test(question);
+}
 
 /** Turnos recientes del chat, recortados para no llenar el contexto. */
 export function trimHistory(history: LocalAiTurn[] = [], turns: number = LOCAL_AI.historyTurns, maxChars = 1_500): LocalAiTurn[] {
@@ -64,7 +73,7 @@ export function buildWorkerRequest(request: LocalAiRequest, passagesText: string
       ...base,
       history: trimHistory(request.history),
       prompt: `${passagesText}\n\nPREGUNTA DEL ESTUDIANTE: ${request.question ?? ''}`,
-      maxTokens: LOCAL_AI.maxTokens.chat,
+      maxTokens: wantsDetail(request.question ?? '') ? LOCAL_AI.maxTokens.chatDetailed : LOCAL_AI.maxTokens.chat,
       temperature: 0.6,
     };
   }
@@ -72,7 +81,7 @@ export function buildWorkerRequest(request: LocalAiRequest, passagesText: string
     ...base,
     history: [],
     prompt: `${passagesText}\n\n${STUDY_PROMPTS[request.task]}`,
-    maxTokens: LOCAL_AI.maxTokens[request.task],
+    maxTokens: request.task === 'summary' ? LOCAL_AI.maxTokens.summary : LOCAL_AI.maxTokens.flashcards,
     temperature: 0.3,
     schema: LOCAL_SCHEMAS[request.task],
   };

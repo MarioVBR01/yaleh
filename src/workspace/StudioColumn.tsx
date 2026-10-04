@@ -16,7 +16,7 @@ import { STUDY_LABELS, type QuizQuestion, type StudyContent, type StudyKind } fr
 import { useSourceTexts } from '../ai/useSourceTexts';
 import { getWorkspaceStore, newId } from '../data/workspace';
 import { useAssistant, useModeFlags } from '../lib/mode';
-import AIUnavailable, { AssistantBadge } from './AIUnavailable';
+import AIUnavailable, { AssistantBadge, LocalSlowNotice } from './AIUnavailable';
 import Markdown from './Markdown';
 import NotesBox from './NotesBox';
 
@@ -96,7 +96,10 @@ function StudyTools({ provider }: { provider: AssistantProvider }) {
       </div>
       {count === 0 && <p className="text-ink-subtle text-[11px]">Agrega una fuente para generar material de estudio.</p>}
       {provider.kind === 'local' && (
-        <p className="text-ink-subtle text-[11px]">Sin conexión: resumen y tarjetas. El cuestionario y el informe necesitan conexión.</p>
+        <>
+          <LocalSlowNotice />
+          <p className="text-ink-subtle text-[11px]">Sin conexión: resumen (4 ideas clave) y 5 tarjetas. El cuestionario y el informe necesitan conexión.</p>
+        </>
       )}
       {busy && provider.kind === 'local' && (
         <p className="text-ink-muted text-[11px] flex items-center gap-2" aria-live="polite">
