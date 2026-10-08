@@ -232,7 +232,7 @@ function AppContent() {
       <AnimatePresence mode="wait">
         <motion.div
           key={phase}
-          className={phase === 'kiosk' ? 'h-screen' : 'min-h-screen'}
+          className={phase === 'kiosk' ? 'h-screen' : 'h-screen overflow-y-auto'}
           initial={fadeOut}
           animate={fadeIn}
           exit={fadeOut}
