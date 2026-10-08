@@ -12,9 +12,20 @@ import { YALEH_WEB_ORIGINS } from '@shared/config';
 
 const env = import.meta.env;
 
+/**
+ * Dominio de autenticación (BUG-001). En la web publicada se usa el mismo dominio de la página
+ * (Firebase Hosting sirve /__/auth/handler en web.app y en firebaseapp.com): si el login usa otro
+ * dominio, los navegadores que bloquean el almacenamiento de terceros (Chrome) cierran la ventana
+ * de Google sin entregar el resultado. En localhost y en el escritorio se usa el de .env.
+ */
+export function resolveAuthDomain(origin: string | undefined, fallback: string | undefined): string | undefined {
+  if (origin && (YALEH_WEB_ORIGINS as readonly string[]).includes(origin)) return new URL(origin).host;
+  return fallback;
+}
+
 const firebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY,
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
+  authDomain: resolveAuthDomain(typeof window !== 'undefined' ? window.location.origin : undefined, env.VITE_FIREBASE_AUTH_DOMAIN),
   projectId: env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,

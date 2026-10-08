@@ -51,5 +51,9 @@ export function describeAuthError(error: unknown): string {
   if (code === 'auth/popup-blocked') return 'El navegador bloqueó la ventana de Google. Permite las ventanas emergentes.';
   if (code === 'auth/network-request-failed') return 'No hay conexión. Revisa tu internet.';
   if (code === 'auth/invalid-credential') return 'La credencial de Google no es válida o expiró. Vuelve a intentarlo.';
-  return 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.';
+  if (code === 'auth/unauthorized-domain') return 'Este dominio no está autorizado para iniciar sesión. Avisa al administrador de YALEH.';
+  // El código ayuda a diagnosticar (BUG-001): se muestra junto al mensaje.
+  return code
+    ? `No se pudo iniciar sesión con Google (${code}). Inténtalo de nuevo.`
+    : 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.';
 }
