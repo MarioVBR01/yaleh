@@ -101,6 +101,11 @@ export interface AppState {
   notice: string | null;
   /** Escritorio: estado del asistente sin conexión (null en la web o mientras se consulta). */
   localAi: LocalAiStatus | null;
+  /**
+   * Web: Firebase ya informó si hay una sesión guardada (BUG-002). Mientras es false, el login
+   * muestra "Comprobando tu sesión…" en lugar del botón, para no aparecer y saltar a la dropzone.
+   */
+  authChecked: boolean;
 }
 
 export interface ActivityRecord {
@@ -127,6 +132,7 @@ export type AppAction =
     }
   | { type: 'SET_CONNECTION'; payload: ConnectionMode }
   | { type: 'SET_LOCAL_AI'; payload: LocalAiStatus }
+  | { type: 'SET_AUTH_CHECKED' }
   | { type: 'SET_SESSION_MODE'; payload: SessionMode | null }
   | { type: 'SET_WORKSPACE'; payload: string | null }
   | { type: 'SET_NOTICE'; payload: string | null }
@@ -175,6 +181,7 @@ export const initialState: AppState = {
   workspaceId: null,
   notice: null,
   localAi: null,
+  authChecked: true,
 };
 
 /**
@@ -240,6 +247,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, connection: action.payload };
     case 'SET_LOCAL_AI':
       return { ...state, localAi: action.payload };
+    case 'SET_AUTH_CHECKED':
+      return state.authChecked ? state : { ...state, authChecked: true };
 
     case 'SET_SESSION_MODE':
       return { ...state, sessionMode: action.payload };

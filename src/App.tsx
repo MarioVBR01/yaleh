@@ -19,6 +19,7 @@ import { startPhase } from './lib/mode';
 import { applyOpenedSessionFile } from './lib/session-file';
 import { initialState, type AppPhase, type AppState } from './store/appStore';
 import LoginPhase from './phases/LoginPhase';
+import WebAccountBar from './phases/WebAccountBar';
 import DesktopStartPhase from './phases/DesktopStartPhase';
 import DropzonePhase from './phases/DropzonePhase';
 import TimerSelectPhase from './phases/TimerSelectPhase';
@@ -117,8 +118,19 @@ function useAuthSync() {
   const phase = state.phase;
   const signedIn = state.session.isAuthenticated;
 
+  // Al cambiar de cuenta o cerrar sesión se descartan los archivos y el borrador de la cuenta anterior.
+  const lastUid = useRef<string | null | undefined>(undefined);
+
   useEffect(() => {
     return watchUser(user => {
+      dispatch({ type: 'SET_AUTH_CHECKED' });
+      const uid = user?.uid ?? null;
+      if (!isElectron() && lastUid.current !== undefined && lastUid.current !== uid) {
+        dispatch({ type: 'SET_FILES', payload: [] });
+        dispatch({ type: 'SET_WORKSPACE', payload: null });
+        dispatch({ type: 'SET_SESSION_DURATION', payload: 0 });
+      }
+      lastUid.current = uid;
       if (user) {
         const name = user.displayName ?? user.email ?? 'Estudiante';
         dispatch({
@@ -211,9 +223,12 @@ function AppContent() {
   // El escritorio nunca muestra el login de la web.
   const phase = getElectronAPI() && state.phase === 'login' ? 'desktop-start' : state.phase;
   const Phase = PHASE_COMPONENTS[phase];
+  // Web: con qué cuenta se entró, y cerrar sesión o cambiar de cuenta (BUG-002).
+  const showAccount = !getElectronAPI() && state.session.isAuthenticated && phase !== 'login';
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
+      {showAccount && <WebAccountBar />}
       <AnimatePresence mode="wait">
         <motion.div
           key={phase}
@@ -240,6 +255,8 @@ export default function App() {
       ...initialState,
       phase: startPhase(isDesktop),
       connection: isDesktop ? 'unknown' : 'online',
+      // Web: hasta que Firebase diga si hay una sesión guardada (BUG-002).
+      authChecked: isDesktop,
     };
   }, []);
 

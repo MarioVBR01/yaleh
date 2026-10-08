@@ -125,9 +125,9 @@ describe('App en el escritorio', () => {
 });
 
 describe('App en la web', () => {
-  it('sigue mostrando el login con Google', () => {
+  it('sigue mostrando el login con Google (después de comprobar la sesión guardada)', async () => {
     render(<App />);
-    expect(screen.getByText('Continuar con Google')).toBeTruthy();
+    expect(await screen.findByText('Continuar con Google', {}, { timeout: 5000 })).toBeTruthy();
   });
 });
 

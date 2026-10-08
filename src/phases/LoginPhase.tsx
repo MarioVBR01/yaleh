@@ -3,15 +3,19 @@
  * @description Inicio de sesión de la web con Google (brief, sección 5.1).
  * Solo existe en la web: el escritorio no tiene login propio (brief, sección 4.2).
  * Al iniciar sesión, App.tsx sincroniza el usuario y pasa a la dropzone.
+ * Mientras Firebase comprueba si hay una sesión guardada, se muestra "Comprobando tu sesión…"
+ * en lugar del botón (BUG-002): así el login no aparece un momento y salta a la dropzone.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 import { isFirebaseConfigured } from '../firebase/app';
 import { describeAuthError, signInWithGoogle } from '../firebase/auth';
 
 export default function LoginPhase() {
+  const { state } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +55,11 @@ export default function LoginPhase() {
             Accede con tu cuenta de Google para cargar tus materiales y trabajar con el asistente.
           </p>
 
+          {!state.authChecked ? (
+            <p className="flex items-center justify-center gap-2 py-3 text-sm text-ink-muted" role="status">
+              <Loader2 size={16} className="animate-spin" /> Comprobando tu sesión…
+            </p>
+          ) : (
           <motion.button
             onClick={handleGoogleLogin}
             disabled={loading || !isFirebaseConfigured}
@@ -74,6 +83,7 @@ export default function LoginPhase() {
             )}
             Continuar con Google
           </motion.button>
+          )}
 
           {error && (
             <p role="alert" className="mt-4 text-sm text-red-400 text-center">
