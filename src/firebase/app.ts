@@ -6,7 +6,7 @@
 
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { CustomProvider, initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
-import { getAuth, type Auth } from 'firebase/auth';
+import { browserPopupRedirectResolver, getAuth, inMemoryPersistence, initializeAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { YALEH_WEB_ORIGINS } from '@shared/config';
 
@@ -95,8 +95,48 @@ export function getFirebaseApp(): FirebaseApp {
   return ensureApp();
 }
 
+/** Base de IndexedDB donde Firebase Auth guarda la sesión (`browserLocalPersistence`). */
+const AUTH_STORAGE_DB = 'firebaseLocalStorageDb';
+
+/**
+ * Borra la sesión que versiones anteriores de la web dejaron guardada en el navegador (BUG-002):
+ * la base de IndexedDB de Auth y las claves `firebase:authUser:*` de localStorage. Solo de Auth:
+ * App Check e Installations usan otras bases.
+ */
+export function clearStoredAuthSession(): void {
+  try {
+    globalThis.indexedDB?.deleteDatabase(AUTH_STORAGE_DB);
+    const storage = globalThis.localStorage;
+    if (storage) {
+      for (const key of Object.keys(storage)) {
+        if (key.startsWith('firebase:authUser:')) storage.removeItem(key);
+      }
+    }
+  } catch (error) {
+    console.warn('[firebase] No se pudo borrar la sesión guardada:', error);
+  }
+}
+
+/**
+ * Web (BUG-002): la sesión vive solo en memoria. Al abrir o recargar la web siempre se pide la
+ * cuenta de Google (computadoras compartidas del TECBA y la demo). `initializeAuth` necesita el
+ * resolvedor de ventanas emergentes para `signInWithPopup`.
+ * El escritorio no inicia sesión con Google (revisión 1.5) y conserva la configuración por defecto.
+ */
 export function getFirebaseAuth(): Auth {
-  if (!auth) auth = getAuth(ensureApp());
+  if (!auth) {
+    const firebaseApp = ensureApp();
+    const isDesktop = typeof window !== 'undefined' && Boolean(window.electronAPI);
+    if (isDesktop) {
+      auth = getAuth(firebaseApp);
+    } else {
+      clearStoredAuthSession();
+      auth = initializeAuth(firebaseApp, {
+        persistence: inMemoryPersistence,
+        popupRedirectResolver: browserPopupRedirectResolver,
+      });
+    }
+  }
   return auth;
 }
 

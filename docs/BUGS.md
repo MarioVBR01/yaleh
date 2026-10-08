@@ -49,7 +49,7 @@ Los errores se corrigen al final (antes de la fase 11); al corregir uno, cambia 
 
 ### BUG-002 — La web salta el login y entra a la dropzone sin pedir cuenta
 
-- **Estado:** En corrección (falta publicar y probar)
+- **Estado:** En corrección: reabierto el 2026-10-08 y corregido de nuevo (falta probar)
 - **Gravedad:** Media (se puede seguir usando, pero no se sabe con qué cuenta se entró ni se puede cambiar de cuenta; en la demo, con una computadora compartida, se usaría la cuenta de otra persona)
 - **Dónde:** Web (navegador Brave, https://yaleh-fbe1c.web.app)
 - **Modo:** Con conexión
@@ -73,3 +73,16 @@ Los errores se corrigen al final (antes de la fase 11); al corregir uno, cambia 
   - En la web, una barra arriba a la derecha muestra la cuenta activa (foto o iniciales, nombre y correo) con "Cambiar de cuenta" y "Cerrar sesión" (`src/phases/WebAccountBar.tsx`). Se ve en la dropzone, el tiempo y la confirmación.
   - Al cambiar de cuenta o cerrar sesión se descartan los archivos y el borrador de la cuenta anterior.
   - Pruebas: `src/phases/WebAccountBar.test.tsx`.
+
+#### Reabierto (2026-10-08)
+
+- **Prueba:** con una sesión guardada, la web seguía entrando sola a la dropzone sin mostrar el login. [Completar: ¿aparecía la barra de la cuenta arriba a la derecha? sí / no. ¿En una ventana privada se quedaba en el login? sí / no]
+- **Qué debería pasar (aclarado):** la web siempre tiene que pedir la cuenta de Google al abrirla o recargarla. No debe recordar la sesión entre aperturas: es para computadoras compartidas del TECBA y para la demo. Mostrar la cuenta activa y "Cerrar sesión" está bien y se queda.
+- **Hallazgo:** `/` se servía con `Cache-Control: max-age=3600` (solo `**/*.html` tenía `no-cache`). Después de publicar 9b5e112, el navegador podía seguir mostrando hasta una hora la versión anterior, sin la barra de la cuenta.
+- **Corrección:**
+  - Web: `initializeAuth` con `inMemoryPersistence` (y `browserPopupRedirectResolver` para la ventana de Google) en `src/firebase/app.ts`. Se eligió en memoria y no `browserSessionPersistence` porque lo pedido es pedir la cuenta también al recargar.
+  - Al arrancar la web se borra la sesión guardada por versiones anteriores (IndexedDB `firebaseLocalStorageDb` y claves `firebase:authUser:*`): los navegadores que ya habían iniciado sesión vuelven al login.
+  - El escritorio no cambia (no inicia sesión con Google).
+  - `firebase.json`: `/` también con `Cache-Control: no-cache`.
+  - Pruebas: `src/firebase/persistence.test.ts`.
+- **Para probar:** abrir la web con una sesión iniciada antes → debe mostrar el login con "Continuar con Google". Iniciar sesión → dropzone con la barra de la cuenta. Recargar → vuelve a pedir la cuenta.
