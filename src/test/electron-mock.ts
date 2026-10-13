@@ -114,6 +114,7 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       deleteNote: vi.fn(async () => {}),
     },
     listSessionHistory: vi.fn(async () => options.history ?? []),
+    exportSessionHistoryPdf: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Historial de sesiones 2026-10-13 10-00-00.pdf' })),
     exportOffice: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Documento.docx' })),
     localAi: {
       getStatus: vi.fn(async () => localAiStatus),

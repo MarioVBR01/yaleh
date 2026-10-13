@@ -25,6 +25,7 @@ export const IPC_INVOKE = {
   workspaceDeleteNote: 'workspace:delete-note',
   officeExport: 'office:export',
   historyList: 'history:list',
+  historyExportPdf: 'history:export-pdf',
   localAiStatus: 'local-ai:status',
   localAiDownload: 'local-ai:download',
   localAiPause: 'local-ai:pause',
@@ -343,6 +344,8 @@ export interface ElectronAPI {
   exportOffice: (request: OfficeExportRequest) => Promise<OfficeExportResult>;
   /** Historial de sesiones (SQLite), de la más reciente a la más antigua. */
   listSessionHistory: () => Promise<SessionHistoryEntry[]>;
+  /** Exporta el historial a PDF en Documentos\\YALEH (sin diálogo; también durante el kiosko). */
+  exportSessionHistoryPdf: () => Promise<OfficeExportResult>;
   /** Asistente sin conexión (modelo local). */
   localAi: LocalAiAPI;
 }

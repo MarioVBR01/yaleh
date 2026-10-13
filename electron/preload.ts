@@ -47,6 +47,7 @@ const api: ElectronAPI = {
   },
   exportOffice: request => ipcRenderer.invoke(IPC_INVOKE.officeExport, request),
   listSessionHistory: () => ipcRenderer.invoke(IPC_INVOKE.historyList),
+  exportSessionHistoryPdf: () => ipcRenderer.invoke(IPC_INVOKE.historyExportPdf),
   localAi: {
     getStatus: () => ipcRenderer.invoke(IPC_INVOKE.localAiStatus),
     startDownload: () => ipcRenderer.invoke(IPC_INVOKE.localAiDownload),

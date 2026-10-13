@@ -61,6 +61,7 @@ import { runSmokeTest } from './smoke';
 import { TabManager } from './tabs/tab-manager';
 import { exportOfficeFile } from './office/export';
 import { listSessionHistory } from './db/history';
+import { exportHistoryPdf } from './history-export';
 import { LocalAiError, LocalAiService, type WorkerHandle } from './local-ai/service';
 
 const isPackaged = app.isPackaged;
@@ -283,6 +284,16 @@ function registerIpcHandlers(): void {
 
   // Historial y estadísticas (fase 10): solo lectura de SQLite.
   handle(IPC_INVOKE.historyList, () => listSessionHistory(db));
+  // Exportar el historial a PDF (ORION #8): datos de SQLite, guardado sin diálogo.
+  handle(IPC_INVOKE.historyExportPdf, async (): Promise<OfficeExportResult> => {
+    try {
+      const filePath = await exportHistoryPdf(listSessionHistory(db), path.join(app.getPath('documents'), 'YALEH'), renderHtmlToPdf);
+      return { ok: true, path: filePath };
+    } catch (error) {
+      console.error('[historial] No se pudo exportar el PDF:', error);
+      return { ok: false, message: 'No se pudo exportar el historial a PDF.' };
+    }
+  });
 
   // Asistente sin conexión (revisión 1.8). La descarga solo con conexión y fuera de la sesión.
   const localAiAction = (run: () => unknown) => {
@@ -323,6 +334,25 @@ function registerIpcHandlers(): void {
     }
     app.quit();
   });
+}
+
+/**
+ * Convierte HTML propio en PDF con una ventana oculta (ORION #8). Usa una partición aparte,
+ * sin JavaScript y sin red: solo se acepta la URL data: con el documento.
+ */
+async function renderHtmlToPdf(html: string): Promise<Buffer> {
+  const pdfSession = session.fromPartition('yaleh-pdf-export', { cache: false });
+  pdfSession.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !details.url.startsWith('data:') }));
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: { session: pdfSession, javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false },
+  });
+  try {
+    await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    return await win.webContents.printToPDF({ pageSize: 'A4', landscape: true, printBackground: true });
+  } finally {
+    win.destroy();
+  }
 }
 
 // ─── Seguridad de red y navegación ───────────────────────────────────────────

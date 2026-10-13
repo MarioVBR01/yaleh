@@ -2,14 +2,34 @@
  * @file HistoryPanel.tsx
  * @description Historial de sesiones del escritorio (fase 10), leído de SQLite:
  * fecha, duración, modo, estado, pérdidas de foco, cortes de red e interrupciones.
+ * "Exportar PDF" (ORION #8): lo genera el proceso principal en Documentos\\YALEH.
  */
 
-import { Clock, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { Clock, FileDown, RefreshCw } from 'lucide-react';
+import { getElectronAPI } from '@/lib/electron';
 import { useSessionHistory } from '@/lib/useSessionHistory';
 import SessionTable from './SessionTable';
 
 export default function HistoryPanel() {
   const { available, entries, loading, error, reload } = useSessionHistory();
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const exportPdf = async () => {
+    const api = getElectronAPI();
+    if (!api) return;
+    setExporting(true);
+    setExportResult(null);
+    try {
+      const result = await api.exportSessionHistoryPdf();
+      setExportResult(result.ok ? { ok: true, text: `Guardado en ${result.path}` } : { ok: false, text: result.message });
+    } catch {
+      setExportResult({ ok: false, text: 'No se pudo exportar el historial a PDF.' });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   let empty = 'Todavía no hay sesiones.';
   if (!available) empty = 'El historial se guarda en la aplicación de escritorio.';
@@ -25,15 +45,39 @@ export default function HistoryPanel() {
           </p>
         </div>
         {available && (
-          <button
-            onClick={() => void reload()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border bg-surface-raised border-line text-ink-muted hover:text-ink"
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            Actualizar
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => void exportPdf()}
+              disabled={exporting || entries.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border bg-surface-raised border-line text-ink-muted hover:text-ink disabled:opacity-50"
+            >
+              <FileDown size={13} />
+              {exporting ? 'Exportando…' : 'Exportar PDF'}
+            </button>
+            <button
+              onClick={() => void reload()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border bg-surface-raised border-line text-ink-muted hover:text-ink"
+            >
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              Actualizar
+            </button>
+          </div>
         )}
       </div>
+
+      {exportResult && (
+        <div
+          role={exportResult.ok ? 'status' : 'alert'}
+          className={`flex items-center gap-2 px-5 py-2 text-xs border-b ${
+            exportResult.ok ? 'bg-success/10 border-success/30' : 'bg-danger/10 border-danger/30'
+          } text-ink-soft`}
+        >
+          <span className="flex-1 break-all">{exportResult.text}</span>
+          <button onClick={() => setExportResult(null)} className="underline text-ink-muted hover:text-ink">
+            Cerrar
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto p-4">
         {error ? (

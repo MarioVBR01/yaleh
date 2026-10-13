@@ -12,12 +12,14 @@
  *    en el reproductor propio con el video cargado, y un sitio no permitido se rechaza.
  * 6. Exportación de ofimática real: .docx, .xlsx y .pptx en DocumentosYALEH (aquí, la carpeta temporal).
  * 7. Que el historial de sesiones (fase 10) responde por IPC.
+ * 9. Exportar el historial a PDF (ORION #8): printToPDF real en una ventana oculta sin red ni JavaScript.
  * 8. Asistente sin conexión sin el modelo (carpeta temporal): el estado llega por IPC, la bienvenida
  *    muestra el aviso correspondiente (descargar, conectarse o requisitos) y no hay errores.
  * No activa el kiosko.
  */
 
 import { webContents, type BrowserWindow } from 'electron';
+import fs from 'node:fs';
 import type { DatabaseSync } from 'node:sqlite';
 
 /**
@@ -152,6 +154,11 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
         }
         const tabsOk = tabsCheck.skipped === true || (tabsCheck.playerTab && tabsCheck.blocked && tabsCheck.embedLoaded);
 
+        const historyPdf = await win.webContents.executeJavaScript('window.electronAPI.exportSessionHistoryPdf()');
+        const historyPdfOk =
+          historyPdf.ok && /YALEH[\\/]Historial de sesiones .+\.pdf$/.test(historyPdf.path) &&
+          fs.readFileSync(historyPdf.path).subarray(0, 5).toString() === '%PDF-';
+
         const office = await win.webContents.executeJavaScript(OFFICE_SCRIPT);
         const officeOk = ['doc', 'sheet', 'deck'].every(
           k => office[k].ok && /YALEH[\\/]Prueba .+\.(docx|xlsx|pptx)$/.test(office[k].path)
@@ -184,8 +191,9 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           sessionFileOk &&
           tabsOk &&
           officeOk &&
+          historyPdfOk &&
           errors.length === 0;
-        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, tabs: tabsCheck, officeOk, sessionFile, rejectedEvents, ingest, sources, errors })}`);
+        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, tabs: tabsCheck, officeOk, historyPdfOk, historyPdf, sessionFile, rejectedEvents, ingest, sources, errors })}`);
         finish(ok);
       } catch (error) {
         console.log(`[smoke] ${JSON.stringify({ ok: false, error: String(error), errors })}`);

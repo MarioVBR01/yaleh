@@ -2,7 +2,7 @@
  * Historial y estadísticas (fase 10): datos reales de SQLite por IPC, no simulados.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { SessionHistoryEntry } from '@shared/ipc-types';
 import { createElectronMock, uninstallElectronMock } from '../test/electron-mock';
@@ -32,6 +32,15 @@ describe('HistoryPanel', () => {
     expect(screen.getByText('Completada')).toBeTruthy();
     expect(screen.getByText('1 h 30 min')).toBeTruthy();
     expect(screen.getByText('Con conexión')).toBeTruthy();
+  });
+
+  it('Exportar PDF: lo pide al proceso principal y muestra dónde quedó (ORION #8)', async () => {
+    const mock = createElectronMock({ history });
+    mock.install();
+    render(<HistoryPanel />);
+    fireEvent.click(await screen.findByText('Exportar PDF'));
+    expect(mock.api.exportSessionHistoryPdf).toHaveBeenCalled();
+    expect(await screen.findByText(/Guardado en .*Historial de sesiones .*.pdf/)).toBeTruthy();
   });
 
   it('en el navegador avisa que el historial está en el escritorio', () => {

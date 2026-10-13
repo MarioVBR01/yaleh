@@ -137,10 +137,10 @@ export async function buildPptx(slides: OfficeSlide[]): Promise<Buffer> {
 
 // ─── Archivo ─────────────────────────────────────────────────────────────────
 
-const EXTENSIONS = { docx: 'docx', xlsx: 'xlsx', pptx: 'pptx' } as const;
+const EXTENSIONS = { docx: 'docx', xlsx: 'xlsx', pptx: 'pptx', pdf: 'pdf' } as const;
 
 /** Nombre con fecha y hora: "Documento 2026-10-03 15-30-12.docx" (sin caracteres inválidos en Windows). */
-export function exportFileName(title: string, kind: OfficeExportRequest['kind'], date: Date = new Date()): string {
+export function exportFileName(title: string, kind: keyof typeof EXTENSIONS, date: Date = new Date()): string {
   const clean = title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'Archivo';
   const pad = (n: number) => String(n).padStart(2, '0');
   const stamp = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}-${pad(
