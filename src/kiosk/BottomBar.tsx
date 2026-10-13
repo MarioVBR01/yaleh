@@ -2,7 +2,7 @@
  * @file BottomBar.tsx
  * @description Barra Inferior del entorno Kiosko de YALEH.
  * Contiene: Temporizador regresivo de sesión (HH:MM:SS, solo lo muestra;
- * la cuenta la lleva KioskLayout) y
+ * la cuenta la lleva KioskLayout), el recuadro del Pomodoro (ORION #4) y
  * Sistema de gestión de pestañas responsivas con botón "Nueva Pestaña".
  * Las pestañas reducen su ancho proporcionalmente al acumularse,
  * emulando el comportamiento nativo de Chrome/Firefox.
@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Clock, Home } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import type { Tab } from '../store/appStore';
+import PomodoroMini from '../pomodoro/PomodoroMini';
 
 /**
  * Formatea segundos totales al formato HH:MM:SS para el temporizador.
@@ -91,6 +92,9 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
           <span>{formatTime(state.timeRemaining)}</span>
         </div>
         )}
+
+        {/* Pomodoro: visible en toda la sesión cuando ya se usó (ORION #4) */}
+        <PomodoroMini />
 
         {/* Separador */}
         <div className="h-6 w-px bg-slate-700/50 flex-shrink-0" />

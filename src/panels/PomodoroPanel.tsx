@@ -1,13 +1,21 @@
 /**
  * @file PomodoroPanel.tsx
- * @description Utilidad visual de temporizador Pomodoro.
- * Modos: Trabajo (25 min), Descanso corto (5 min), Descanso largo (15 min).
- * Incluye alertas sonoras locales al cumplir cada ciclo usando Web Audio API.
- * Persiste el estado al cambiar entre pestañas.
+ * @description Vista del temporizador Pomodoro.
+ * Modos: Trabajo, Descanso corto y Descanso largo, con los minutos que elige el estudiante
+ * (por defecto 25, 5 y 15). El estado vive en PomodoroContext (ORION #4): sigue corriendo
+ * fuera de esta vista y se ve en la barra inferior del kiosko.
  */
 
-import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  formatPomodoroTime,
+  isValidPomodoroMinutes,
+  POMODORO_LABELS,
+  POMODORO_LIMITS,
+  usePomodoro,
+  type PomodoroMode,
+} from '../pomodoro/PomodoroContext';
 
 type IconProps = {
   size?: number;
@@ -151,176 +159,75 @@ const Moon = ({ size = 16, className }: IconProps) => (
   </svg>
 );
 
-/** Modos del temporizador Pomodoro */
-type PomodoroMode = 'work' | 'short-break' | 'long-break';
-
-const MODES: Record<PomodoroMode, { label: string; minutes: number; color: string; icon: ReactNode; bg: string }> = {
+/** Aspecto de cada modo (los minutos los elige el estudiante). */
+const MODES: Record<PomodoroMode, { color: string; icon: ReactNode; bg: string }> = {
   'work': {
-    label: 'Trabajo',
-    minutes: 25,
     color: 'text-red-400',
     bg: 'from-red-950 to-orange-950',
     icon: <Brain size={16} />,
   },
   'short-break': {
-    label: 'Descanso corto',
-    minutes: 5,
     color: 'text-emerald-400',
     bg: 'from-emerald-950 to-teal-950',
     icon: <Coffee size={16} />,
   },
   'long-break': {
-    label: 'Descanso largo',
-    minutes: 15,
     color: 'text-blue-400',
     bg: 'from-blue-950 to-indigo-950',
     icon: <Moon size={16} />,
   },
 };
 
-/**
- * Genera un sonido de alerta usando la Web Audio API.
- * No requiere archivos externos — funciona 100% offline.
- * @param frequency Frecuencia del tono (Hz)
- * @param duration Duración del tono (ms)
- * @param type Tipo de onda de audio
- */
-function playBeep(frequency = 880, duration = 400, type: OscillatorType = 'sine') {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+const MODE_ORDER: PomodoroMode[] = ['work', 'short-break', 'long-break'];
 
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+/** Minutos de un modo, editables (se aplican al salir del campo o con Enter). */
+function MinutesInput({ mode }: { mode: PomodoroMode }) {
+  const pomodoro = usePomodoro();
+  const [value, setValue] = useState(String(pomodoro.minutes[mode]));
+  const [invalid, setInvalid] = useState(false);
+  const { min, max } = POMODORO_LIMITS[mode];
 
-    oscillator.frequency.value = frequency;
-    oscillator.type = type;
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+  const apply = () => {
+    const minutes = Number(value);
+    if (isValidPomodoroMinutes(mode, minutes)) {
+      pomodoro.setMinutes(mode, minutes);
+      setInvalid(false);
+    } else {
+      setInvalid(true);
+    }
+  };
 
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + duration / 1000);
-  } catch {
-    // Silenciar si el navegador no soporta Web Audio
-  }
-}
-
-/**
- * Secuencia de alerta al finalizar ciclo de trabajo.
- * 3 tonos ascendentes.
- */
-function playWorkCompleteAlert() {
-  playBeep(523, 200, 'sine');
-  setTimeout(() => playBeep(659, 200, 'sine'), 250);
-  setTimeout(() => playBeep(784, 400, 'sine'), 500);
-}
-
-/**
- * Tono suave de alerta para finalizar descanso.
- */
-function playBreakCompleteAlert() {
-  playBeep(440, 300, 'triangle');
-  setTimeout(() => playBeep(550, 400, 'triangle'), 350);
+  return (
+    <label className="flex flex-col items-center gap-1 text-[11px] text-slate-400">
+      {POMODORO_LABELS[mode]}
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        aria-label={`Minutos de ${POMODORO_LABELS[mode]}`}
+        onChange={e => setValue(e.target.value)}
+        onBlur={apply}
+        onKeyDown={e => {
+          if (e.key === 'Enter') apply();
+        }}
+        className={`w-16 bg-white/5 border rounded-lg px-2 py-1 text-center text-sm text-white focus:outline-none ${
+          invalid ? 'border-red-400' : 'border-white/10 focus:border-white/30'
+        }`}
+      />
+      {invalid && <span className="text-red-400">{min}–{max} min</span>}
+    </label>
+  );
 }
 
 export default function PomodoroPanel() {
-  const [mode, setMode] = useState<PomodoroMode>('work');
-  const [secondsLeft, setSecondsLeft] = useState(MODES['work'].minutes * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [cycles, setCycles] = useState(0);
-  const [totalWorkTime, setTotalWorkTime] = useState(0); // segundos acumulados de trabajo
-
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pomodoro = usePomodoro();
+  const { mode, secondsLeft, cycles, soundEnabled } = pomodoro;
+  const isRunning = pomodoro.running;
+  const totalWorkTime = pomodoro.workSeconds;
   const modeData = MODES[mode];
-  const totalSeconds = modeData.minutes * 60;
-  const progress = (secondsLeft / totalSeconds) * 100;
-
-  /** Formatea segundos al formato MM:SS */
-  const formatTime = (s: number): string => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  };
-
-  /**
-   * Maneja el fin de un ciclo Pomodoro.
-   * Emite alerta sonora y sugiere el siguiente modo.
-   */
-  const handleCycleComplete = useCallback(() => {
-    setIsRunning(false);
-    if (soundEnabled) {
-      if (mode === 'work') {
-        playWorkCompleteAlert();
-      } else {
-        playBreakCompleteAlert();
-      }
-    }
-    if (mode === 'work') {
-      setCycles(prev => {
-        const newCycles = prev + 1;
-        // Cada 4 ciclos de trabajo → descanso largo
-        if (newCycles % 4 === 0) {
-          setMode('long-break');
-          setSecondsLeft(MODES['long-break'].minutes * 60);
-        } else {
-          setMode('short-break');
-          setSecondsLeft(MODES['short-break'].minutes * 60);
-        }
-        return newCycles;
-      });
-    } else {
-      setMode('work');
-      setSecondsLeft(MODES['work'].minutes * 60);
-    }
-  }, [mode, soundEnabled]);
-
-  /**
-   * Actualiza el temporizador cada segundo cuando está activo.
-   */
-  useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => {
-        setSecondsLeft(prev => {
-          if (prev <= 1) {
-            handleCycleComplete();
-            return 0;
-          }
-          // Acumular tiempo de trabajo
-          if (mode === 'work') {
-            setTotalWorkTime(t => t + 1);
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isRunning, handleCycleComplete, mode]);
-
-  /**
-   * Reinicia el temporizador al modo y tiempo inicial del modo actual.
-   */
-  const handleReset = () => {
-    setIsRunning(false);
-    setSecondsLeft(MODES[mode].minutes * 60);
-  };
-
-  /**
-   * Cambia el modo del Pomodoro y reinicia el temporizador.
-   */
-  const handleModeChange = (newMode: PomodoroMode) => {
-    setIsRunning(false);
-    setMode(newMode);
-    setSecondsLeft(MODES[newMode].minutes * 60);
-  };
+  const progress = (secondsLeft / pomodoro.totalSeconds) * 100;
+  const formatTime = formatPomodoroTime;
 
   // Calcular el ángulo del arco SVG para el progreso circular
   const radius = 90;
@@ -332,10 +239,10 @@ export default function PomodoroPanel() {
 
       {/* Selector de modo */}
       <div className="flex gap-2 mb-8">
-        {(Object.keys(MODES) as PomodoroMode[]).map(m => (
+        {MODE_ORDER.map(m => (
           <motion.button
             key={m}
-            onClick={() => handleModeChange(m)}
+            onClick={() => pomodoro.setMode(m)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all border ${
               mode === m
                 ? 'bg-white/15 border-white/30 text-white'
@@ -345,7 +252,7 @@ export default function PomodoroPanel() {
             whileTap={{ scale: 0.95 }}
           >
             {MODES[m].icon}
-            {MODES[m].label}
+            {POMODORO_LABELS[m]}
           </motion.button>
         ))}
       </div>
@@ -390,7 +297,7 @@ export default function PomodoroPanel() {
           </AnimatePresence>
           <p className="text-slate-400 text-sm mt-2 flex items-center gap-1.5">
             {modeData.icon}
-            {modeData.label}
+            {POMODORO_LABELS[mode]}
           </p>
         </div>
       </div>
@@ -399,7 +306,8 @@ export default function PomodoroPanel() {
       <div className="flex items-center gap-4 mb-8">
         {/* Reset */}
         <motion.button
-          onClick={handleReset}
+          onClick={pomodoro.reset}
+          title="Reiniciar"
           className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors border border-white/10"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -409,7 +317,8 @@ export default function PomodoroPanel() {
 
         {/* Play/Pause */}
         <motion.button
-          onClick={() => setIsRunning(prev => !prev)}
+          onClick={pomodoro.toggle}
+          title={isRunning ? 'Pausar' : 'Iniciar'}
           className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-2xl transition-all border-2 ${
             isRunning
               ? 'bg-white/20 border-white/40 hover:bg-white/30'
@@ -427,7 +336,8 @@ export default function PomodoroPanel() {
 
         {/* Sonido */}
         <motion.button
-          onClick={() => setSoundEnabled(prev => !prev)}
+          onClick={() => pomodoro.setSoundEnabled(!soundEnabled)}
+          title={soundEnabled ? 'Silenciar' : 'Activar sonido'}
           className={`p-3 rounded-full border transition-colors ${
             soundEnabled
               ? 'bg-white/10 border-white/10 text-white hover:bg-white/20'
@@ -463,13 +373,19 @@ export default function PomodoroPanel() {
           animate={{ opacity: 1 }}
           className="mt-6 text-slate-500 text-xs text-center"
         >
-          Próximo: {
-            mode === 'work'
-              ? (cycles + 1) % 4 === 0 ? 'Descanso largo (15 min)' : 'Descanso corto (5 min)'
-              : 'Ciclo de trabajo (25 min)'
-          }
+          Próximo: {POMODORO_LABELS[pomodoro.nextMode]} ({pomodoro.minutes[pomodoro.nextMode]} min)
         </motion.p>
       )}
+
+      {/* Minutos de cada modo, elegidos por el estudiante (ORION #4) */}
+      <div className="mt-6 w-full max-w-xs">
+        <p className="text-slate-400 text-xs text-center mb-2">Personalizar minutos</p>
+        <div className="flex justify-center gap-3">
+          {MODE_ORDER.map(m => (
+            <MinutesInput key={m} mode={m} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
