@@ -4,19 +4,21 @@
  * Opciones rápidas: 25, 50 y 90 minutos.
  * Entrada manual personalizada (máximo definido en shared/config.ts).
  * Al continuar pasa a la pantalla de confirmación; el kiosko lo activa el proceso principal.
+ * Vista compacta, sin scroll (ORION #3): botones rápidos chicos, sin el aviso de "Modo kiosko"
+ * (la advertencia ya está en el encabezado) ni los consejos de 25/50/90 min.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Lock, ChevronRight, Shield, Brain } from 'lucide-react';
+import { Clock, ChevronRight, Shield, Brain } from 'lucide-react';
 import { LIMITS } from '@shared/config';
 import { useApp } from '../context/AppContext';
 
 /** Opciones rápidas de tiempo de sesión en minutos */
 const QUICK_OPTIONS = [
-  { minutes: 25, label: '25 min', desc: 'Sesión Pomodoro corta', icon: '⚡', color: 'from-green-500 to-emerald-600' },
-  { minutes: 50, label: '50 min', desc: 'Sesión estándar', icon: '📚', color: 'from-blue-500 to-blue-600' },
-  { minutes: 90, label: '90 min', desc: 'Sesión extendida', icon: '🎯', color: 'from-purple-500 to-purple-600' },
+  { minutes: 25, label: '25 min', color: 'from-green-500 to-emerald-600' },
+  { minutes: 50, label: '50 min', color: 'from-blue-500 to-blue-600' },
+  { minutes: 90, label: '90 min', color: 'from-purple-500 to-purple-600' },
 ];
 
 export default function TimerSelectPhase() {
@@ -94,7 +96,7 @@ export default function TimerSelectPhase() {
                   setSelectedMinutes(opt.minutes);
                   setCustomMinutes('');
                 }}
-                className={`relative p-4 rounded-xl border-2 text-center transition-all overflow-hidden ${
+                className={`relative py-2 rounded-xl border-2 text-center transition-all overflow-hidden ${
                   selectedMinutes === opt.minutes && !customMinutes
                     ? 'border-blue-500 bg-blue-500/15'
                     : 'border-slate-700 hover:border-slate-600 bg-slate-800/60'
@@ -109,9 +111,7 @@ export default function TimerSelectPhase() {
                     animate={{ opacity: 0.1 }}
                   />
                 )}
-                <div className="text-2xl mb-1">{opt.icon}</div>
-                <div className="text-white font-bold text-lg">{opt.label}</div>
-                <div className="text-slate-500 text-xs mt-0.5">{opt.desc}</div>
+                <div className="relative text-white font-bold">{opt.label}</div>
               </motion.button>
             ))}
           </div>
@@ -160,15 +160,6 @@ export default function TimerSelectPhase() {
             </motion.div>
           )}
 
-          {/* Advertencia de bloqueo */}
-          <div className="mb-6 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
-            <Lock size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
-            <div className="text-xs text-amber-300/80">
-              <strong className="text-amber-300">Modo Kiosko:</strong> El equipo quedará bloqueado
-              en YALEH y no podrás salir hasta que el temporizador llegue a cero.
-            </div>
-          </div>
-
           {/* Botón de activación */}
           <motion.button
             onClick={handleContinue}
@@ -187,20 +178,6 @@ export default function TimerSelectPhase() {
               : 'Selecciona una duración'}
             {isValid && <ChevronRight size={16} />}
           </motion.button>
-
-          {/* Tips de productividad */}
-          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-            {[
-              { icon: '⚡', tip: '25 min = 1 Pomodoro' },
-              { icon: '🧠', tip: '50 min = flujo profundo' },
-              { icon: '🎯', tip: '90 min = ciclo ultradian' },
-            ].map(item => (
-              <div key={item.tip} className="p-2 rounded-lg bg-slate-800/40">
-                <div className="text-lg mb-1">{item.icon}</div>
-                <div className="text-slate-500 text-[10px]">{item.tip}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </motion.div>
     </div>
