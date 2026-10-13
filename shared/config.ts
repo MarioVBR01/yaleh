@@ -118,6 +118,9 @@ export const CONNECTIVITY = {
 /** Opciones rápidas de la pantalla de selección de tiempo, en minutos. */
 export const QUICK_SESSION_MINUTES = [25, 50, 90] as const;
 
+/** Minutos para extender una sesión al terminar (ORION #2). */
+export const EXTEND_SESSION_MINUTES = [15, 25, 50] as const;
+
 // ─── Inteligencia artificial (brief, sección 7) ──────────────────────────────
 
 export const AI = {

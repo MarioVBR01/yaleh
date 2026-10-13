@@ -236,6 +236,10 @@ function registerIpcHandlers(): void {
   });
   handle(IPC_INVOKE.sessionGetState, () => controller.getSnapshot());
   handle(IPC_INVOKE.sessionResume, () => controller.resume());
+  // Extender la sesión que acaba de terminar (ORION #2): lo decide el controlador.
+  handle(IPC_INVOKE.sessionExtend, (_event, extraSeconds) =>
+    controller.extend(parseDurationSeconds(extraSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60))
+  );
   handle(IPC_INVOKE.sessionDiscardResume, () => controller.discardResume());
 
   // Archivo de sesión: el diálogo del sistema solo existe fuera de la sesión.

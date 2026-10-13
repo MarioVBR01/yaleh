@@ -27,6 +27,7 @@ export type SessionEventType =
   | 'session-finished'
   | 'session-interrupted'
   | 'session-resumed'
+  | 'session-extended'
   | 'focus-lost'
   | 'dev-release'
   | 'connection-lost'

@@ -68,6 +68,12 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
     })),
     getSessionState: vi.fn(async () => snapshot),
     resumeSession: vi.fn(async () => ({ ...snapshot, status: 'active' as const })),
+    extendSession: vi.fn(async (extraSeconds: number) => ({
+      ...snapshot,
+      status: 'active' as const,
+      durationSeconds: snapshot.durationSeconds + extraSeconds,
+      remainingSeconds: extraSeconds,
+    })),
     discardResume: vi.fn(async () => ({ ...snapshot, status: 'idle' as const })),
     onSessionTick: vi.fn(cb => {
       tick = cb;

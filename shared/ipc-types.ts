@@ -10,6 +10,7 @@ export const IPC_INVOKE = {
   sessionStart: 'session:start',
   sessionGetState: 'session:get-state',
   sessionResume: 'session:resume',
+  sessionExtend: 'session:extend',
   sessionDiscardResume: 'session:discard-resume',
   sessionFileOpenDialog: 'session-file:open-dialog',
   sessionFileOpenContent: 'session-file:open-content',
@@ -312,6 +313,11 @@ export interface ElectronAPI {
   getSessionState: () => Promise<SessionSnapshot>;
   /** Retoma una sesión interrumpida (estado `resumable`). */
   resumeSession: () => Promise<SessionSnapshot>;
+  /**
+   * Extiende la sesión que acaba de terminar con más tiempo (estado `finished`): el proceso
+   * principal vuelve a bloquear el equipo y suma la duración a la misma sesión.
+   */
+  extendSession: (extraSeconds: number) => Promise<SessionSnapshot>;
   /** Descarta la sesión interrumpida; queda registrada como tal. */
   discardResume: () => Promise<SessionSnapshot>;
   onSessionTick: (callback: (payload: SessionTickPayload) => void) => () => void;

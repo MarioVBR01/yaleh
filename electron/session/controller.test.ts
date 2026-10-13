@@ -312,3 +312,47 @@ describe('SessionController: modo y conexión', () => {
     expect(store.events.map(e => e.type)).toEqual(['session-started']);
   });
 });
+
+describe('SessionController: extender la sesión (ORION #2)', () => {
+  it('al terminar, extiende la misma sesión: vuelve a bloquear y suma la duración', () => {
+    const { controller, store, lock } = setup();
+    controller.start(60, 'online');
+    vi.advanceTimersByTime(60_000);
+    expect(controller.getSnapshot().status).toBe('finished');
+
+    const snapshot = controller.extend(15 * 60);
+    expect(snapshot).toMatchObject({ status: 'active', sessionId: 'session-1', mode: 'online', durationSeconds: 60 + 900, remainingSeconds: 900 });
+    expect(lock).toHaveBeenCalledTimes(2);
+    expect(store.session).toMatchObject({ id: 'session-1', status: 'active', durationSeconds: 960 });
+    expect(store.events.map(e => e.type)).toEqual(['session-started', 'session-finished', 'session-extended']);
+    expect(store.events.at(-1)?.detail).toBe('900s');
+  });
+
+  it('la extensión termina sola al cumplirse el tiempo extra', () => {
+    const { controller, store, onEnded } = setup();
+    controller.start(60, 'offline');
+    vi.advanceTimersByTime(60_000);
+    controller.extend(120);
+    vi.advanceTimersByTime(120_000);
+    expect(controller.getSnapshot().status).toBe('finished');
+    expect(onEnded).toHaveBeenCalledTimes(2);
+    expect(store.session).toMatchObject({ status: 'finished', durationSeconds: 180 });
+  });
+
+  it('no se puede extender sin una sesión terminada (inactiva, activa o interrumpida)', () => {
+    const { controller } = setup();
+    expect(() => controller.extend(900)).toThrow(/acaba de terminar/);
+    controller.start(120, 'offline');
+    expect(() => controller.extend(900)).toThrow(/acaba de terminar/);
+  });
+
+  it('rechaza duraciones fuera de los límites', () => {
+    const { controller } = setup();
+    controller.start(60, 'offline');
+    vi.advanceTimersByTime(60_000);
+    expect(() => controller.extend(10)).toThrow(/no válida/);
+    expect(() => controller.extend(MAX + 60)).toThrow(/no válida/);
+    expect(() => controller.extend(90.5)).toThrow(/no válida/);
+    expect(controller.getSnapshot().status).toBe('finished');
+  });
+});

@@ -2,13 +2,16 @@
  * @file SessionCompletePhase.tsx
  * @description Fase final: Pantalla de resumen cuando termina la sesión en modo kiosko.
  * Muestra métricas de la sesión (duración, sitios visitados, archivos cargados)
- * y permite cerrar la aplicación.
+ * y permite cerrar la aplicación. En el escritorio permite extender la sesión con más
+ * minutos (ORION #2): el proceso principal vuelve a bloquear y suma el tiempo.
  */
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Calendar } from 'lucide-react';
+import { CheckCircle2, Calendar, TimerReset } from 'lucide-react';
+import { EXTEND_SESSION_MINUTES } from '@shared/config';
 import { useApp } from '../context/AppContext';
-import { closeApp } from '../lib/electron';
+import { closeApp, getElectronAPI } from '../lib/electron';
 
 /**
  * Formatea la fecha/hora actual en español.
@@ -36,7 +39,32 @@ function formatMinutes(seconds: number): number {
 }
 
 export default function SessionCompletePhase() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
+  const api = getElectronAPI();
+  const [extending, setExtending] = useState<number | null>(null);
+  const [extendError, setExtendError] = useState<string | null>(null);
+
+  /** Vuelve al kiosko con la misma sesión y más minutos (lo decide el proceso principal). */
+  const handleExtend = async (minutes: number) => {
+    if (!api) return;
+    setExtending(minutes);
+    setExtendError(null);
+    try {
+      const snapshot = await api.extendSession(minutes * 60);
+      dispatch({
+        type: 'RESUME_SESSION',
+        payload: {
+          durationSeconds: snapshot.durationSeconds,
+          remainingSeconds: snapshot.remainingSeconds,
+          mode: snapshot.mode,
+        },
+      });
+    } catch (err) {
+      console.error('No se pudo extender la sesión:', err);
+      setExtendError('No se pudo extender la sesión. Puedes empezar una nueva desde la bienvenida.');
+      setExtending(null);
+    }
+  };
 
 
   // Extraer métricas del estado global
@@ -170,10 +198,36 @@ export default function SessionCompletePhase() {
             transition={{ delay: 0.5 }}
           >
             <p className="text-slate-400 text-sm leading-relaxed">
-              Tu participación en el entorno de estudio YALEH ha sido
-              registrada. No es posible abrir nuevas sesiones desde este punto.
+              Tu participación en el entorno de estudio YALEH ha sido registrada.
+              {api && ' Si quieres seguir estudiando, puedes extender la sesión con más minutos.'}
             </p>
           </motion.div>
+
+          {/* Extender la sesión (escritorio): mismos materiales, notas y espacio de trabajo */}
+          {api && (
+            <div className="mb-6">
+              <p className="text-ink-soft text-sm font-medium mb-2 flex items-center gap-2">
+                <TimerReset size={16} className="text-accent" /> Extender la sesión
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {EXTEND_SESSION_MINUTES.map(minutes => (
+                  <button
+                    key={minutes}
+                    onClick={() => void handleExtend(minutes)}
+                    disabled={extending !== null}
+                    className="py-2 rounded-xl text-sm border border-line text-ink-soft hover:text-ink hover:border-accent disabled:opacity-50"
+                  >
+                    {extending === minutes ? 'Extendiendo…' : `+${minutes} min`}
+                  </button>
+                ))}
+              </div>
+              {extendError && (
+                <p role="alert" className="mt-2 text-xs text-danger">
+                  {extendError}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Botón de cerrar */}
           <motion.button

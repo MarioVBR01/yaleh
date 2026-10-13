@@ -130,6 +130,31 @@ export class SessionController {
     return this.getSnapshot();
   }
 
+  /**
+   * Extiende la sesión que acaba de terminar (ORION #2): la misma sesión vuelve a estar activa
+   * con `extraSeconds` más, el equipo se bloquea otra vez y la duración se suma. Solo es posible
+   * con la sesión terminada en esta ejecución de la app (tras reiniciar, la pantalla de sesión
+   * completada ya no existe).
+   */
+  extend(extraSeconds: number): SessionSnapshot {
+    if (this.status !== 'finished' || !this.current) {
+      throw new Error('Solo se puede extender una sesión que acaba de terminar.');
+    }
+    if (!Number.isInteger(extraSeconds) || extraSeconds < this.deps.minSeconds || extraSeconds > this.deps.maxSeconds) {
+      throw new Error('Duración de la extensión no válida.');
+    }
+    this.current = {
+      ...this.current,
+      status: 'active',
+      endsAt: this.now() + extraSeconds * 1000,
+      durationSeconds: this.current.durationSeconds + extraSeconds,
+    };
+    this.deps.store.saveSession(this.current);
+    this.log('session-extended', this.current.id, `${extraSeconds}s`);
+    this.activate();
+    return this.getSnapshot();
+  }
+
   discardResume(): SessionSnapshot {
     if (this.status === 'resumable' && this.current) {
       this.deps.store.saveSession({ ...this.current, status: 'interrupted' });

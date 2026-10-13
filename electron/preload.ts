@@ -24,6 +24,7 @@ const api: ElectronAPI = {
   startSession: (durationSeconds, sessionId) => ipcRenderer.invoke(IPC_INVOKE.sessionStart, durationSeconds, sessionId),
   getSessionState: () => ipcRenderer.invoke(IPC_INVOKE.sessionGetState),
   resumeSession: () => ipcRenderer.invoke(IPC_INVOKE.sessionResume),
+  extendSession: extraSeconds => ipcRenderer.invoke(IPC_INVOKE.sessionExtend, extraSeconds),
   discardResume: () => ipcRenderer.invoke(IPC_INVOKE.sessionDiscardResume),
   onSessionTick: callback => subscribe(IPC_EVENT.sessionTick, callback),
   onSessionEnded: callback => subscribe(IPC_EVENT.sessionEnded, callback),
