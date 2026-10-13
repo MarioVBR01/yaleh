@@ -30,6 +30,9 @@ export type TabType =
   | 'downloads'
   | 'stats';
 
+/** Vistas que solo pueden tener una pestaña: al abrirlas de nuevo se activa la existente. */
+export const SINGLE_INSTANCE_TABS: readonly TabType[] = ['pomodoro', 'stats', 'history'];
+
 export interface Tab {
   id: string;
   type: TabType;
@@ -283,9 +286,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     case 'ADD_TAB': {
-      // Evitar duplicados de URL o tipo único
+      // Evitar duplicados: misma URL, o una vista única ya abierta (ORION #5: cada clic en
+      // "Pomodoro" abría otra pestaña con un Pomodoro nuevo).
       const exists = state.tabs.find(
-        t => t.url === action.payload.url && action.payload.url
+        t =>
+          (action.payload.url && t.url === action.payload.url) ||
+          (SINGLE_INSTANCE_TABS.includes(action.payload.type) && t.type === action.payload.type)
       );
       if (exists) {
         return { ...state, activeTabId: exists.id };
