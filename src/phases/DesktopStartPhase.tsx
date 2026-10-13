@@ -7,11 +7,12 @@
  *   válido, bloquea el equipo y empieza el tiempo de inmediato. También se puede
  *   arrastrar el archivo a esta ventana.
  * - Asistente sin conexión (revisión 1.8): descarga del modelo local, solo aquí (fuera de la sesión).
+ * - Configuración (ORION #7) y saludo con el nombre del estudiante.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileUp, Loader2, Play, Wifi, WifiOff } from 'lucide-react';
+import { FileUp, Loader2, Play, Settings, Wifi, WifiOff } from 'lucide-react';
 import { SESSION_FILE_EXTENSION } from '@shared/session-file';
 import { useApp } from '../context/AppContext';
 import { newId } from '../data/workspace';
@@ -19,11 +20,22 @@ import { getElectronAPI } from '../lib/electron';
 import { applyOpenedSessionFile } from '../lib/session-file';
 import LocalAiCard from './LocalAiCard';
 
+function initialsOf(name: string): string {
+  return name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 export default function DesktopStartPhase() {
   const { state, dispatch } = useApp();
   const api = getElectronAPI();
   const [opening, setOpening] = useState(false);
   const [dragging, setDragging] = useState(false);
+
+  const profileName = state.settings?.profileName ?? null;
 
   /** Flujo local: espacio de trabajo nuevo en SQLite (su id será el de la sesión). */
   const handleStart = () => {
@@ -32,7 +44,7 @@ export default function DesktopStartPhase() {
     dispatch({ type: 'SET_FILES', payload: [] });
     dispatch({
       type: 'SET_SESSION',
-      payload: { isAuthenticated: false, isAnonymous: true, displayName: 'Estudiante', initials: 'ES' },
+      payload: { isAuthenticated: false, isAnonymous: true, displayName: profileName ?? 'Estudiante', initials: initialsOf(profileName ?? 'Estudiante') },
     });
     dispatch({ type: 'SET_PHASE', payload: 'dropzone' });
   };
@@ -84,7 +96,9 @@ export default function DesktopStartPhase() {
         animate={{ opacity: 1, y: 0 }}
       >
         <h1 className="text-3xl font-bold text-ink mb-1">Bienvenido a YALEH</h1>
-        <p className="text-ink-muted text-sm mb-6">Tu entorno de estudio sin distracciones.</p>
+        <p className="text-ink-muted text-sm mb-6">
+          {profileName ? `Hola, ${profileName}. ` : ''}Tu entorno de estudio sin distracciones.
+        </p>
 
         <p className="flex items-center justify-center gap-2 text-xs text-ink-subtle mb-6" role="status">
           {state.connection === 'online' ? (
@@ -117,6 +131,13 @@ export default function DesktopStartPhase() {
           >
             {opening ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
             Abrir archivo de sesión (.yaleh)
+          </button>
+          <button
+            onClick={() => dispatch({ type: 'SET_PHASE', payload: 'settings' })}
+            disabled={opening}
+            className="w-full py-2 rounded-xl text-xs text-ink-muted hover:text-ink transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            <Settings size={14} /> Configuración
           </button>
         </div>
         <p className="text-ink-subtle text-[11px] mt-3">

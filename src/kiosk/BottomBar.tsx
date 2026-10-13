@@ -43,6 +43,10 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
 
   const timePercent = calcTimePercent(state.timeRemaining, state.sessionDuration);
   const isLowTime = state.timeRemaining < 300; // Menos de 5 minutos
+  // Aviso antes de que termine (configuración, ORION #7).
+  const warningMinutes = state.settings?.settings.endWarningMinutes ?? 0;
+  const showEndWarning =
+    warningMinutes > 0 && state.sessionDuration > 0 && state.timeRemaining > 0 && state.timeRemaining <= warningMinutes * 60;
 
   /**
    * Calcula el ancho máximo de cada pestaña en píxeles
@@ -91,6 +95,12 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
           </motion.div>
           <span>{formatTime(state.timeRemaining)}</span>
         </div>
+        )}
+
+        {showEndWarning && (
+          <span role="alert" className="px-2 py-1 rounded-lg border border-warning/40 bg-warning/10 text-warning text-xs font-medium flex-shrink-0">
+            Quedan {Math.ceil(state.timeRemaining / 60)} min de sesión
+          </span>
         )}
 
         {/* Pomodoro: visible en toda la sesión cuando ya se usó (ORION #4) */}

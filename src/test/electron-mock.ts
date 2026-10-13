@@ -6,6 +6,7 @@
 
 import { act } from '@testing-library/react';
 import { vi } from 'vitest';
+import { DEFAULT_SETTINGS, isKioskSafePatch, type AppSettings, type SettingsSnapshot } from '@shared/settings';
 import type {
   ConnectionChangedPayload,
   ConnectionMode,
@@ -31,6 +32,10 @@ export interface ElectronMockOptions {
   localAi?: Partial<LocalAiStatus>;
   /** Respuesta del modelo local; se entrega en dos partes por onChunk antes de resolver. */
   localAiResult?: LocalAiResult;
+  /** Configuración inicial (ORION #7) y si hay una sesión en curso (solo se cambia lo inofensivo). */
+  settings?: Partial<AppSettings>;
+  profileName?: string | null;
+  sessionActive?: boolean;
   /** Resultado que devolverán el diálogo y la apertura por contenido. */
   openResult?: OpenSessionFileResult;
 }
@@ -55,6 +60,16 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
   let localAiStatus = makeLocalAiStatus(options.localAi);
   let statusListener: ((s: LocalAiStatus) => void) | null = null;
   let chunkListener: ((c: LocalAiChunk) => void) | null = null;
+
+  let settingsSnapshot: SettingsSnapshot = {
+    settings: { ...DEFAULT_SETTINGS, ...options.settings },
+    profileName: options.profileName ?? null,
+    exportDirResolved: 'C:\\Users\\x\\Documents\\YALEH',
+    sessionActive: options.sessionActive ?? false,
+  };
+  const outside = () => {
+    if (settingsSnapshot.sessionActive) throw new Error('Esta opción solo se puede cambiar fuera de la sesión, desde la pantalla de inicio.');
+  };
 
   const api: ElectronAPI = {
     version: 'test',
@@ -114,6 +129,29 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       deleteNote: vi.fn(async () => {}),
     },
     listSessionHistory: vi.fn(async () => options.history ?? []),
+    clearSessionHistory: vi.fn(async () => {
+      outside();
+      return (options.history ?? []).length;
+    }),
+    settings: {
+      get: vi.fn(async () => settingsSnapshot),
+      update: vi.fn(async patch => {
+        if (!isKioskSafePatch(patch)) outside();
+        settingsSnapshot = { ...settingsSnapshot, settings: { ...settingsSnapshot.settings, ...patch } };
+        return settingsSnapshot;
+      }),
+      setProfileName: vi.fn(async name => {
+        outside();
+        settingsSnapshot = { ...settingsSnapshot, profileName: name };
+        return settingsSnapshot;
+      }),
+      chooseExportDir: vi.fn(async () => {
+        outside();
+        settingsSnapshot = { ...settingsSnapshot, settings: { ...settingsSnapshot.settings, exportDir: 'D:\\Estudio' }, exportDirResolved: 'D:\\Estudio' };
+        return settingsSnapshot;
+      }),
+      resetExportDir: vi.fn(async () => settingsSnapshot),
+    },
     exportSessionHistoryPdf: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Historial de sesiones 2026-10-13 10-00-00.pdf' })),
     exportOffice: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Documento.docx' })),
     localAi: {

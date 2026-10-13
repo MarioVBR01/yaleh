@@ -43,6 +43,8 @@ export default function SessionCompletePhase() {
   const api = getElectronAPI();
   const [extending, setExtending] = useState<number | null>(null);
   const [extendError, setExtendError] = useState<string | null>(null);
+  // Se puede desactivar en la configuración (ORION #7).
+  const canExtend = Boolean(api) && state.settings?.settings.allowExtend !== false;
 
   /** Vuelve al kiosko con la misma sesión y más minutos (lo decide el proceso principal). */
   const handleExtend = async (minutes: number) => {
@@ -199,12 +201,12 @@ export default function SessionCompletePhase() {
           >
             <p className="text-slate-400 text-sm leading-relaxed">
               Tu participación en el entorno de estudio YALEH ha sido registrada.
-              {api && ' Si quieres seguir estudiando, puedes extender la sesión con más minutos.'}
+              {canExtend && ' Si quieres seguir estudiando, puedes extender la sesión con más minutos.'}
             </p>
           </motion.div>
 
           {/* Extender la sesión (escritorio): mismos materiales, notas y espacio de trabajo */}
-          {api && (
+          {canExtend && (
             <div className="mb-6">
               <p className="text-ink-soft text-sm font-medium mb-2 flex items-center gap-2">
                 <TimerReset size={16} className="text-accent" /> Extender la sesión

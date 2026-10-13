@@ -7,6 +7,7 @@
 
 import { LIMITS } from '@shared/config';
 import type { ConnectionMode, LocalAiStatus, SessionMode } from '@shared/ipc-types';
+import type { SettingsSnapshot } from '@shared/settings';
 
 /** Mensaje al llegar al límite de pestañas (brief, sección 10). */
 export const TAB_LIMIT_MESSAGE = `Llegaste al máximo de ${LIMITS.maxTabs} pestañas. Cierra una para abrir otra.`;
@@ -19,7 +20,9 @@ export type AppPhase =
   | 'confirm-session'
   | 'resume-offer'
   | 'kiosk'
-  | 'session-complete';
+  | 'session-complete'
+  /** Escritorio: Configuración desde la bienvenida (ORION #7). */
+  | 'settings';
 
 export type TabType =
   | 'dashboard'
@@ -28,10 +31,11 @@ export type TabType =
   | 'history'
   | 'pomodoro'
   | 'downloads'
-  | 'stats';
+  | 'stats'
+  | 'settings';
 
 /** Vistas que solo pueden tener una pestaña: al abrirlas de nuevo se activa la existente. */
-export const SINGLE_INSTANCE_TABS: readonly TabType[] = ['pomodoro', 'stats', 'history'];
+export const SINGLE_INSTANCE_TABS: readonly TabType[] = ['pomodoro', 'stats', 'history', 'settings'];
 
 export interface Tab {
   id: string;
@@ -109,6 +113,8 @@ export interface AppState {
    * muestra "Comprobando tu sesión…" en lugar del botón, para no aparecer y saltar a la dropzone.
    */
   authChecked: boolean;
+  /** Escritorio: configuración guardada en SQLite (ORION #7); null en la web o mientras se lee. */
+  settings: SettingsSnapshot | null;
 }
 
 export interface ActivityRecord {
@@ -136,6 +142,7 @@ export type AppAction =
   | { type: 'SET_CONNECTION'; payload: ConnectionMode }
   | { type: 'SET_LOCAL_AI'; payload: LocalAiStatus }
   | { type: 'SET_AUTH_CHECKED' }
+  | { type: 'SET_SETTINGS'; payload: SettingsSnapshot }
   | { type: 'SET_SESSION_MODE'; payload: SessionMode | null }
   | { type: 'SET_WORKSPACE'; payload: string | null }
   | { type: 'SET_NOTICE'; payload: string | null }
@@ -185,6 +192,7 @@ export const initialState: AppState = {
   notice: null,
   localAi: null,
   authChecked: true,
+  settings: null,
 };
 
 /**
@@ -250,6 +258,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, connection: action.payload };
     case 'SET_LOCAL_AI':
       return { ...state, localAi: action.payload };
+    case 'SET_SETTINGS':
+      return { ...state, settings: action.payload };
     case 'SET_AUTH_CHECKED':
       return state.authChecked ? state : { ...state, authChecked: true };
 

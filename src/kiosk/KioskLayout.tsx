@@ -19,6 +19,7 @@ import ExternalTabPanel from '../panels/ExternalTabPanel';
 import OfflineEditorPanel from '../panels/OfflineEditorPanel';
 import HistoryPanel from '../panels/HistoryPanel';
 import PomodoroPanel from '../panels/PomodoroPanel';
+import SettingsView from '../settings/SettingsView';
 import { PomodoroProvider } from '../pomodoro/PomodoroContext';
 import DownloadsPanel from '../panels/DownloadsPanel';
 import StatsPanel from '../panels/StatsPanel';
@@ -48,6 +49,8 @@ function TabContent({ tab }: { tab: Tab }) {
       return <DownloadsPanel />;
     case 'stats':
       return <StatsPanel />;
+    case 'settings':
+      return <SettingsView inSession />;
     default:
       return <WorkspaceView />;
   }

@@ -4,6 +4,8 @@
  * El preload expone `window.electronAPI` con la forma de `ElectronAPI`.
  */
 
+import type { SettingsPatch, SettingsSnapshot } from './settings';
+
 /** Canales invocables desde la interfaz (ipcRenderer.invoke → ipcMain.handle). */
 export const IPC_INVOKE = {
   appGetInfo: 'app:get-info',
@@ -26,6 +28,12 @@ export const IPC_INVOKE = {
   officeExport: 'office:export',
   historyList: 'history:list',
   historyExportPdf: 'history:export-pdf',
+  historyClear: 'history:clear',
+  settingsGet: 'settings:get',
+  settingsUpdate: 'settings:update',
+  settingsSetProfileName: 'settings:set-profile-name',
+  settingsChooseExportDir: 'settings:choose-export-dir',
+  settingsResetExportDir: 'settings:reset-export-dir',
   localAiStatus: 'local-ai:status',
   localAiDownload: 'local-ai:download',
   localAiPause: 'local-ai:pause',
@@ -301,6 +309,16 @@ export interface LocalAiAPI {
   onChunk: (callback: (chunk: LocalAiChunk) => void) => () => void;
 }
 
+/** Configuración del escritorio (ORION #7). Lo que afecta a la sesión solo se cambia fuera de ella. */
+export interface SettingsAPI {
+  get: () => Promise<SettingsSnapshot>;
+  update: (patch: SettingsPatch) => Promise<SettingsSnapshot>;
+  setProfileName: (name: string | null) => Promise<SettingsSnapshot>;
+  /** Diálogo del sistema para elegir la carpeta de exportaciones (solo fuera de la sesión). */
+  chooseExportDir: () => Promise<SettingsSnapshot>;
+  resetExportDir: () => Promise<SettingsSnapshot>;
+}
+
 /** API expuesta por el preload en `window.electronAPI`. */
 export interface ElectronAPI {
   /** Versión de la aplicación de escritorio. */
@@ -346,6 +364,9 @@ export interface ElectronAPI {
   listSessionHistory: () => Promise<SessionHistoryEntry[]>;
   /** Exporta el historial a PDF en Documentos\\YALEH (sin diálogo; también durante el kiosko). */
   exportSessionHistoryPdf: () => Promise<OfficeExportResult>;
+  /** Borra el historial y las estadísticas (solo fuera de la sesión). Devuelve cuántas sesiones borró. */
+  clearSessionHistory: () => Promise<number>;
+  settings: SettingsAPI;
   /** Asistente sin conexión (modelo local). */
   localAi: LocalAiAPI;
 }

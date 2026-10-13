@@ -12,6 +12,7 @@
  *    en el reproductor propio con el video cargado, y un sitio no permitido se rechaza.
  * 6. Exportación de ofimática real: .docx, .xlsx y .pptx en DocumentosYALEH (aquí, la carpeta temporal).
  * 7. Que el historial de sesiones (fase 10) responde por IPC.
+ * 10. Configuración (ORION #7): responde por IPC con los valores predeterminados.
  * 9. Exportar el historial a PDF (ORION #8): printToPDF real en una ventana oculta sin red ni JavaScript.
  * 8. Asistente sin conexión sin el modelo (carpeta temporal): el estado llega por IPC, la bienvenida
  *    muestra el aviso correspondiente (descargar, conectarse o requisitos) y no hay errores.
@@ -121,6 +122,7 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
             connection: window.electronAPI ? await window.electronAPI.getConnectionMode() : null,
             history: window.electronAPI ? Array.isArray(await window.electronAPI.listSessionHistory()) : false,
             localAi: window.electronAPI ? (await window.electronAPI.localAi.getStatus()).state : null,
+            settings: window.electronAPI ? (await window.electronAPI.settings.get()).settings.endWarningMinutes : null,
             localAiCard: (() => {
               const card = document.querySelector('[aria-label="Asistente sin conexión"]');
               if (!card) return null;
@@ -184,6 +186,7 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           base.state !== null &&
           base.connection !== null &&
           base.history &&
+          base.settings === 5 &&
           ['not-installed', 'unsupported'].includes(base.localAi) &&
           (base.localAiCard === 'download' || base.localAiCard === 'connect' || base.localAiCard === 'unsupported') &&
           migrations.length > 0 &&

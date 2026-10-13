@@ -51,7 +51,11 @@ export class SqliteSessionStore implements SessionStore {
 
   /** true si ya existe una sesión con ese id (archivo .yaleh ya usado). */
   hasSession(sessionId: string): boolean {
-    return this.db.prepare('SELECT 1 FROM sessions WHERE id = ?').get(sessionId) !== undefined;
+    // También las sesiones borradas del historial (ORION #7): el .yaleh sigue siendo de uso único.
+    return (
+      this.db.prepare('SELECT 1 FROM sessions WHERE id = ? UNION SELECT 1 FROM used_session_ids WHERE id = ?').get(sessionId, sessionId) !==
+      undefined
+    );
   }
 
   loadSession(): PersistedSession | null {

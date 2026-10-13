@@ -23,7 +23,7 @@ export function sessionStatusText(s: SessionHistoryEntry): string {
 const formatDate = (ms: number) => new Date(ms).toLocaleString('es-BO', { dateStyle: 'medium', timeStyle: 'short' });
 
 /** Documento HTML del historial (autocontenido: sin scripts ni recursos externos). */
-export function buildHistoryHtml(entries: SessionHistoryEntry[], generatedAt: Date = new Date()): string {
+export function buildHistoryHtml(entries: SessionHistoryEntry[], generatedAt: Date = new Date(), studentName: string | null = null): string {
   const stats = computeStats(entries, generatedAt);
   const rows = entries
     .map(
@@ -63,7 +63,7 @@ export function buildHistoryHtml(entries: SessionHistoryEntry[], generatedAt: Da
 </head>
 <body>
   <h1>Historial de sesiones — YALEH</h1>
-  <p class="meta">Generado el ${escapeHtml(formatDate(generatedAt.getTime()))} · ${entries.length} sesiones</p>
+  <p class="meta">${studentName ? `Estudiante: ${escapeHtml(studentName)} · ` : ''}Generado el ${escapeHtml(formatDate(generatedAt.getTime()))} · ${entries.length} sesiones</p>
   <div class="summary">
     <div>Completadas<strong>${stats.completed}</strong></div>
     <div>Interrumpidas<strong>${stats.interrupted}</strong></div>
@@ -92,8 +92,9 @@ export async function exportHistoryPdf(
   entries: SessionHistoryEntry[],
   directory: string,
   renderPdf: (html: string) => Promise<Buffer>,
-  now: Date = new Date()
+  now: Date = new Date(),
+  studentName: string | null = null
 ): Promise<string> {
-  const pdf = await renderPdf(buildHistoryHtml(entries, now));
+  const pdf = await renderPdf(buildHistoryHtml(entries, now, studentName));
   return saveUnique(directory, exportFileName('Historial de sesiones', 'pdf', now), pdf);
 }

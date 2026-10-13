@@ -22,9 +22,12 @@ const QUICK_OPTIONS = [
 ];
 
 export default function TimerSelectPhase() {
-  const { dispatch } = useApp();
-  const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
-  const [customMinutes, setCustomMinutes] = useState('');
+  const { state, dispatch } = useApp();
+  // Duración predeterminada de la configuración (ORION #7): opción rápida o minutos personalizados.
+  const preset = state.settings?.settings.defaultSessionMinutes ?? null;
+  const presetIsQuick = preset !== null && QUICK_OPTIONS.some(o => o.minutes === preset);
+  const [selectedMinutes, setSelectedMinutes] = useState<number | null>(presetIsQuick ? preset : null);
+  const [customMinutes, setCustomMinutes] = useState(preset !== null && !presetIsQuick ? String(preset) : '');
 
   /**
    * Devuelve los minutos finales a usar para la sesión.

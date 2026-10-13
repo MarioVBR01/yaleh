@@ -198,3 +198,8 @@ export function formatPomodoroTime(seconds: number): string {
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+
+/** Como usePomodoro, pero null fuera del kiosko (por ejemplo, la Configuración desde la bienvenida). */
+export function usePomodoroOptional(): PomodoroApi | null {
+  return useContext(PomodoroContext);
+}

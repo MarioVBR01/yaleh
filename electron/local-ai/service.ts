@@ -189,6 +189,11 @@ export class LocalAiService {
     return status;
   }
 
+  /** Configuración (ORION #7): tarjeta gráfica si hay o solo el procesador. Vale desde el próximo arranque del modelo. */
+  setGpu(gpu: false | 'auto'): void {
+    this.deps.gpu = gpu;
+  }
+
   /** Libera la memoria del modelo (al terminar la sesión o al borrarlo). */
   releaseModel(): void {
     const worker = this.worker;

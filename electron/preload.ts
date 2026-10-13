@@ -48,6 +48,14 @@ const api: ElectronAPI = {
   exportOffice: request => ipcRenderer.invoke(IPC_INVOKE.officeExport, request),
   listSessionHistory: () => ipcRenderer.invoke(IPC_INVOKE.historyList),
   exportSessionHistoryPdf: () => ipcRenderer.invoke(IPC_INVOKE.historyExportPdf),
+  clearSessionHistory: () => ipcRenderer.invoke(IPC_INVOKE.historyClear),
+  settings: {
+    get: () => ipcRenderer.invoke(IPC_INVOKE.settingsGet),
+    update: patch => ipcRenderer.invoke(IPC_INVOKE.settingsUpdate, patch),
+    setProfileName: name => ipcRenderer.invoke(IPC_INVOKE.settingsSetProfileName, name),
+    chooseExportDir: () => ipcRenderer.invoke(IPC_INVOKE.settingsChooseExportDir),
+    resetExportDir: () => ipcRenderer.invoke(IPC_INVOKE.settingsResetExportDir),
+  },
   localAi: {
     getStatus: () => ipcRenderer.invoke(IPC_INVOKE.localAiStatus),
     startDownload: () => ipcRenderer.invoke(IPC_INVOKE.localAiDownload),

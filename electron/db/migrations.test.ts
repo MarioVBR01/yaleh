@@ -14,7 +14,7 @@ function tableNames(db: DatabaseSync): string[] {
 describe('runMigrations', () => {
   it('crea las tablas y registra las versiones', () => {
     const db = new DatabaseSync(':memory:');
-    expect(runMigrations(db)).toEqual([1, 2, 3]);
+    expect(runMigrations(db)).toEqual([1, 2, 3, 4]);
 
     expect(tableNames(db)).toEqual([
       'local_profile',
@@ -27,12 +27,14 @@ describe('runMigrations', () => {
       'source_passages',
       'source_passages_fts',
       'sources',
+      'used_session_ids',
     ]);
     const rows = db.prepare('SELECT version, name FROM schema_migrations').all();
     expect(rows).toEqual([
       { version: 1, name: 'initial' },
       { version: 2, name: 'workspace' },
       { version: 3, name: 'passages-fts' },
+      { version: 4, name: 'used-session-ids' },
     ]);
   });
 
@@ -44,15 +46,15 @@ describe('runMigrations', () => {
     expect(runMigrations(db)).toEqual([]);
     expect(runMigrations(db)).toEqual([]);
     expect(tableNames(db)).toEqual(before);
-    expect(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get()).toEqual({ n: 3 });
+    expect(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get()).toEqual({ n: 4 });
   });
 
   it('aplica solo las migraciones nuevas, en orden', () => {
     const db = new DatabaseSync(':memory:');
     runMigrations(db);
-    const extra: Migration = { version: 4, name: 'extra', sql: 'CREATE TABLE extra (x INTEGER)' };
+    const extra: Migration = { version: 5, name: 'extra', sql: 'CREATE TABLE extra (x INTEGER)' };
 
-    expect(runMigrations(db, [...MIGRATIONS, extra])).toEqual([4]);
+    expect(runMigrations(db, [...MIGRATIONS, extra])).toEqual([5]);
     expect(tableNames(db)).toContain('extra');
   });
 
@@ -60,14 +62,14 @@ describe('runMigrations', () => {
     const db = new DatabaseSync(':memory:');
     runMigrations(db);
     const broken: Migration = {
-      version: 4,
+      version: 5,
       name: 'broken',
       sql: 'CREATE TABLE half (x INTEGER); THIS IS NOT SQL;',
     };
 
-    expect(() => runMigrations(db, [...MIGRATIONS, broken])).toThrow(/La migración 4 \(broken\) falló/);
+    expect(() => runMigrations(db, [...MIGRATIONS, broken])).toThrow(/La migración 5 \(broken\) falló/);
     expect(tableNames(db)).not.toContain('half');
-    expect(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get()).toEqual({ n: 3 });
+    expect(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get()).toEqual({ n: 4 });
   });
 
   it('las restricciones rechazan modos y estados inválidos', () => {

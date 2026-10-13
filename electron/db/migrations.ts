@@ -119,6 +119,18 @@ export const MIGRATIONS: readonly Migration[] = [
       END;
     `,
   },
+  {
+    version: 4,
+    name: 'used-session-ids',
+    sql: `
+      -- Configuración (ORION #7): "Borrar historial" elimina sesiones, pero sus ids quedan aquí
+      -- para que un archivo .yaleh ya usado no se pueda volver a abrir (uso único).
+      CREATE TABLE used_session_ids (
+        id         TEXT PRIMARY KEY,
+        cleared_at TEXT NOT NULL
+      );
+    `,
+  },
 ];
 
 /**

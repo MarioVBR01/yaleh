@@ -10,7 +10,8 @@
  */
 
 import { useEffect, useMemo, useRef, type ComponentType } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
+import { TEXT_SCALES } from '@shared/settings';
 import { AppProvider, useApp } from './context/AppContext';
 import { getElectronAPI, isElectron } from './lib/electron';
 import { watchUser } from './firebase/auth';
@@ -27,6 +28,7 @@ import ConfirmSessionPhase from './phases/ConfirmSessionPhase';
 import ResumeSessionPhase from './phases/ResumeSessionPhase';
 import SessionCompletePhase from './phases/SessionCompletePhase';
 import KioskLayout from './kiosk/KioskLayout';
+import SettingsPhase from './settings/SettingsPhase';
 
 /** Propiedades de animación de entrada para transiciones de fase */
 const fadeIn = { opacity: 1, scale: 1 };
@@ -42,6 +44,7 @@ const PHASE_COMPONENTS: Record<AppPhase, ComponentType> = {
   'resume-offer': ResumeSessionPhase,
   kiosk: KioskLayout,
   'session-complete': SessionCompletePhase,
+  settings: SettingsPhase,
 };
 
 /**
@@ -95,6 +98,27 @@ function useConnectionMode() {
       window.removeEventListener('offline', recheck);
     };
   }, [dispatch]);
+}
+
+/**
+ * Escritorio: configuración (ORION #7). Tamaño del texto (escala la raíz: la interfaz usa rem)
+ * y reducir animaciones (clase en <html> + MotionConfig).
+ */
+function useDesktopSettings() {
+  const { state, dispatch } = useApp();
+  const settings = state.settings?.settings;
+
+  useEffect(() => {
+    const api = getElectronAPI();
+    if (!api) return;
+    void api.settings.get().then(snapshot => dispatch({ type: 'SET_SETTINGS', payload: snapshot }));
+  }, [dispatch]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.fontSize = settings ? `${TEXT_SCALES[settings.textScale].percent}%` : '';
+    root.classList.toggle('reduce-motion', Boolean(settings?.reduceMotion));
+  }, [settings]);
 }
 
 /** Escritorio: estado del asistente sin conexión (requisitos, descarga, instalación). */
@@ -216,6 +240,7 @@ function AppContent() {
   useSessionRecovery();
   useConnectionMode();
   useLocalAiStatus();
+  useDesktopSettings();
   useAuthSync();
   useWebWorkspace();
   useSessionFileResults();
@@ -227,21 +252,23 @@ function AppContent() {
   const showAccount = !getElectronAPI() && state.session.isAuthenticated && phase !== 'login';
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
-      {showAccount && <WebAccountBar />}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={phase}
-          className={phase === 'kiosk' ? 'h-screen' : 'h-screen overflow-y-auto'}
-          initial={fadeOut}
-          animate={fadeIn}
-          exit={fadeOut}
-          transition={{ duration: 0.3 }}
-        >
-          <Phase />
-        </motion.div>
-      </AnimatePresence>
-    </div>
+    <MotionConfig reducedMotion={state.settings?.settings.reduceMotion ? 'always' : 'user'}>
+      <div className="min-h-screen bg-canvas text-ink">
+        {showAccount && <WebAccountBar />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={phase}
+            className={phase === 'kiosk' ? 'h-screen' : 'h-screen overflow-y-auto'}
+            initial={fadeOut}
+            animate={fadeIn}
+            exit={fadeOut}
+            transition={{ duration: 0.3 }}
+          >
+            <Phase />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </MotionConfig>
   );
 }
 

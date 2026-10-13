@@ -50,3 +50,28 @@ export function listSessionHistory(db: DatabaseSync, limit = 500): SessionHistor
     endReason: r.end_reason === 'completed' || r.end_reason === 'dev-release' ? r.end_reason : null,
   }));
 }
+
+/**
+ * Borra el historial y las estadísticas (ORION #7): las sesiones que no están en curso y todos
+ * los eventos que no pertenecen a una sesión en curso. Los ids borrados se guardan en
+ * `used_session_ids` para que los .yaleh sigan siendo de uso único. No toca fuentes ni notas.
+ * Devuelve cuántas sesiones borró.
+ */
+export function clearSessionHistory(db: DatabaseSync, now: Date = new Date()): number {
+  db.exec('BEGIN');
+  try {
+    db.prepare(
+      `INSERT OR IGNORE INTO used_session_ids (id, cleared_at) SELECT id, ? FROM sessions WHERE status <> 'active'`
+    ).run(now.toISOString());
+    db.prepare(
+      `DELETE FROM session_events
+       WHERE session_id IS NULL OR session_id NOT IN (SELECT id FROM sessions WHERE status = 'active')`
+    ).run();
+    const result = db.prepare(`DELETE FROM sessions WHERE status <> 'active'`).run();
+    db.exec('COMMIT');
+    return Number(result.changes);
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}

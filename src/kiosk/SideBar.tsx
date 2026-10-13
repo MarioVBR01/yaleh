@@ -2,7 +2,7 @@
  * @file SideBar.tsx
  * @description Barra Lateral Izquierda del entorno Kiosko de YALEH.
  * Brief, sección 5.3: Espacio de trabajo, Estadísticas, Pomodoro, Herramientas
- * (solo con conexión), Historial de sesiones y Configuración (próximamente).
+ * (solo con conexión), Historial de sesiones y Configuración (ORION #7).
  * En el escritorio agrega los editores de ofimática. Se oculta con el botón lateral.
  * Soporta menús desplegables internos (App Drawers).
  */
@@ -339,13 +339,16 @@ export default function SideBar({ collapsed }: SideBarProps) {
         </div>
         )}
 
-        {/* Configuración: botón visible; su función se define después (brief 5.3) */}
-        <NavItem
-          icon={<Settings size={18} />}
-          label="Configuración (próximamente)"
-          onClick={() => {}}
-          collapsed={collapsed}
-        />
+        {/* Configuración (ORION #7): dentro de la sesión solo lo inofensivo */}
+        {isDesktop && (
+          <NavItem
+            icon={<Settings size={18} />}
+            label="Configuración"
+            active={activeTab?.type === 'settings'}
+            onClick={() => openTab({ type: 'settings', title: 'Configuración', icon: '⚙️' })}
+            collapsed={collapsed}
+          />
+        )}
       </nav>
 
       {/* Footer de la sidebar */}

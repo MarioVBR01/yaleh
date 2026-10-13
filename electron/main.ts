@@ -60,7 +60,9 @@ import { findSessionFileInArgv, openSessionFile } from './session-file-service';
 import { runSmokeTest } from './smoke';
 import { TabManager } from './tabs/tab-manager';
 import { exportOfficeFile } from './office/export';
-import { listSessionHistory } from './db/history';
+import { clearSessionHistory, listSessionHistory } from './db/history';
+import { getProfileName, loadSettings, saveSettings, setProfileName } from './settings-store';
+import { isKioskSafePatch, normalizeProfileName, validateSettingsPatch, type SettingsSnapshot } from '../shared/settings';
 import { exportHistoryPdf } from './history-export';
 import { LocalAiError, LocalAiService, type WorkerHandle } from './local-ai/service';
 
@@ -238,9 +240,11 @@ function registerIpcHandlers(): void {
   handle(IPC_INVOKE.sessionGetState, () => controller.getSnapshot());
   handle(IPC_INVOKE.sessionResume, () => controller.resume());
   // Extender la sesión que acaba de terminar (ORION #2): lo decide el controlador.
-  handle(IPC_INVOKE.sessionExtend, (_event, extraSeconds) =>
-    controller.extend(parseDurationSeconds(extraSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60))
-  );
+  handle(IPC_INVOKE.sessionExtend, (_event, extraSeconds) => {
+    // Configuración (ORION #7): se puede desactivar.
+    if (!loadSettings(db).allowExtend) throw new Error('Extender la sesión está desactivado en la configuración.');
+    return controller.extend(parseDurationSeconds(extraSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60));
+  });
   handle(IPC_INVOKE.sessionDiscardResume, () => controller.discardResume());
 
   // Archivo de sesión: el diálogo del sistema solo existe fuera de la sesión.
@@ -287,12 +291,51 @@ function registerIpcHandlers(): void {
   // Exportar el historial a PDF (ORION #8): datos de SQLite, guardado sin diálogo.
   handle(IPC_INVOKE.historyExportPdf, async (): Promise<OfficeExportResult> => {
     try {
-      const filePath = await exportHistoryPdf(listSessionHistory(db), path.join(app.getPath('documents'), 'YALEH'), renderHtmlToPdf);
+      const filePath = await exportHistoryPdf(listSessionHistory(db), exportDirectory(), renderHtmlToPdf, new Date(), getProfileName(db));
       return { ok: true, path: filePath };
     } catch (error) {
       console.error('[historial] No se pudo exportar el PDF:', error);
       return { ok: false, message: 'No se pudo exportar el historial a PDF.' };
     }
+  });
+
+  // Configuración (ORION #7). Nunca afloja el kiosko: durante la sesión solo se cambia lo inofensivo.
+  const outsideSession = (what: string) => {
+    if (isLocked()) throw new Error(`${what} solo se puede cambiar fuera de la sesión, desde la pantalla de inicio.`);
+  };
+  handle(IPC_INVOKE.settingsGet, () => settingsSnapshot());
+  handle(IPC_INVOKE.settingsUpdate, (_event, patch) => {
+    const parsed = validateSettingsPatch(patch);
+    if (!isKioskSafePatch(parsed)) outsideSession('Esta opción');
+    const saved = saveSettings(db, parsed);
+    if (parsed.localAiGpu) localAi.setGpu(saved.localAiGpu === 'cpu' ? false : 'auto');
+    return settingsSnapshot();
+  });
+  handle(IPC_INVOKE.settingsSetProfileName, (_event, name) => {
+    outsideSession('El nombre');
+    setProfileName(db, normalizeProfileName(name));
+    return settingsSnapshot();
+  });
+  handle(IPC_INVOKE.settingsChooseExportDir, async () => {
+    outsideSession('La carpeta de exportaciones');
+    if (!mainWindow) return settingsSnapshot();
+    const choice = await dialog.showOpenDialog(mainWindow, {
+      title: 'Carpeta para las exportaciones de YALEH',
+      defaultPath: exportDirectory(),
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    const dir = choice.filePaths[0];
+    if (!choice.canceled && dir && path.isAbsolute(dir) && fs.existsSync(dir)) saveSettings(db, { exportDir: dir });
+    return settingsSnapshot();
+  });
+  handle(IPC_INVOKE.settingsResetExportDir, () => {
+    outsideSession('La carpeta de exportaciones');
+    saveSettings(db, { exportDir: null });
+    return settingsSnapshot();
+  });
+  handle(IPC_INVOKE.historyClear, () => {
+    outsideSession('El historial');
+    return clearSessionHistory(db);
   });
 
   // Asistente sin conexión (revisión 1.8). La descarga solo con conexión y fuera de la sesión.
@@ -314,7 +357,7 @@ function registerIpcHandlers(): void {
   // Ofimática: se guarda directo en Documentos\\YALEH, sin diálogo del sistema (brief, sección 6.1).
   handle(IPC_INVOKE.officeExport, async (_event, request): Promise<OfficeExportResult> => {
     try {
-      const filePath = await exportOfficeFile(parseOfficeRequest(request), path.join(app.getPath('documents'), 'YALEH'));
+      const filePath = await exportOfficeFile(parseOfficeRequest(request), exportDirectory());
       return { ok: true, path: filePath };
     } catch (error) {
       console.error('[ofimática] No se pudo exportar:', error);
@@ -334,6 +377,15 @@ function registerIpcHandlers(): void {
     }
     app.quit();
   });
+}
+
+/** Carpeta de las exportaciones (ORION #7): la elegida en la configuración o Documentos\\YALEH. */
+function exportDirectory(): string {
+  return loadSettings(db).exportDir ?? path.join(app.getPath('documents'), 'YALEH');
+}
+
+function settingsSnapshot(): SettingsSnapshot {
+  return { settings: loadSettings(db), profileName: getProfileName(db), exportDirResolved: exportDirectory(), sessionActive: isLocked() };
 }
 
 /**
@@ -536,6 +588,7 @@ function bootstrap(): void {
         stdio: 'inherit',
       }) as unknown as WorkerHandle,
   });
+  localAi.setGpu(loadSettings(db).localAiGpu === 'cpu' ? false : 'auto');
   if (isPackaged) Menu.setApplicationMenu(null);
 
   installSessionGuards();

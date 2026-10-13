@@ -162,6 +162,14 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 - **Historial y estadísticas:** `history:list` → `listSessionHistory(db)` (contadores de `focus-lost`, `connection-lost`, `session-interrupted` y motivo del fin). `computeStats` en la interfaz. Solo suman minutos las sesiones completadas (no se registra cuánto duró una interrumpida). En el navegador: "Disponible en la aplicación de escritorio".
 - **Sincronización con Firestore:** versión 2 (revisión 1.7).
 
+## Configuración (ORION #7)
+
+- **Dónde:** botón "Configuración" en la bienvenida (fase `settings`, todo editable) y en la barra lateral del kiosko (pestaña `settings`, solo lo inofensivo). Vista: `src/settings/SettingsView.tsx`.
+- **Datos:** `shared/settings.ts` (tipo, valores predeterminados, validación, `KIOSK_SAFE_SETTINGS`); `electron/settings-store.ts` guarda en `settings` (clave `app-settings`) y el nombre en `local_profile`. IPC `settings:*` e `history:clear`.
+- **Regla:** nunca afloja el kiosko. Durante la sesión el proceso principal solo acepta `textScale` y `reduceMotion`; nombre, carpeta y borrado del historial, solo fuera. `exportDir` solo se elige con el diálogo del proceso principal.
+- **Qué hace cada opción:** duración predeterminada (vista de duración), aviso de fin en la barra inferior, permitir extender (también lo comprueba `session:extend`), GPU/CPU del modelo local, carpeta de exportaciones (ofimática y PDF del historial), exportar o borrar el historial (migración 4: `used_session_ids` conserva el uso único de los .yaleh), tamaño del texto (escala la raíz) y reducir animaciones (clase `reduce-motion` + `MotionConfig`), nombre del estudiante (saludo y PDF), Acerca de.
+- **Modo nocturno:** el interruptor existe pero está deshabilitado; se activa en la fase de diseño.
+
 ## Modos online / offline (fase 3)
 
 - **Detección (proceso principal, `connectivity.ts`):** online si `net.isOnline()` y la web de YALEH responde una petición HEAD en menos de 5 s (cualquier código HTTP cuenta). Se repite cada 30 s, al volver de la suspensión (`powerMonitor`) y cuando la interfaz ve eventos `online`/`offline` (solo piden una nueva comprobación; decide el proceso principal). Parámetros en `CONNECTIVITY` (`shared/config.ts`).
