@@ -2,6 +2,8 @@
  * @file StatsPanel.tsx
  * @description Estadísticas de concentración (fase 10), calculadas con el historial de SQLite:
  * minutos por día y por semana, completadas frente a interrumpidas y pérdidas de foco promedio.
+ * Junto al gráfico redondo, recuadros con las completadas y las interrumpidas (cantidad y % del
+ * total), y debajo las 10 últimas sesiones del historial (ORION #6).
  */
 
 import { useMemo } from 'react';
@@ -10,6 +12,10 @@ import { motion } from 'framer-motion';
 import { Clock, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
 import { computeStats, formatDuration } from '@/lib/stats';
 import { useSessionHistory } from '@/lib/useSessionHistory';
+import SessionTable from './SessionTable';
+
+/** Sesiones recientes que se muestran debajo de los gráficos. */
+const RECENT_SESSIONS = 10;
 
 /** Mismos valores que los tokens de src/index.css (recharts necesita colores literales). */
 const COLORS = {
@@ -42,6 +48,21 @@ function MinutesChart({ title, data }: { title: string; data: { label: string; m
           <Bar dataKey="minutes" name="Minutos" fill={COLORS.accent} radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
+    </div>
+  );
+}
+
+/** Recuadro con la cantidad de sesiones de un tipo y su porcentaje del total. */
+function OutcomeBox({ label, value, total, tone }: { label: string; value: number; total: number; tone: 'success' | 'danger' }) {
+  const percent = total > 0 ? Math.round((value / total) * 1000) / 10 : 0;
+  const styles = tone === 'success' ? 'bg-success/10 border-success text-success' : 'bg-danger/10 border-danger text-danger';
+  return (
+    <div className={`p-4 rounded-xl border-l-4 ${styles}`} data-testid={`outcome-${tone}`}>
+      <p className="text-ink-soft text-sm font-medium flex items-center gap-2">
+        <span className={`w-2.5 h-2.5 rounded-full ${tone === 'success' ? 'bg-success' : 'bg-danger'}`} /> {label}
+      </p>
+      <p className="text-3xl font-bold mt-1">{value}</p>
+      <p className="text-ink-subtle text-xs">{String(percent).replace('.', ',')} % del total</p>
     </div>
   );
 }
@@ -108,6 +129,7 @@ export default function StatsPanel() {
             {outcome.length > 0 && (
               <div className="p-4 rounded-2xl bg-surface border border-line">
                 <h3 className="text-ink font-semibold text-sm mb-4">Sesiones completadas e interrumpidas</h3>
+                <div className="grid gap-4 md:grid-cols-[220px_1fr] items-center">
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie data={outcome} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
@@ -119,8 +141,23 @@ export default function StatsPanel() {
                     <Legend wrapperStyle={{ fontSize: 12, color: COLORS.axis }} />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <OutcomeBox label="Completadas" value={stats.completed} total={stats.sessions} tone="success" />
+                  <OutcomeBox label="Interrumpidas" value={stats.interrupted} total={stats.sessions} tone="danger" />
+                </div>
+                </div>
               </div>
             )}
+
+            <div className="p-4 rounded-2xl bg-surface border border-line">
+              <h3 className="text-ink font-semibold text-sm mb-3">Sesiones recientes</h3>
+              <p className="text-ink-subtle text-[11px] mb-2">
+                Las {RECENT_SESSIONS} últimas. El historial completo está en "Historial de sesiones".
+              </p>
+              <div className="overflow-x-auto">
+                <SessionTable entries={entries.slice(0, RECENT_SESSIONS)} />
+              </div>
+            </div>
           </>
         )}
       </div>

@@ -44,8 +44,27 @@ describe('StatsPanel', () => {
   it('muestra minutos de las completadas y el promedio de pérdidas de foco', async () => {
     createElectronMock({ history }).install();
     render(<StatsPanel />);
-    expect(await screen.findByText('25 min')).toBeTruthy();
+    expect((await screen.findAllByText('25 min')).length).toBeGreaterThan(0);
     expect(screen.getByText('Pérdidas de foco por sesión').previousElementSibling?.textContent).toBe('3');
+  });
+
+  it('junto al gráfico redondo: completadas e interrumpidas con su % del total (ORION #6)', async () => {
+    createElectronMock({ history }).install();
+    render(<StatsPanel />);
+    const done = await screen.findByTestId('outcome-success');
+    expect(done.textContent).toContain('Completadas');
+    expect(done.textContent).toContain('1');
+    expect(done.textContent).toContain('50 % del total');
+    expect(screen.getByTestId('outcome-danger').textContent).toContain('Interrumpidas');
+  });
+
+  it('debajo muestra solo las 10 últimas sesiones del historial (ORION #6)', async () => {
+    const many = Array.from({ length: 14 }, (_, i) => ({ ...history[1], id: 's' + i, startedAt: now - i * 3_600_000 }));
+    createElectronMock({ history: many }).install();
+    render(<StatsPanel />);
+    expect(await screen.findByText('Sesiones recientes')).toBeTruthy();
+    const table = screen.getByText('Sesiones recientes').parentElement!.querySelector('tbody')!;
+    expect(table.querySelectorAll('tr')).toHaveLength(10);
   });
 
   it('sin sesiones lo dice', async () => {
