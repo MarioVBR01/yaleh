@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { displayHost, isUrlAllowed } from './allowlist';
+import { TOOL_LINKS, WORKSPACE_LINKS } from './config';
 
 describe('isUrlAllowed', () => {
   it.each([
@@ -9,7 +10,6 @@ describe('isUrlAllowed', () => {
     'https://docs.google.com/document/d/abc/edit',
     'https://classroom.google.com/c/123',
     'https://accounts.google.com/signin',
-    'https://gamma.app/docs/abc',
     'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
     'https://www.google.com/recaptcha/enterprise/anchor?k=x',
   ])('permite %s', url => {
@@ -25,7 +25,8 @@ describe('isUrlAllowed', () => {
     ['Moodle del TECBA (ORION #14)', 'https://moodle-108854-0.cloudclusters.net/login/'],
     ['Canva (ORION #15)', 'https://www.canva.com/design/xyz'],
     ['Canva sin www (ORION #15)', 'https://canva.com/'],
-    ['dominio que solo termina igual', 'https://evilgamma.app/'],
+    ['Gamma (ORION #16)', 'https://gamma.app/docs/abc'],
+    ['dominio que solo termina igual', 'https://xyaleh-fbe1c.web.app/'],
     ['dominio con sufijo engañoso', 'https://docs.google.com.evil.io/'],
     ['credenciales incrustadas', 'https://user@docs.google.com/'],
     ['puerto no estándar', 'https://docs.google.com:8443/'],
@@ -50,5 +51,15 @@ describe('isUrlAllowed', () => {
 describe('displayHost', () => {
   it('quita www. y devuelve el host', () => {
     expect(displayHost('https://www.youtube-nocookie.com/embed/x')).toBe('youtube-nocookie.com');
+  });
+});
+
+describe('herramientas (ORION #14 a #16)', () => {
+  it('quedan solo Google Docs, Sheets, Slides y Classroom', () => {
+    expect([...WORKSPACE_LINKS, ...TOOL_LINKS].map(t => t.name)).toEqual(['Google Docs', 'Google Sheets', 'Google Slides', 'Google Classroom']);
+  });
+
+  it('todas las herramientas están en la lista de sitios permitidos', () => {
+    for (const tool of [...WORKSPACE_LINKS, ...TOOL_LINKS]) expect(isUrlAllowed(tool.url)).toBe(true);
   });
 });

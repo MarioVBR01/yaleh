@@ -42,7 +42,6 @@ export const ALLOWED_SITES: readonly AllowedSite[] = [
   { host: 'accounts.youtube.com', reason: 'Paso del inicio de sesión de Google que fija la sesión' },
   { host: 'www.google.com', pathPrefix: '/recaptcha/', reason: 'App Check (Fraud Defense) en la fase 4' },
 
-  { host: 'gamma.app', includeSubdomains: true, reason: 'Gamma' },
   { host: 'www.youtube-nocookie.com', reason: 'Reproductor de YouTube embebido (fase 8)' },
 ];
 
@@ -64,10 +63,9 @@ export interface ToolLink {
   icon: string;
 }
 
-/** Herramientas autorizadas (brief, secciones 5.3 y 9). */
+/** Herramientas autorizadas (brief, secciones 5.3 y 9). Moodle, Canva y Gamma se retiraron (ORION #14 a #16). */
 export const TOOL_LINKS: readonly ToolLink[] = [
   { id: 'classroom', name: 'Google Classroom', url: 'https://classroom.google.com', icon: '🖥️' },
-  { id: 'gamma', name: 'Gamma', url: 'https://gamma.app', icon: '📊' },
 ];
 
 /** Aplicaciones de Google Workspace del sidebar. */

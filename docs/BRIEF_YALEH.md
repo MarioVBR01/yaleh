@@ -15,7 +15,7 @@ YALEH es un entorno de estudio para estudiantes del TECBA con problemas de conce
 - **Web:** el centro de trabajo con IA. El estudiante inicia sesión, carga sus materiales, trabaja con el asistente y prepara su sesión de concentración.
 - **Escritorio (Electron):** bloquea el sistema operativo durante la sesión, al estilo de Safe Exam Browser. Funciona con o sin internet.
 
-No hay navegación libre por internet. La información la busca el asistente de IA, y el estudiante solo accede a herramientas autorizadas: Google Workspace, Gamma y Classroom (Moodle y Canva se retiraron, ORION #14 y #15).
+No hay navegación libre por internet. La información la busca el asistente de IA, y el estudiante solo accede a herramientas autorizadas: Google Docs, Hojas y Presentaciones (Workspace) y Classroom (Moodle, Canva y Gamma se retiraron, ORION #14 a #16).
 
 El proyecto parte del MVP existente ("Safe Research Browser"), que se **reorganiza**, no se rehace.
 
@@ -116,7 +116,7 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 3. Confirma la sesión en la pantalla de confirmación.
 4. Se activa el kiosko. El modo lo decide el proceso principal según la conexión en ese momento.
 
-**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Gamma) no se muestran. La IA la atiende el asistente sin conexión si está descargado (sección 7.5); si no, muestra "Disponible próximamente" con la indicación para descargarlo.
+**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace y Classroom) no se muestran. La IA la atiende el asistente sin conexión si está descargado (sección 7.5); si no, muestra "Disponible próximamente" con la indicación para descargarlo.
 
 ### 4.3 Durante la sesión (ambos modos)
 
@@ -167,7 +167,7 @@ En pantallas angostas, las columnas se convierten en pestañas. El mapa mental q
 
 - **Estadísticas** (dashboard).
 - **Pomodoro.**
-- **Herramientas:** Google Workspace, Gamma y Classroom. En el navegador se abren en una pestaña nueva del navegador; en el kiosko, en pestañas internas.
+- **Herramientas:** Google Docs, Hojas y Presentaciones, y Classroom. En el navegador se abren en una pestaña nueva del navegador; en el kiosko, en pestañas internas.
 - **Actividades recientes:** sesiones pasadas.
 - **Configuración:** botón visible; su función se define después.
 
@@ -191,7 +191,7 @@ Barra superior completa (buscador y botón de configuración), Enciclopedia SRB,
 | Inicio | Bienvenida: "Iniciar" (flujo local) o "Abrir archivo de sesión (.yaleh)" | Igual |
 | Vista principal | La interfaz de YALEH (Fuentes · Chat · Estudio) con las fuentes guardadas en SQLite | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
 | Asistente de IA | Sí (Gemini, "Asistente en línea") | Sí, si se descargó el modelo ("Asistente sin conexión"): chat, resumen y tarjetas. Cuestionario, informe y Wikipedia, solo con conexión |
-| Workspace, Gamma, Classroom | Pestañas internas | No visibles |
+| Workspace (Docs, Hojas, Presentaciones) y Classroom | Pestañas internas | No visibles |
 | Reproductor de YouTube | Sí | No |
 | Editores de ofimática | Eliminados (ORION #12): Google Docs, Hojas y Presentaciones en las pestañas | Eliminados: notas e IA sin conexión |
 | Notas, archivos y Pomodoro | Sí | Sí |
@@ -372,7 +372,6 @@ Todo el bloqueo se aplica en el **proceso principal**, nunca en la interfaz. Ver
 | `accounts.google.com` | Inicio de sesión de Google |
 | `accounts.youtube.com` | Paso del inicio de sesión de Google que fija la sesión; sin él el login se interrumpe |
 | `www.google.com`, solo la ruta `/recaptcha/` | App Check (Fraud Defense) carga su marco desde ahí (fase 4) |
-| `gamma.app` y subdominios | Gamma |
 | `www.youtube-nocookie.com` | Reproductor de YouTube embebido (fase 8) |
 | `localhost:5173` | Servidor de Vite, solo sin empaquetar |
 
@@ -574,3 +573,13 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | 59 | Fragmentos | FTS5 de SQLite (migración 3); solo los fragmentos relevantes, dentro del contexto del modelo |
 | 60 | Funciones sin conexión | Chat, resumen y tarjetas. Cuestionario, informe y Wikipedia solo con conexión |
 | 61 | Respuestas breves sin conexión | Chat de ~150 tokens (más si se pide detalle), 4 ideas clave, 5 tarjetas y aviso de que es más lento |
+
+### Revisión 1.9 — 14/10/2026 (ajustes del sprint de pruebas en ORION)
+
+| # | Tema | Decisión |
+| --- | --- | --- |
+| 62 | Ofimática | Se eliminan los editores propios (ORION #12). Con conexión, Google Docs, Hojas y Presentaciones en las pestañas; sin conexión, notas e IA sin conexión. Se conserva la generación de `.pptx` para la presentación de Gemini |
+| 63 | Herramientas | Se retiran Moodle, Canva y Gamma (ORION #14 a #16): no cargaban después de iniciar sesión dentro del kiosko o no hacían falta. Quedan Google Docs, Sheets, Slides y Classroom |
+| 64 | Minutos de las estadísticas | Cuentan el tiempo realmente estudiado de cada sesión, medido por el proceso principal (ORION #11) |
+| 65 | Extender la sesión | También durante los últimos 5 minutos, desde la barra inferior, y con minutos propios (ORION #10) |
+| 66 | Aviso de tiempo restante | Notificación dentro de YALEH a los minutos elegidos en la configuración (ORION #13) |
