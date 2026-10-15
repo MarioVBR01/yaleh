@@ -24,18 +24,26 @@ describe('validateSettingsPatch', () => {
       defaultSessionMinutes: 50, endWarningMinutes: 10, allowExtend: false, localAiGpu: 'cpu', textScale: 'large', reduceMotion: true,
     });
     expect(validateSettingsPatch({ defaultSessionMinutes: null })).toEqual({ defaultSessionMinutes: null });
+    expect(validateSettingsPatch({ endWarningMinutes: 3, alarmVolume: 0, alarmSound: 'digital', highContrast: true, dyslexiaFont: true })).toEqual({
+      endWarningMinutes: 3, alarmVolume: 0, alarmSound: 'digital', highContrast: true, dyslexiaFont: true,
+    });
   });
 
   it('rechaza valores fuera de rango, opciones desconocidas y la carpeta (solo la elige el proceso principal)', () => {
     expect(() => validateSettingsPatch({ defaultSessionMinutes: 500 })).toThrow(/entre 1 y 180/);
-    expect(() => validateSettingsPatch({ endWarningMinutes: 3 })).toThrow();
+    expect(() => validateSettingsPatch({ endWarningMinutes: 61 })).toThrow(/entre 1 y 60/);
+    expect(() => validateSettingsPatch({ alarmVolume: 150 })).toThrow();
+    expect(() => validateSettingsPatch({ alarmSound: 'sirena' })).toThrow();
     expect(() => validateSettingsPatch({ textScale: 'enorme' })).toThrow();
     expect(() => validateSettingsPatch({ exportDir: 'C:\\' })).toThrow(/desconocida/);
     expect(() => validateSettingsPatch({ allowedSites: [] })).toThrow(/desconocida/);
   });
 
-  it('durante la sesión solo es inofensivo el tamaño del texto y las animaciones', () => {
+  it('durante la sesión: accesibilidad, alarmas y aviso de fin (ORION #19); nunca lo que toca la sesión', () => {
     expect(isKioskSafePatch({ textScale: 'xlarge', reduceMotion: true })).toBe(true);
+    expect(isKioskSafePatch({ highContrast: true, dyslexiaFont: true, alarmVolume: 30, alarmSound: 'suave', endWarningMinutes: 7 })).toBe(true);
+    expect(isKioskSafePatch({ defaultSessionMinutes: 30 })).toBe(false);
+    expect(isKioskSafePatch({ localAiGpu: 'cpu' })).toBe(false);
     expect(isKioskSafePatch({ allowExtend: true })).toBe(false);
     expect(isKioskSafePatch({ textScale: 'large', defaultSessionMinutes: 10 })).toBe(false);
   });

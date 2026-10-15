@@ -18,7 +18,7 @@ import SettingsView from './SettingsView';
 afterEach(() => {
   uninstallElectronMock();
   document.documentElement.style.fontSize = '';
-  document.documentElement.classList.remove('reduce-motion');
+  document.documentElement.classList.remove('reduce-motion', 'high-contrast', 'dyslexia-font');
 });
 
 const snapshot = (settings: Partial<AppSettings> = {}, sessionActive = false) => ({
@@ -91,10 +91,50 @@ describe('SettingsView', () => {
     const extend = (await screen.findByRole('switch', { name: 'Permitir extender la sesión' })) as HTMLButtonElement;
     expect(extend.disabled).toBe(true);
     expect((screen.getByLabelText('Duración predeterminada en minutos') as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByLabelText('Nombre del estudiante') as HTMLInputElement).disabled).toBe(true);
+    // Lo inofensivo sí se puede durante la sesión (ORION #19): nombre, accesibilidad, alarmas y aviso.
+    expect((screen.getByLabelText('Nombre del estudiante') as HTMLInputElement).disabled).toBe(false);
+    expect((screen.getByRole('switch', { name: 'Alto contraste' }) as HTMLButtonElement).disabled).toBe(false);
     expect((within(section('Datos')).getByText('Borrar') as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByText('Muy grande'));
     expect(mock.api.settings.update).toHaveBeenCalledWith({ textScale: 'xlarge' });
+  });
+});
+
+describe('opciones del kiosko (ORION #19)', () => {
+  it('dentro de la sesión se cambian el aviso (minutos libres), el volumen, el sonido y el nombre', async () => {
+    const mock = renderSettings(true);
+    const warning = await screen.findByLabelText('Minutos del aviso antes de que termine');
+    fireEvent.change(warning, { target: { value: '7' } });
+    fireEvent.blur(warning);
+    expect(mock.api.settings.update).toHaveBeenCalledWith({ endWarningMinutes: 7 });
+
+    fireEvent.change(screen.getByLabelText('Volumen de las alarmas'), { target: { value: '30' } });
+    expect(mock.api.settings.update).toHaveBeenCalledWith({ alarmVolume: 30 });
+    fireEvent.change(screen.getByLabelText('Sonido de las alarmas'), { target: { value: 'suave' } });
+    expect(mock.api.settings.update).toHaveBeenCalledWith({ alarmSound: 'suave' });
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Tipografía para dislexia' }));
+    expect(mock.api.settings.update).toHaveBeenCalledWith({ dyslexiaFont: true });
+
+    fireEvent.change(screen.getByLabelText('Nombre del estudiante'), { target: { value: 'Ana' } });
+    fireEvent.click(within(section('Perfil')).getByText('Guardar'));
+    expect(await screen.findByText('Nombre guardado.')).toBeTruthy();
+  });
+
+  it('el aviso fuera de rango muestra el motivo y no se guarda', async () => {
+    const mock = renderSettings(true);
+    const warning = await screen.findByLabelText('Minutos del aviso antes de que termine');
+    fireEvent.change(warning, { target: { value: '90' } });
+    fireEvent.blur(warning);
+    expect(screen.getByRole('alert').textContent).toMatch(/entre 1 y 60/);
+    expect(mock.api.settings.update).not.toHaveBeenCalled();
+  });
+
+  it('alto contraste y tipografía para dislexia se aplican a toda la interfaz', async () => {
+    createElectronMock({ settings: { highContrast: true, dyslexiaFont: true } }).install();
+    render(<App />);
+    await waitFor(() => expect(document.documentElement.classList.contains('high-contrast')).toBe(true));
+    expect(document.documentElement.classList.contains('dyslexia-font')).toBe(true);
   });
 });
 

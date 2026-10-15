@@ -7,6 +7,9 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { DEFAULT_SETTINGS } from '@shared/settings';
+import { useApp } from '../context/AppContext';
+import { playAlarm } from '../lib/alarm';
 
 export type PomodoroMode = 'work' | 'short-break' | 'long-break';
 
@@ -54,36 +57,6 @@ export interface PomodoroApi extends PomodoroState {
 
 const PomodoroContext = createContext<PomodoroApi | null>(null);
 
-function playBeep(frequency = 880, duration = 400, type: OscillatorType = 'sine') {
-  try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new AudioCtx();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.frequency.value = frequency;
-    oscillator.type = type;
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + duration / 1000);
-  } catch {
-    // Sin Web Audio: sin sonido.
-  }
-}
-
-function playAlert(finished: PomodoroMode) {
-  if (finished === 'work') {
-    playBeep(523, 200);
-    setTimeout(() => playBeep(659, 200), 250);
-    setTimeout(() => playBeep(784, 400), 500);
-  } else {
-    playBeep(440, 300, 'triangle');
-    setTimeout(() => playBeep(550, 400, 'triangle'), 350);
-  }
-}
-
 /** Modo siguiente: tras el trabajo, descanso (largo cada 4 ciclos); tras un descanso, trabajo. */
 export function nextPomodoroMode(mode: PomodoroMode, cyclesAfter: number): PomodoroMode {
   if (mode !== 'work') return 'work';
@@ -109,6 +82,13 @@ export function PomodoroProvider({ children, now = () => Date.now() }: { childre
   const endsAt = useRef<number | null>(null);
   const nowRef = useRef(now);
   nowRef.current = now;
+  // Sonido y volumen de las alarmas, de la configuración (ORION #19).
+  const { state: app } = useApp();
+  const alarm = useRef({ sound: DEFAULT_SETTINGS.alarmSound, volume: DEFAULT_SETTINGS.alarmVolume });
+  alarm.current = {
+    sound: app.settings?.settings.alarmSound ?? DEFAULT_SETTINGS.alarmSound,
+    volume: app.settings?.settings.alarmVolume ?? DEFAULT_SETTINGS.alarmVolume,
+  };
 
   const tick = useCallback(() => {
     setState(prev => {
@@ -120,7 +100,7 @@ export function PomodoroProvider({ children, now = () => Date.now() }: { childre
 
       // Fin del ciclo: alerta y se prepara el siguiente modo (en pausa).
       endsAt.current = null;
-      if (prev.soundEnabled) playAlert(prev.mode);
+      if (prev.soundEnabled) playAlarm(alarm.current.sound, alarm.current.volume, prev.mode === 'work' ? 'work' : 'break');
       const cycles = prev.mode === 'work' ? prev.cycles + 1 : prev.cycles;
       const mode = nextPomodoroMode(prev.mode, cycles);
       return { ...prev, running: false, mode, cycles, workSeconds, secondsLeft: prev.minutes[mode] * 60 };

@@ -141,7 +141,6 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
         return settingsSnapshot;
       }),
       setProfileName: vi.fn(async name => {
-        outside();
         settingsSnapshot = { ...settingsSnapshot, profileName: name };
         return settingsSnapshot;
       }),

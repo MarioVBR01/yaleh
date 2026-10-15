@@ -311,8 +311,8 @@ function registerIpcHandlers(): void {
     if (parsed.localAiGpu) localAi.setGpu(saved.localAiGpu === 'cpu' ? false : 'auto');
     return settingsSnapshot();
   });
+  // El nombre del estudiante es inofensivo: se puede cambiar también durante la sesión (ORION #19).
   handle(IPC_INVOKE.settingsSetProfileName, (_event, name) => {
-    outsideSession('El nombre');
     setProfileName(db, normalizeProfileName(name));
     return settingsSnapshot();
   });

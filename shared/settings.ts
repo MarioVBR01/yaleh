@@ -8,11 +8,12 @@
 import { LIMITS } from './config';
 
 export type TextScale = 'normal' | 'large' | 'xlarge';
+export type AlarmSound = 'campana' | 'suave' | 'digital';
 
 export interface AppSettings {
   /** Duración que se propone al elegir el tiempo (minutos); null = sin predeterminada. */
   defaultSessionMinutes: number | null;
-  /** Aviso "Te quedan N minutos" antes de que termine la sesión (minutos); 0 = desactivado (ORION #13). */
+  /** Aviso "Te quedan N minutos" antes de que termine la sesión (minutos, 0–60); 0 = desactivado (ORION #13 y #19). */
   endWarningMinutes: number;
   /** Ofrecer "Extender la sesión" al terminar (ORION #2). */
   allowExtend: boolean;
@@ -22,6 +23,12 @@ export interface AppSettings {
   exportDir: string | null;
   textScale: TextScale;
   reduceMotion: boolean;
+  /** Accesibilidad (ORION #19): más contraste y tipografía para dislexia (OpenDyslexic). */
+  highContrast: boolean;
+  dyslexiaFont: boolean;
+  /** Alarmas del Pomodoro y del aviso de fin de sesión (ORION #19): volumen 0–100 y sonido. */
+  alarmVolume: number;
+  alarmSound: AlarmSound;
   /** Modo nocturno: el interruptor existe, pero se activa en la fase de diseño (hoy no hace nada). */
   darkMode: boolean;
 }
@@ -34,10 +41,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
   exportDir: null,
   textScale: 'normal',
   reduceMotion: false,
+  highContrast: false,
+  dyslexiaFont: false,
+  alarmVolume: 70,
+  alarmSound: 'campana',
   darkMode: true,
 };
 
-export const END_WARNING_OPTIONS = [0, 1, 5, 10, 15] as const;
+/** El aviso de fin se elige libremente (como el aviso de batería baja): de 1 a 60 minutos, o 0 = desactivado. */
+export const END_WARNING_MAX_MINUTES = 60;
+
+export const ALARM_SOUNDS: Record<AlarmSound, string> = { campana: 'Campana', suave: 'Suave', digital: 'Digital' };
 
 export const TEXT_SCALES: Record<TextScale, { label: string; percent: number }> = {
   normal: { label: 'Normal', percent: 100 },
@@ -45,8 +59,19 @@ export const TEXT_SCALES: Record<TextScale, { label: string; percent: number }> 
   xlarge: { label: 'Muy grande', percent: 125 },
 };
 
-/** Lo único que se puede cambiar durante una sesión (no afloja el kiosko). */
-export const KIOSK_SAFE_SETTINGS: readonly (keyof AppSettings)[] = ['textScale', 'reduceMotion'];
+/**
+ * Lo que se puede cambiar durante una sesión (no afloja el kiosko: no toca el tiempo, los sitios
+ * permitidos ni el acceso al sistema). ORION #19 suma accesibilidad, alarmas y el aviso de fin.
+ */
+export const KIOSK_SAFE_SETTINGS: readonly (keyof AppSettings)[] = [
+  'textScale',
+  'reduceMotion',
+  'highContrast',
+  'dyslexiaFont',
+  'alarmVolume',
+  'alarmSound',
+  'endWarningMinutes',
+];
 
 export const PROFILE_NAME_MAX = 60;
 
@@ -80,11 +105,23 @@ export function validateSettingsPatch(value: unknown): SettingsPatch {
         patch.defaultSessionMinutes = v as number | null;
         break;
       case 'endWarningMinutes':
-        if (!(END_WARNING_OPTIONS as readonly unknown[]).includes(v)) throw new Error('Aviso de fin no válido.');
+        if (!Number.isInteger(v) || (v as number) < 0 || (v as number) > END_WARNING_MAX_MINUTES) {
+          throw new Error(`El aviso de fin debe estar entre 1 y ${END_WARNING_MAX_MINUTES} minutos (0 para desactivarlo).`);
+        }
         patch.endWarningMinutes = v as number;
+        break;
+      case 'alarmVolume':
+        if (!Number.isInteger(v) || (v as number) < 0 || (v as number) > 100) throw new Error('Volumen no válido.');
+        patch.alarmVolume = v as number;
+        break;
+      case 'alarmSound':
+        if (typeof v !== 'string' || !(v in ALARM_SOUNDS)) throw new Error('Sonido no válido.');
+        patch.alarmSound = v as AlarmSound;
         break;
       case 'allowExtend':
       case 'reduceMotion':
+      case 'highContrast':
+      case 'dyslexiaFont':
       case 'darkMode':
         if (typeof v !== 'boolean') throw new Error('Valor no válido.');
         patch[key] = v;

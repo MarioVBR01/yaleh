@@ -7,12 +7,14 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { Database, Info, Moon, Sparkles, Timer, Type, User } from 'lucide-react';
+import { BellRing, Database, Info, Moon, Sparkles, Timer, Type, User } from 'lucide-react';
 import { LIMITS, LOCAL_AI } from '@shared/config';
 import {
-  END_WARNING_OPTIONS,
+  ALARM_SOUNDS,
+  END_WARNING_MAX_MINUTES,
   PROFILE_NAME_MAX,
   TEXT_SCALES,
+  type AlarmSound,
   type SettingsPatch,
   type SettingsSnapshot,
   type TextScale,
@@ -20,6 +22,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { getElectronAPI } from '../lib/electron';
 import LocalAiCard, { ipcErrorMessage } from '../phases/LocalAiCard';
+import { playAlarm } from '../lib/alarm';
 import { usePomodoroOptional } from '../pomodoro/PomodoroContext';
 
 const LOCKED_NOTE = 'Se cambia desde la pantalla de inicio, fuera de la sesión.';
@@ -77,6 +80,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
   const [version, setVersion] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState('');
   const [minutesDraft, setMinutesDraft] = useState('');
+  const [warningDraft, setWarningDraft] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => {
@@ -89,6 +93,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
     if (!snapshot) return;
     setNameDraft(snapshot.profileName ?? '');
     setMinutesDraft(snapshot.settings.defaultSessionMinutes?.toString() ?? '');
+    setWarningDraft(String(snapshot.settings.endWarningMinutes));
   }, [snapshot]);
 
   if (!api || !snapshot) {
@@ -118,6 +123,16 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
     if (value !== settings.defaultSessionMinutes) void update({ defaultSessionMinutes: value });
   };
 
+  /** Aviso de fin: minutos libres de 0 (desactivado) a 60, como el aviso de batería baja. */
+  const saveWarning = () => {
+    const value = Number(warningDraft.trim() === '' ? '0' : warningDraft.trim());
+    if (!Number.isInteger(value) || value < 0 || value > END_WARNING_MAX_MINUTES) {
+      setMessage({ ok: false, text: `El aviso de fin debe estar entre 1 y ${END_WARNING_MAX_MINUTES} minutos (0 para desactivarlo).` });
+      return;
+    }
+    if (value !== settings.endWarningMinutes) void update({ endWarningMinutes: value });
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-canvas p-5">
       <div className="max-w-2xl mx-auto space-y-4">
@@ -125,7 +140,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
           <h1 className="text-xl font-bold text-ink mb-1">⚙️ Configuración</h1>
           <p className="text-ink-muted text-sm">
             {inSession
-              ? 'Durante la sesión solo se cambia lo que no afecta al bloqueo: el tamaño del texto, las animaciones y el sonido del Pomodoro.'
+              ? 'Durante la sesión solo se cambia lo que no afecta al bloqueo ni al tiempo: accesibilidad, sonido y avisos, y tu nombre.'
               : 'Los cambios se guardan en este equipo.'}
           </p>
         </div>
@@ -157,21 +172,6 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
               className="w-20 bg-canvas border border-line focus:border-accent rounded-lg px-2 py-1 text-sm text-ink text-center focus:outline-none disabled:opacity-50"
             />
             <span className="text-ink-subtle text-xs">min</span>
-          </Row>
-          <Row label="Aviso antes de que termine" hint="Notificación dentro de YALEH (no de Windows): sale una vez por sesión y otra si la extiendes.">
-            <select
-              value={settings.endWarningMinutes}
-              disabled={inSession}
-              aria-label="Aviso antes de que termine"
-              onChange={e => void update({ endWarningMinutes: Number(e.target.value) })}
-              className="bg-canvas border border-line rounded-lg px-2 py-1 text-sm text-ink disabled:opacity-50"
-            >
-              {END_WARNING_OPTIONS.map(m => (
-                <option key={m} value={m}>
-                  {m === 0 ? 'Desactivado' : `${m} min antes`}
-                </option>
-              ))}
-            </select>
           </Row>
           <Row label="Permitir extender la sesión" hint="Al terminar, ofrecer +15, +25 o +50 minutos.">
             <Switch
@@ -279,8 +279,66 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
               </button>
             ))}
           </Row>
+          <Row label="Alto contraste" hint="Textos y bordes más claros sobre fondos más oscuros.">
+            <Switch label="Alto contraste" checked={settings.highContrast} onChange={v => void update({ highContrast: v })} />
+          </Row>
+          <Row label="Tipografía para dislexia" hint="OpenDyslexic: letras con la base más marcada, más fáciles de distinguir.">
+            <Switch label="Tipografía para dislexia" checked={settings.dyslexiaFont} onChange={v => void update({ dyslexiaFont: v })} />
+          </Row>
           <Row label="Reducir animaciones" hint="Menos movimiento en pantalla, para concentrarse mejor.">
             <Switch label="Reducir animaciones" checked={settings.reduceMotion} onChange={v => void update({ reduceMotion: v })} />
+          </Row>
+        </Section>
+
+        <Section icon={<BellRing size={16} />} title="Sonido y avisos">
+          <Row label="Volumen de las alarmas" hint="Pomodoro y aviso de fin de sesión.">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={10}
+              value={settings.alarmVolume}
+              aria-label="Volumen de las alarmas"
+              onChange={e => void update({ alarmVolume: Number(e.target.value) })}
+              className="w-28 accent-accent"
+            />
+            <span className="text-ink-subtle text-xs w-9 text-right">{settings.alarmVolume}%</span>
+          </Row>
+          <Row label="Sonido de las alarmas">
+            <select
+              value={settings.alarmSound}
+              aria-label="Sonido de las alarmas"
+              onChange={e => void update({ alarmSound: e.target.value as AlarmSound })}
+              className="bg-canvas border border-line rounded-lg px-2 py-1 text-sm text-ink"
+            >
+              {(Object.keys(ALARM_SOUNDS) as AlarmSound[]).map(sound => (
+                <option key={sound} value={sound}>
+                  {ALARM_SOUNDS[sound]}
+                </option>
+              ))}
+            </select>
+            <button className={button} onClick={() => playAlarm(settings.alarmSound, settings.alarmVolume, 'end')}>
+              Probar
+            </button>
+          </Row>
+          <Row
+            label="Aviso antes de que termine"
+            hint={`Como el aviso de batería baja: elige a partir de qué minuto te avisa (1 a ${END_WARNING_MAX_MINUTES}; 0 lo desactiva).`}
+          >
+            <input
+              type="number"
+              min={0}
+              max={END_WARNING_MAX_MINUTES}
+              value={warningDraft}
+              aria-label="Minutos del aviso antes de que termine"
+              onChange={e => setWarningDraft(e.target.value)}
+              onBlur={saveWarning}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveWarning();
+              }}
+              className="w-16 bg-canvas border border-line focus:border-accent rounded-lg px-2 py-1 text-sm text-ink text-center focus:outline-none"
+            />
+            <span className="text-ink-subtle text-xs">{settings.endWarningMinutes === 0 ? 'desactivado' : 'min antes'}</span>
           </Row>
           {pomodoro && (
             <Row label="Sonido del Pomodoro" hint="Alerta al terminar cada ciclo.">
@@ -289,12 +347,11 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
           )}
         </Section>
 
-        <Section icon={<User size={16} />} title="Perfil" locked={inSession}>
+        <Section icon={<User size={16} />} title="Perfil">
           <Row label="Nombre del estudiante" hint="Para los saludos y el historial exportado.">
             <input
               value={nameDraft}
               maxLength={PROFILE_NAME_MAX}
-              disabled={inSession}
               aria-label="Nombre del estudiante"
               onChange={e => setNameDraft(e.target.value)}
               placeholder="Tu nombre"
@@ -302,7 +359,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
             />
             <button
               className={button}
-              disabled={inSession || nameDraft.trim() === (snapshot.profileName ?? '')}
+              disabled={nameDraft.trim() === (snapshot.profileName ?? '')}
               onClick={() => void run(() => api.settings.setProfileName(nameDraft.trim() || null), 'Nombre guardado.')}
             >
               Guardar

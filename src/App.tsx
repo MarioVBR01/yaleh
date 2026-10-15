@@ -102,7 +102,7 @@ function useConnectionMode() {
 
 /**
  * Escritorio: configuración (ORION #7). Tamaño del texto (escala la raíz: la interfaz usa rem)
- * y reducir animaciones (clase en <html> + MotionConfig).
+ * reducir animaciones (clase en <html> + MotionConfig), alto contraste y tipografía para dislexia (ORION #19).
  */
 function useDesktopSettings() {
   const { state, dispatch } = useApp();
@@ -118,6 +118,8 @@ function useDesktopSettings() {
     const root = document.documentElement;
     root.style.fontSize = settings ? `${TEXT_SCALES[settings.textScale].percent}%` : '';
     root.classList.toggle('reduce-motion', Boolean(settings?.reduceMotion));
+    root.classList.toggle('high-contrast', Boolean(settings?.highContrast));
+    root.classList.toggle('dyslexia-font', Boolean(settings?.dyslexiaFont));
   }, [settings]);
 }
 

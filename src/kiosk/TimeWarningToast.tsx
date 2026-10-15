@@ -11,7 +11,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { BellRing, X } from 'lucide-react';
+import { DEFAULT_SETTINGS } from '@shared/settings';
 import { useApp } from '../context/AppContext';
+import { playAlarm } from '../lib/alarm';
 
 /** Segundos que se ve el aviso si no se cierra. */
 export const TIME_WARNING_SECONDS = 10;
@@ -32,6 +34,10 @@ export default function TimeWarningToast() {
     if (shownFor.current === sessionKey) return;
     shownFor.current = sessionKey;
     setVisibleMinutes(Math.max(1, Math.ceil(remaining / 60)));
+    // Alarma con el sonido y el volumen de la configuración (ORION #19).
+    const s = state.settings?.settings;
+    playAlarm(s?.alarmSound ?? DEFAULT_SETTINGS.alarmSound, s?.alarmVolume ?? DEFAULT_SETTINGS.alarmVolume, 'end');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, warningMinutes, sessionKey, state.sessionDuration]);
 
   useEffect(() => {

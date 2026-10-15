@@ -118,3 +118,30 @@ html, body, #root {
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
+
+/* Configuración → "Alto contraste" (ORION #19): textos y bordes más claros, fondos más oscuros.
+ * Cambia los tokens y los grises de Tailwind que usan los componentes sin migrar. */
+:root.high-contrast {
+  --color-canvas: #000000;
+  --color-surface: #050505;
+  --color-surface-raised: #141414;
+  --color-line: #a3a3a3;
+  --color-line-strong: #e5e5e5;
+  --color-ink-soft: #ffffff;
+  --color-ink-muted: #f1f5f9;
+  --color-ink-subtle: #e2e8f0;
+  --color-accent-soft: #bfdbfe;
+  --color-slate-300: #ffffff;
+  --color-slate-400: #f1f5f9;
+  --color-slate-500: #e2e8f0;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #a3a3a3;
+  --color-slate-800: #141414;
+  --color-slate-900: #050505;
+  --color-slate-950: #000000;
+}
+
+/* Configuración → "Tipografía para dislexia" (ORION #19): OpenDyslexic, incluida en la app (sin internet). */
+.dyslexia-font *:not(.font-mono):not(.font-mono *) {
+  font-family: 'OpenDyslexic', -apple-system, 'Segoe UI', sans-serif;
+}
