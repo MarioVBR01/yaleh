@@ -4,6 +4,7 @@
  * El preload expone `window.electronAPI` con la forma de `ElectronAPI`.
  */
 
+import type { HistoryFilter } from './history-filter';
 import type { SettingsPatch, SettingsSnapshot } from './settings';
 
 /** Canales invocables desde la interfaz (ipcRenderer.invoke → ipcMain.handle). */
@@ -354,8 +355,8 @@ export interface ElectronAPI {
   exportOffice: (request: OfficeExportRequest) => Promise<OfficeExportResult>;
   /** Historial de sesiones (SQLite), de la más reciente a la más antigua. */
   listSessionHistory: () => Promise<SessionHistoryEntry[]>;
-  /** Exporta el historial a PDF en Documentos\\YALEH (sin diálogo; también durante el kiosko). */
-  exportSessionHistoryPdf: () => Promise<OfficeExportResult>;
+  /** Exporta el historial a PDF en la carpeta de exportaciones (sin diálogo; también durante el kiosko). Con filtro, solo esas sesiones (ORION #23). */
+  exportSessionHistoryPdf: (filter?: HistoryFilter) => Promise<OfficeExportResult>;
   /** Borra el historial y las estadísticas (solo fuera de la sesión). Devuelve cuántas sesiones borró. */
   clearSessionHistory: () => Promise<number>;
   settings: SettingsAPI;

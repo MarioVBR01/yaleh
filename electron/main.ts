@@ -64,6 +64,7 @@ import { clearSessionHistory, listSessionHistory } from './db/history';
 import { getProfileName, loadSettings, saveSettings, setProfileName } from './settings-store';
 import { isKioskSafePatch, normalizeProfileName, validateSettingsPatch, type SettingsSnapshot } from '../shared/settings';
 import { exportHistoryPdf } from './history-export';
+import { filterSessions, parseHistoryFilter } from '../shared/history-filter';
 import { LocalAiError, LocalAiService, type WorkerHandle } from './local-ai/service';
 
 const isPackaged = app.isPackaged;
@@ -289,9 +290,11 @@ function registerIpcHandlers(): void {
   // Historial y estadísticas (fase 10): solo lectura de SQLite.
   handle(IPC_INVOKE.historyList, () => listSessionHistory(db));
   // Exportar el historial a PDF (ORION #8): datos de SQLite, guardado sin diálogo.
-  handle(IPC_INVOKE.historyExportPdf, async (): Promise<OfficeExportResult> => {
+  // Con filtro (ORION #23) exporta lo mismo que se ve en la tabla.
+  handle(IPC_INVOKE.historyExportPdf, async (_event, filter): Promise<OfficeExportResult> => {
     try {
-      const filePath = await exportHistoryPdf(listSessionHistory(db), exportDirectory(), renderHtmlToPdf, new Date(), getProfileName(db));
+      const entries = filterSessions(listSessionHistory(db), parseHistoryFilter(filter));
+      const filePath = await exportHistoryPdf(entries, exportDirectory(), renderHtmlToPdf, new Date(), getProfileName(db));
       return { ok: true, path: filePath };
     } catch (error) {
       console.error('[historial] No se pudo exportar el PDF:', error);

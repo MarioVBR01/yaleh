@@ -29,7 +29,7 @@ describe('HistoryPanel', () => {
   it('lista las sesiones guardadas con su estado y contadores', async () => {
     createElectronMock({ history }).install();
     render(<HistoryPanel />);
-    expect(await screen.findByText('2 sesiones guardadas en este equipo')).toBeTruthy();
+    expect(await screen.findByText('2 sesiones guardadas en este equipo · mostrando 2')).toBeTruthy();
     expect(screen.getByText('Interrumpida')).toBeTruthy();
     expect(screen.getByText('Completada')).toBeTruthy();
     expect(screen.getByText('1 h 30 min')).toBeTruthy();
