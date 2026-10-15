@@ -129,6 +129,21 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       deleteNote: vi.fn(async () => {}),
     },
     listSessionHistory: vi.fn(async () => options.history ?? []),
+    folders: {
+      roots: vi.fn(async () => ({
+        roots: [
+          { name: 'Documentos', path: 'C:\\Users\\x\\Documents' },
+          { name: 'Unidad E:', path: 'E:\\' },
+        ],
+        start: 'C:\\Users\\x\\Documents\\YALEH',
+      })),
+      list: vi.fn(async (folderPath: string) => ({
+        path: folderPath,
+        parent: folderPath.endsWith('YALEH') ? 'C:\\Users\\x\\Documents' : null,
+        rootName: folderPath.startsWith('E:') ? 'Unidad E:' : 'Documentos',
+        folders: folderPath.endsWith('Documents') ? [{ name: 'Tareas', path: 'C:\\Users\\x\\Documents\\Tareas' }, { name: 'YALEH', path: 'C:\\Users\\x\\Documents\\YALEH' }] : [],
+      })),
+    },
     clearSessionHistory: vi.fn(async () => {
       outside();
       return (options.history ?? []).length;

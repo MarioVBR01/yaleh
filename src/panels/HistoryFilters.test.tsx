@@ -74,7 +74,11 @@ describe('HistoryPanel con filtros', () => {
     fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-15' } });
     fireEvent.click(screen.getByText('Buscar'));
     fireEvent.click(screen.getByText('Exportar PDF'));
-    await waitFor(() => expect(mock.api.exportSessionHistoryPdf).toHaveBeenCalledWith({ from: '2026-10-15', to: null, limit: 10 }));
+    await waitFor(() => expect(screen.getByTestId('current-folder').textContent).toContain('YALEH'));
+    fireEvent.click(screen.getByText('Guardar aquí'));
+    await waitFor(() =>
+      expect(mock.api.exportSessionHistoryPdf).toHaveBeenCalledWith({ from: '2026-10-15', to: null, limit: 10 }, 'C:\\Users\\x\\Documents\\YALEH')
+    );
     vi.restoreAllMocks();
   });
 });

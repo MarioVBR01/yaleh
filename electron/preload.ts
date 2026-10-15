@@ -47,7 +47,11 @@ const api: ElectronAPI = {
   },
   exportOffice: request => ipcRenderer.invoke(IPC_INVOKE.officeExport, request),
   listSessionHistory: () => ipcRenderer.invoke(IPC_INVOKE.historyList),
-  exportSessionHistoryPdf: filter => ipcRenderer.invoke(IPC_INVOKE.historyExportPdf, filter),
+  exportSessionHistoryPdf: (filter, directory) => ipcRenderer.invoke(IPC_INVOKE.historyExportPdf, filter, directory),
+  folders: {
+    roots: () => ipcRenderer.invoke(IPC_INVOKE.foldersRoots),
+    list: folderPath => ipcRenderer.invoke(IPC_INVOKE.foldersList, folderPath),
+  },
   clearSessionHistory: () => ipcRenderer.invoke(IPC_INVOKE.historyClear),
   settings: {
     get: () => ipcRenderer.invoke(IPC_INVOKE.settingsGet),

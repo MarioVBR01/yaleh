@@ -64,6 +64,7 @@ import { clearSessionHistory, listSessionHistory } from './db/history';
 import { getProfileName, loadSettings, saveSettings, setProfileName } from './settings-store';
 import { isKioskSafePatch, normalizeProfileName, validateSettingsPatch, type SettingsSnapshot } from '../shared/settings';
 import { exportHistoryPdf } from './history-export';
+import { availableRoots, isInsideRoots, listFolders, otherDrives } from './folder-browser';
 import { filterSessions, parseHistoryFilter } from '../shared/history-filter';
 import { LocalAiError, LocalAiService, type WorkerHandle } from './local-ai/service';
 
@@ -291,16 +292,32 @@ function registerIpcHandlers(): void {
   handle(IPC_INVOKE.historyList, () => listSessionHistory(db));
   // Exportar el historial a PDF (ORION #8): datos de SQLite, guardado sin diálogo.
   // Con filtro (ORION #23) exporta lo mismo que se ve en la tabla.
-  handle(IPC_INVOKE.historyExportPdf, async (_event, filter): Promise<OfficeExportResult> => {
+  // Carpeta elegida con el selector propio (ORION #22): se valida aquí que esté permitida.
+  handle(IPC_INVOKE.historyExportPdf, async (_event, filter, directory): Promise<OfficeExportResult> => {
+    let target = exportDirectory();
+    if (directory !== undefined && directory !== null) {
+      if (typeof directory !== 'string' || !isInsideRoots(directory, folderRoots()) || !fs.statSync(directory, { throwIfNoEntry: false })?.isDirectory()) {
+        return { ok: false, message: 'Esa carpeta no está disponible.' };
+      }
+      target = directory;
+    }
     try {
       const entries = filterSessions(listSessionHistory(db), parseHistoryFilter(filter));
-      const filePath = await exportHistoryPdf(entries, exportDirectory(), renderHtmlToPdf, new Date(), getProfileName(db));
+      const filePath = await exportHistoryPdf(entries, target, renderHtmlToPdf, new Date(), getProfileName(db));
       return { ok: true, path: filePath };
     } catch (error) {
       console.error('[historial] No se pudo exportar el PDF:', error);
       return { ok: false, message: 'No se pudo exportar el historial a PDF.' };
     }
   });
+
+  // Selector de carpetas propio (ORION #22): solo carpetas, dentro de las ubicaciones permitidas.
+  handle(IPC_INVOKE.foldersRoots, () => {
+    const start = exportDirectory();
+    fs.mkdirSync(start, { recursive: true });
+    return { roots: folderRoots(), start };
+  });
+  handle(IPC_INVOKE.foldersList, (_event, folderPath) => listFolders(typeof folderPath === 'string' ? folderPath : '', folderRoots()));
 
   // Configuración (ORION #7). Nunca afloja el kiosko: durante la sesión solo se cambia lo inofensivo.
   const outsideSession = (what: string) => {
@@ -386,6 +403,19 @@ function registerIpcHandlers(): void {
 /** Carpeta de las exportaciones (ORION #7): la elegida en la configuración o Documentos\\YALEH. */
 function exportDirectory(): string {
   return loadSettings(db).exportDir ?? path.join(app.getPath('documents'), 'YALEH');
+}
+
+/** Ubicaciones del selector de carpetas (ORION #22). La de exportaciones se suma si está fuera de las demás. */
+function folderRoots() {
+  const base = availableRoots([
+    { name: 'Documentos', path: app.getPath('documents') },
+    { name: 'Escritorio', path: app.getPath('desktop') },
+    { name: 'Descargas', path: app.getPath('downloads') },
+    { name: 'Imágenes', path: app.getPath('pictures') },
+    ...otherDrives(),
+  ]);
+  const exportDir = exportDirectory();
+  return isInsideRoots(exportDir, base) ? base : [...availableRoots([{ name: 'Carpeta de exportaciones', path: exportDir }]), ...base];
 }
 
 function settingsSnapshot(): SettingsSnapshot {

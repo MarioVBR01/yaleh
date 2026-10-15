@@ -30,6 +30,8 @@ export const IPC_INVOKE = {
   historyList: 'history:list',
   historyExportPdf: 'history:export-pdf',
   historyClear: 'history:clear',
+  foldersRoots: 'folders:roots',
+  foldersList: 'folders:list',
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsSetProfileName: 'settings:set-profile-name',
@@ -306,6 +308,26 @@ export interface LocalAiAPI {
   onChunk: (callback: (chunk: LocalAiChunk) => void) => () => void;
 }
 
+/** Selector de carpetas propio (ORION #22): ubicaciones permitidas y subcarpetas. */
+export interface FolderRoot {
+  name: string;
+  path: string;
+}
+
+export interface FolderListing {
+  path: string;
+  /** Carpeta de arriba, o null si ya es una ubicación raíz. */
+  parent: string | null;
+  rootName: string;
+  folders: FolderRoot[];
+}
+
+export interface FoldersAPI {
+  /** Ubicaciones permitidas y la carpeta donde arranca (la de exportaciones). */
+  roots: () => Promise<{ roots: FolderRoot[]; start: string }>;
+  list: (path: string) => Promise<FolderListing>;
+}
+
 /** Configuración del escritorio (ORION #7). Lo que afecta a la sesión solo se cambia fuera de ella. */
 export interface SettingsAPI {
   get: () => Promise<SettingsSnapshot>;
@@ -360,7 +382,9 @@ export interface ElectronAPI {
   /** Historial de sesiones (SQLite), de la más reciente a la más antigua. */
   listSessionHistory: () => Promise<SessionHistoryEntry[]>;
   /** Exporta el historial a PDF en la carpeta de exportaciones (sin diálogo; también durante el kiosko). Con filtro, solo esas sesiones (ORION #23). */
-  exportSessionHistoryPdf: (filter?: HistoryFilter) => Promise<OfficeExportResult>;
+  exportSessionHistoryPdf: (filter?: HistoryFilter, directory?: string) => Promise<OfficeExportResult>;
+  /** Selector de carpetas propio de YALEH (nunca la ventana de Windows; ORION #22). */
+  folders: FoldersAPI;
   /** Borra el historial y las estadísticas (solo fuera de la sesión). Devuelve cuántas sesiones borró. */
   clearSessionHistory: () => Promise<number>;
   settings: SettingsAPI;

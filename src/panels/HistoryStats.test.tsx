@@ -2,7 +2,7 @@
  * Historial y estadísticas (fase 10): datos reales de SQLite por IPC, no simulados.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { SessionHistoryEntry } from '@shared/ipc-types';
 import { createElectronMock, uninstallElectronMock } from '../test/electron-mock';
@@ -48,7 +48,9 @@ describe('HistoryPanel', () => {
     mock.install();
     render(<HistoryPanel />);
     fireEvent.click(await screen.findByText('Exportar PDF'));
-    expect(mock.api.exportSessionHistoryPdf).toHaveBeenCalled();
+    // Primero se elige la carpeta con el selector propio (ORION #22).
+    fireEvent.click(await screen.findByText('Guardar aquí'));
+    await waitFor(() => expect(mock.api.exportSessionHistoryPdf).toHaveBeenCalled());
     expect(await screen.findByText(/Guardado en .*Historial de sesiones .*.pdf/)).toBeTruthy();
   });
 

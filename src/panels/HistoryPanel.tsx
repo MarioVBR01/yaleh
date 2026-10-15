@@ -4,7 +4,8 @@
  * fecha, duración, modo, estado, pérdidas de foco, cortes de red e interrupciones.
  * "Exportar PDF" (ORION #8): lo genera el proceso principal en la carpeta de exportaciones.
  * Filtros (ORION #23): rango de fechas con "Buscar" y cantidad (10, 20, 30, 50 o todas). Exportar
- * usa lo filtrado.
+ * usa lo filtrado. La carpeta se elige con el selector propio de YALEH (ORION #22), nunca con la
+ * ventana de Windows.
  */
 
 import { useState } from 'react';
@@ -12,11 +13,13 @@ import { Clock, FileDown, RefreshCw, Search } from 'lucide-react';
 import { DEFAULT_HISTORY_LIMIT, filterSessions, HISTORY_PAGE_SIZES, type HistoryFilter } from '@shared/history-filter';
 import { getElectronAPI } from '@/lib/electron';
 import { useSessionHistory } from '@/lib/useSessionHistory';
+import FolderPicker from './FolderPicker';
 import SessionTable from './SessionTable';
 
 export default function HistoryPanel() {
   const { available, entries, loading, error, reload } = useSessionHistory();
   const [exporting, setExporting] = useState(false);
+  const [choosingFolder, setChoosingFolder] = useState(false);
   const [exportResult, setExportResult] = useState<{ ok: boolean; text: string } | null>(null);
   // Fechas que se están escribiendo y las aplicadas con "Buscar"; la cantidad se aplica al elegirla.
   const [fromDraft, setFromDraft] = useState('');
@@ -27,13 +30,14 @@ export default function HistoryPanel() {
   const visible = filterSessions(entries, filter);
   const filteredByDate = Boolean(range.from || range.to);
 
-  const exportPdf = async () => {
+  const exportPdf = async (folder: string) => {
     const api = getElectronAPI();
     if (!api) return;
+    setChoosingFolder(false);
     setExporting(true);
     setExportResult(null);
     try {
-      const result = await api.exportSessionHistoryPdf(filter);
+      const result = await api.exportSessionHistoryPdf(filter, folder);
       setExportResult(result.ok ? { ok: true, text: `Guardado en ${result.path}` } : { ok: false, text: result.message });
     } catch {
       setExportResult({ ok: false, text: 'No se pudo exportar el historial a PDF.' });
@@ -61,7 +65,10 @@ export default function HistoryPanel() {
         {available && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => void exportPdf()}
+              onClick={() => {
+                setExportResult(null);
+                setChoosingFolder(true);
+              }}
               disabled={exporting || visible.length === 0}
               title="Exporta las sesiones que se ven en la tabla"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border bg-surface-raised border-line text-ink-muted hover:text-ink disabled:opacity-50"
@@ -135,6 +142,14 @@ export default function HistoryPanel() {
             </select>
           </label>
         </div>
+      )}
+
+      {choosingFolder && (
+        <FolderPicker
+          title="¿Dónde guardar el historial (PDF)?"
+          onSelect={folder => void exportPdf(folder)}
+          onCancel={() => setChoosingFolder(false)}
+        />
       )}
 
       {exportResult && (

@@ -168,6 +168,17 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           historyPdf.ok && /YALEH[\\/]Historial de sesiones .+\.pdf$/.test(historyPdf.path) &&
           fs.readFileSync(historyPdf.path).subarray(0, 5).toString() === '%PDF-';
 
+        // Selector de carpetas propio (ORION #22): lista, exporta a la elegida y rechaza otra.
+        const folders = await win.webContents.executeJavaScript(`(async () => {
+          const api = window.electronAPI;
+          const { roots, start } = await api.folders.roots();
+          const listing = await api.folders.list(start);
+          const chosen = await api.exportSessionHistoryPdf({}, start);
+          const outside = await api.exportSessionHistoryPdf({}, 'C:\Windows');
+          return { roots: roots.length, listed: listing.path === start, chosenOk: chosen.ok && chosen.path.startsWith(start), outsideRejected: !outside.ok };
+        })()`);
+        const foldersOk = folders.roots > 0 && folders.listed && folders.chosenOk && folders.outsideRejected;
+
         const office = await win.webContents.executeJavaScript(OFFICE_SCRIPT);
         const officeOk = ['deck'].every(
           k => office[k].ok && /YALEH[\\/]Prueba .+\.(docx|xlsx|pptx)$/.test(office[k].path)
@@ -202,8 +213,9 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           tabsOk &&
           officeOk &&
           historyPdfOk &&
+          foldersOk &&
           errors.length === 0;
-        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, tabs: tabsCheck, officeOk, historyPdfOk, historyPdf, sessionFile, rejectedEvents, ingest, sources, errors })}`);
+        console.log(`[smoke] ${JSON.stringify({ ok, ...base, migrations, tabs: tabsCheck, officeOk, historyPdfOk, historyPdf, folders, sessionFile, rejectedEvents, ingest, sources, errors })}`);
         finish(ok);
       } catch (error) {
         console.log(`[smoke] ${JSON.stringify({ ok: false, error: String(error), errors })}`);

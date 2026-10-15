@@ -73,7 +73,7 @@ describe('SettingsView', () => {
     const minutes = await screen.findByLabelText('Duración predeterminada en minutos');
     fireEvent.change(minutes, { target: { value: '500' } });
     fireEvent.blur(minutes);
-    expect(screen.getByRole('alert').textContent).toMatch(/entre 1 y 180/);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/entre 1 y 180/);
     expect(mock.api.settings.update).not.toHaveBeenCalled();
   });
 
@@ -126,7 +126,7 @@ describe('opciones del kiosko (ORION #19)', () => {
     const warning = await screen.findByLabelText('Minutos del aviso antes de que termine');
     fireEvent.change(warning, { target: { value: '90' } });
     fireEvent.blur(warning);
-    expect(screen.getByRole('alert').textContent).toMatch(/entre 1 y 60/);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/entre 1 y 60/);
     expect(mock.api.settings.update).not.toHaveBeenCalled();
   });
 

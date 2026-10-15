@@ -89,12 +89,14 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
     void api.getAppInfo().then(info => setVersion(info.version));
   }, [api, dispatch]);
 
-  useEffect(() => {
-    if (!snapshot) return;
-    setNameDraft(snapshot.profileName ?? '');
-    setMinutesDraft(snapshot.settings.defaultSessionMinutes?.toString() ?? '');
-    setWarningDraft(String(snapshot.settings.endWarningMinutes));
-  }, [snapshot]);
+  // Los campos se rellenan solo cuando cambia el valor guardado (no con cada copia nueva de la
+  // configuración), para no pisar lo que el estudiante está escribiendo.
+  const savedName = snapshot?.profileName ?? '';
+  const savedMinutes = snapshot?.settings.defaultSessionMinutes?.toString() ?? '';
+  const savedWarning = snapshot ? String(snapshot.settings.endWarningMinutes) : '';
+  useEffect(() => setNameDraft(savedName), [savedName]);
+  useEffect(() => setMinutesDraft(savedMinutes), [savedMinutes]);
+  useEffect(() => setWarningDraft(savedWarning), [savedWarning]);
 
   if (!api || !snapshot) {
     return <p className="p-6 text-sm text-ink-subtle">La configuración está disponible en la aplicación de escritorio.</p>;
