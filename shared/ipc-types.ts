@@ -156,15 +156,6 @@ export interface SessionHistoryEntry {
   endReason: SessionEndReason | null;
 }
 
-/** Nodo del documento de TipTap (formato JSON de ProseMirror). */
-export interface TipTapNode {
-  type: string;
-  text?: string;
-  attrs?: Record<string, unknown>;
-  marks?: { type: string; attrs?: Record<string, unknown> }[];
-  content?: TipTapNode[];
-}
-
 export interface OfficeSlide {
   title: string;
   content: string;
@@ -172,13 +163,10 @@ export interface OfficeSlide {
   background: string;
 }
 
-/** Exportación de los editores de ofimática (brief, sección 6.1). */
-export type OfficeExportRequest =
-  | { kind: 'docx'; title: string; document: TipTapNode }
-  | { kind: 'xlsx'; title: string; rows: string[][] }
-  | { kind: 'pptx'; title: string; slides: OfficeSlide[] };
+/** Exportación a .pptx (la usará la presentación generada por Gemini; los editores se eliminaron, ORION #12). */
+export type OfficeExportRequest = { kind: 'pptx'; title: string; slides: OfficeSlide[] };
 
-/** Ruta del archivo guardado en Documentos\YALEH, o el motivo del error. */
+/** Ruta del archivo guardado en la carpeta de exportaciones, o el motivo del error. */
 export type OfficeExportResult = { ok: true; path: string } | { ok: false; message: string };
 
 /** Resultado de abrir una pestaña interna (WebContentsView). */

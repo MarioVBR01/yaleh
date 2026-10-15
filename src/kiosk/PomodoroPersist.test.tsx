@@ -60,9 +60,9 @@ describe('ADD_TAB: vistas únicas', () => {
     expect(state.activeTabId).toBe('p1');
   });
 
-  it('los editores sí pueden abrirse varias veces', () => {
-    let state = appReducer(initialState, { type: 'ADD_TAB', payload: tab('e1', 'offline-editor') });
-    state = appReducer(state, { type: 'ADD_TAB', payload: tab('e2', 'offline-editor') });
-    expect(state.tabs.filter(t => t.type === 'offline-editor')).toHaveLength(2);
+  it('las páginas externas sí pueden abrirse varias veces', () => {
+    let state = appReducer(initialState, { type: 'ADD_TAB', payload: { ...tab('e1', 'workspace-url'), url: 'https://docs.google.com/a' } });
+    state = appReducer(state, { type: 'ADD_TAB', payload: { ...tab('e2', 'workspace-url'), url: 'https://docs.google.com/b' } });
+    expect(state.tabs.filter(t => t.type === 'workspace-url')).toHaveLength(2);
   });
 });

@@ -3,7 +3,7 @@
 YALEH es un entorno de estudio para estudiantes del TECBA con problemas de concentración (proyecto de grado de Mario Víctor Brañez Rodriguez). Tiene dos aplicaciones sobre una misma base de código:
 
 - **Web** (Firebase Hosting): login con Google, carga de materiales (se extrae el texto) y preparación de la sesión, que termina con la descarga de un **archivo de sesión `.yaleh`**. Sin IA (revisión 1.6).
-- **Escritorio** (Electron): bloquea el sistema operativo durante la sesión (kiosko), con o sin internet. No inicia sesión con Google: abre el `.yaleh` o empieza una sesión local. Dentro del kiosko: espacio de trabajo con IA (Gemini con conexión; modelo local sin conexión, revisión 1.8), pestañas internas, ofimática, historial y estadísticas.
+- **Escritorio** (Electron): bloquea el sistema operativo durante la sesión (kiosko), con o sin internet. No inicia sesión con Google: abre el `.yaleh` o empieza una sesión local. Dentro del kiosko: espacio de trabajo con IA (Gemini con conexión; modelo local sin conexión, revisión 1.8), pestañas internas, historial, estadísticas y configuración. La Ofimática se eliminó (ORION #12).
 
 Las dos aplicaciones funcionan por separado y se unen solo con el archivo `.yaleh` (como Safe Exam Browser; brief, revisión 1.5). El diseño anterior (enlaces `yaleh://`) queda en el tag de git `demo-antes-archivo`.
 
@@ -23,7 +23,7 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | 6. Archivos (extracción de texto) | Hecha |
 | 7. IA (Gemini + búsqueda en Wikipedia) | Hecha |
 | 8. Pestañas con WebContentsView, herramientas y YouTube | Hecha |
-| 9. Editores de ofimática con exportación | Hecha |
+| 9. Editores de ofimática con exportación | Hecha (eliminados después en ORION #12; queda la exportación a .pptx) |
 | 10. Historial y estadísticas (SQLite; la sincronización pasa a v2) | Hecha |
 | 10b. IA sin conexión (Qwen3.5-4B con node-llama-cpp, FTS5; revisión 1.8) | Hecha |
 | 11. Pruebas y empaquetado | Pendiente |
@@ -81,8 +81,10 @@ electron/                   Proceso principal (TypeScript → esbuild → dist-e
   local-ai/bench.ts         Medición (npm run bench:local-ai)
   tabs/tab-manager.ts       Pestañas internas con WebContentsView (máximo 8, ventanas nuevas → pestañas)
   tabs/resolve.ts           URL de una pestaña: sitio permitido, reproductor de YouTube o rechazo
-  office/export.ts          .docx / .xlsx / .pptx en Documentos\YALEH (docx, ExcelJS, PptxGenJS)
-  smoke.ts                  Prueba de humo (extracción, .yaleh, pestañas, ofimática, historial)
+  office/export.ts          .pptx con PptxGenJS (para la presentación de Gemini), nombre con fecha y guardado sin sobrescribir
+  history-export.ts         PDF del historial (printToPDF en una ventana oculta)
+  settings-store.ts         Configuración (SQLite) y nombre del estudiante
+  smoke.ts                  Prueba de humo (extracción, .yaleh, pestañas, .pptx, PDF, historial, configuración)
 shared/                     Usado por el proceso principal y la interfaz (sin Node ni DOM)
   config.ts                 Sitios permitidos, herramientas, límites (8 pestañas, 500 MB, 1–180 min)
   allowlist.ts              isUrlAllowed()
@@ -110,7 +112,6 @@ src/                        Interfaz React (web y escritorio). Alias: @/ → src
   lib/useSessionHistory.ts  Historial por IPC (vacío en el navegador)
   kiosk/useExternalTabs.ts  Abrir pestañas externas y sincronizar su visibilidad con el proceso principal
   panels/ExternalTabPanel.tsx  Hueco donde se dibuja la WebContentsView (informa sus límites)
-  panels/OfflineEditorPanel.tsx  Documento (TipTap), hoja y presentación con exportación
   panels/HistoryPanel.tsx, StatsPanel.tsx  Historial y estadísticas desde SQLite (recharts)
   youtube/main.ts           Página del reproductor (youtube.html, entrada propia de Vite)
   test/electron-mock.ts     window.electronAPI simulada para las pruebas de la interfaz
@@ -155,10 +156,10 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 - **Interfaz:** etiqueta "Asistente en línea" / "Asistente sin conexión"; el chat muestra el texto a medida que se genera y tiene botón para detener; Estudio muestra los tokens generados.
 - **Tiempos medidos:** `docs/MEDICIONES_IA_LOCAL.md` (resumen y decisión CPU/GPU) y `docs/mediciones/` (cada corrida). Presupuesto de fragmentos: 6 000 caracteres (leer el contexto es lo más lento).
 
-## Pestañas, ofimática, historial (fases 8 a 10)
+## Pestañas, exportaciones, historial (fases 8 a 10)
 
 - **Pestañas (`TabManager`):** cada página externa es una `WebContentsView` con sandbox, dibujada encima del hueco de `ExternalTabPanel` (la interfaz informa los límites; se oculta mientras hay un diálogo). Máximo `LIMITS.maxTabs` (8): al llegar, aviso en la interfaz. Ventanas nuevas de sitios permitidos → `tabs:open-request` → pestaña nueva. Los enlaces de YouTube se convierten en `YOUTUBE_PLAYER_URL?v=<id>` (página propia en Hosting con `youtube-nocookie` y `referrerpolicy`); youtube.com sigue bloqueado. Al terminar la sesión se cierran todas.
-- **Ofimática:** la interfaz envía el contenido (JSON de TipTap, filas o diapositivas) por `office:export`; el proceso principal valida (`parseOfficeRequest`) y guarda en `Documentos\YALEH` como `Título AAAA-MM-DD HH-mm-ss.ext`, sin sobrescribir. Sin diálogo. Funciona sin conexión. `docx`, `exceljs` y `pptxgenjs` son externos en esbuild (se cargan de `node_modules`).
+- **Ofimática: eliminada (ORION #12).** Los editores eran muy sencillos frente a Office. Con conexión se usan Google Docs, Hojas y Presentaciones en las pestañas; sin conexión, las notas y la IA sin conexión. Se quitaron TipTap, `docx` y ExcelJS. Queda `office:export` solo para `.pptx` (lo usará la presentación generada por Gemini): el proceso principal valida (`parseOfficeRequest`) y guarda en la carpeta de exportaciones como `Título AAAA-MM-DD HH-mm-ss.pptx`, sin sobrescribir ni diálogo. `pptxgenjs` es externo en esbuild.
 - **Historial y estadísticas:** `history:list` → `listSessionHistory(db)` (contadores de `focus-lost`, `connection-lost`, `session-interrupted` y motivo del fin). `computeStats` en la interfaz. **Regla de los minutos (ORION #11):** el tiempo realmente estudiado de cada sesión (`studiedSeconds`, migración 5): el controlador lo mide y lo guarda cada 15 s y al terminar; incluye extensiones, interrumpidas y liberadas; la sesión en curso no cuenta. La barra de cada día = suma de "Tiempo estudiado" del Historial. Sesiones anteriores a la migración: completadas = duración; liberadas = desde el inicio hasta el fin registrado; interrumpidas = 0. En el navegador: "Disponible en la aplicación de escritorio".
 - **Sincronización con Firestore:** versión 2 (revisión 1.7).
 
@@ -167,7 +168,7 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 - **Dónde:** botón "Configuración" en la bienvenida (fase `settings`, todo editable) y en la barra lateral del kiosko (pestaña `settings`, solo lo inofensivo). Vista: `src/settings/SettingsView.tsx`.
 - **Datos:** `shared/settings.ts` (tipo, valores predeterminados, validación, `KIOSK_SAFE_SETTINGS`); `electron/settings-store.ts` guarda en `settings` (clave `app-settings`) y el nombre en `local_profile`. IPC `settings:*` e `history:clear`.
 - **Regla:** nunca afloja el kiosko. Durante la sesión el proceso principal solo acepta `textScale` y `reduceMotion`; nombre, carpeta y borrado del historial, solo fuera. `exportDir` solo se elige con el diálogo del proceso principal.
-- **Qué hace cada opción:** duración predeterminada (vista de duración), aviso de fin en la barra inferior, permitir extender (también lo comprueba `session:extend`), GPU/CPU del modelo local, carpeta de exportaciones (ofimática y PDF del historial), exportar o borrar el historial (migración 4: `used_session_ids` conserva el uso único de los .yaleh), tamaño del texto (escala la raíz) y reducir animaciones (clase `reduce-motion` + `MotionConfig`), nombre del estudiante (saludo y PDF), Acerca de.
+- **Qué hace cada opción:** duración predeterminada (vista de duración), aviso de fin en la barra inferior, permitir extender (también lo comprueba `session:extend`), GPU/CPU del modelo local, carpeta de exportaciones (.pptx y PDF del historial), exportar o borrar el historial (migración 4: `used_session_ids` conserva el uso único de los .yaleh), tamaño del texto (escala la raíz) y reducir animaciones (clase `reduce-motion` + `MotionConfig`), nombre del estudiante (saludo y PDF), Acerca de.
 - **Modo nocturno:** el interruptor existe pero está deshabilitado; se activa en la fase de diseño.
 
 ## Modos online / offline (fase 3)

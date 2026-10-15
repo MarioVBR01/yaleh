@@ -16,7 +16,6 @@ import SideBar from './SideBar';
 import BottomBar from './BottomBar';
 import WorkspaceView from '../workspace/WorkspaceView';
 import ExternalTabPanel from '../panels/ExternalTabPanel';
-import OfflineEditorPanel from '../panels/OfflineEditorPanel';
 import HistoryPanel from '../panels/HistoryPanel';
 import PomodoroPanel from '../panels/PomodoroPanel';
 import SettingsView from '../settings/SettingsView';
@@ -39,8 +38,6 @@ function TabContent({ tab }: { tab: Tab }) {
       return <WorkspaceView />;
     case 'workspace-url':
       return <ExternalTabPanel tab={tab} />;
-    case 'offline-editor':
-      return <OfflineEditorPanel editorType={tab.editorType || 'docs'} />;
     case 'history':
       return <HistoryPanel />;
     case 'pomodoro':

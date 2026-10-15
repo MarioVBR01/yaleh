@@ -3,14 +3,14 @@
  * @description Barra Lateral Izquierda del entorno Kiosko de YALEH.
  * Brief, sección 5.3: Espacio de trabajo, Estadísticas, Pomodoro, Herramientas
  * (solo con conexión), Historial de sesiones y Configuración (ORION #7).
- * En el escritorio agrega los editores de ofimática. Se oculta con el botón lateral.
+ * La sección de Ofimática se eliminó (ORION #12). Se oculta con el botón lateral.
  * Soporta menús desplegables internos (App Drawers).
  */
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Home, FileEdit, History, Clock, Wrench,
+  Home, History, Clock, Wrench,
   BarChart2, ChevronRight, ChevronDown, Settings
 } from 'lucide-react';
 import { TOOL_LINKS, WORKSPACE_LINKS, type ToolLink } from '@shared/config';
@@ -25,34 +25,6 @@ const WORKSPACE_STYLES: Record<string, string> = {
   sheets: 'text-emerald-400',
   slides: 'text-orange-400',
 };
-
-/** Configuración de editores Offline (Quill/Luckysheet embebidos) */
-const OFFLINE_EDITORS = [
-  {
-    id: 'docs',
-    label: 'Documento (.docx)',
-    icon: '📄',
-    editorType: 'docs' as const,
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/10',
-  },
-  {
-    id: 'sheets',
-    label: 'Hoja de cálculo (.xlsx)',
-    icon: '📋',
-    editorType: 'sheets' as const,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-  },
-  {
-    id: 'slides',
-    label: 'Presentación (.pptx)',
-    icon: '🎭',
-    editorType: 'slides' as const,
-    color: 'text-purple-400',
-    bg: 'bg-purple-500/10',
-  },
-];
 
 interface SideBarProps {
   collapsed: boolean;
@@ -139,20 +111,6 @@ export default function SideBar({ collapsed }: SideBarProps) {
       void openExternal(app.url, app.name, app.icon);
     }
     logActivity({ type: 'tool', label: `${app.name} abierto`, icon: app.icon });
-  };
-
-  /**
-   * Abre el editor offline local en una nueva pestaña.
-   * Funciona 100% sin conexión utilizando editores JS embebidos.
-   */
-  const handleOfflineEditor = (editor: typeof OFFLINE_EDITORS[0]) => {
-    openTab({
-      type: 'offline-editor',
-      title: editor.label,
-      icon: editor.icon,
-      editorType: editor.editorType,
-    });
-    logActivity({ type: 'tool', label: `${editor.label} abierto (Offline)`, icon: editor.icon });
   };
 
   /** Abre la vista de historial de actividad */
@@ -300,44 +258,6 @@ export default function SideBar({ collapsed }: SideBarProps) {
           onClick={handleHistory}
           collapsed={collapsed}
         />
-
-        {/* Ofimática: solo en el escritorio (brief, secciones 5.5 y 6.1) */}
-        {isDesktop && (
-        <div>
-          <NavItem
-            icon={<FileEdit size={18} />}
-            label="Ofimática"
-            hasChildren
-            isOpen={openDrawer === 'offline'}
-            onClick={() => toggleDrawer('offline')}
-            collapsed={collapsed}
-          />
-          <AnimatePresence>
-            {openDrawer === 'offline' && !collapsed && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="ml-3 mt-1 space-y-1 overflow-hidden border-l border-slate-700/50 pl-3"
-              >
-                {OFFLINE_EDITORS.map(editor => (
-                  <button
-                    key={editor.id}
-                    onClick={() => handleOfflineEditor(editor)}
-                    className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-all hover:bg-slate-800 ${editor.color}`}
-                  >
-                    <span>{editor.icon}</span>
-                    <span className="text-slate-300 hover:text-white">{editor.label}</span>
-                  </button>
-                ))}
-                <div className="px-2 py-1">
-                  <span className="text-[10px] text-emerald-400/70">✓ Funciona sin internet</span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-        )}
 
         {/* Configuración (ORION #7): dentro de la sesión solo lo inofensivo */}
         {isDesktop && (

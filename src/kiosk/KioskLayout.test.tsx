@@ -128,8 +128,8 @@ describe('Kiosko según el modo (escritorio)', () => {
 
     expect(screen.queryByText('Herramientas')).toBeNull();
     expect(screen.queryByText('Google Workspace')).toBeNull();
-    // Los módulos locales siguen disponibles.
-    expect(screen.getByText('Ofimática')).toBeTruthy();
+    // Los módulos locales siguen disponibles; la Ofimática se eliminó (ORION #12).
+    expect(screen.queryByText('Ofimática')).toBeNull();
     expect(screen.getByText('Pomodoro')).toBeTruthy();
   });
 

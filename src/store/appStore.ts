@@ -27,7 +27,6 @@ export type AppPhase =
 export type TabType =
   | 'dashboard'
   | 'workspace-url'
-  | 'offline-editor'
   | 'history'
   | 'pomodoro'
   | 'downloads'
@@ -43,7 +42,6 @@ export interface Tab {
   title: string;
   url?: string;
   icon?: string;
-  editorType?: 'docs' | 'sheets' | 'slides';
   /** Pestañas internas (WebContentsView): error de carga informado por el proceso principal. */
   error?: string;
 }

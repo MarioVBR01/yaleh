@@ -3,7 +3,7 @@
  * @description Validación de los mensajes IPC: origen del remitente y argumentos.
  */
 
-import type { LocalAiRequest, LocalAiTask, LocalAiTurn, OfficeExportRequest, OfficeSlide, TipTapNode } from '../../shared/ipc-types';
+import type { LocalAiRequest, LocalAiTask, LocalAiTurn, OfficeExportRequest, OfficeSlide } from '../../shared/ipc-types';
 
 export interface SenderTrust {
   /** URL `file://` del index.html de la interfaz empaquetada. */
@@ -118,29 +118,13 @@ export function parseBounds(value: unknown): { x: number; y: number; width: numb
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const MAX_OFFICE_JSON = 10_000_000;
 
-/** Valida el pedido de exportación de ofimática (tipo, título, tamaño y forma de los datos). */
+/** Valida el pedido de exportación a .pptx (título, tamaño y forma de las diapositivas). */
 export function parseOfficeRequest(value: unknown): OfficeExportRequest {
   const req = value as Record<string, unknown> | null;
   if (!req || typeof req !== 'object') throw new Error('Pedido de exportación no válido.');
   if (JSON.stringify(req).length > MAX_OFFICE_JSON) throw new Error('El archivo es demasiado grande para exportarlo.');
   const title = typeof req.title === 'string' ? req.title.slice(0, 100) : 'Archivo';
 
-  if (req.kind === 'docx') {
-    const doc = req.document as Record<string, unknown> | null;
-    if (!doc || doc.type !== 'doc') throw new Error('Documento no válido.');
-    return { kind: 'docx', title, document: doc as unknown as TipTapNode };
-  }
-  if (req.kind === 'xlsx') {
-    const rows = req.rows;
-    if (
-      !Array.isArray(rows) ||
-      rows.length > 5000 ||
-      !rows.every(r => Array.isArray(r) && r.length <= 200 && r.every(c => typeof c === 'string' && c.length <= 32767))
-    ) {
-      throw new Error('Hoja de cálculo no válida.');
-    }
-    return { kind: 'xlsx', title, rows: rows as string[][] };
-  }
   if (req.kind === 'pptx') {
     const slides = req.slides;
     if (

@@ -153,7 +153,7 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       resetExportDir: vi.fn(async () => settingsSnapshot),
     },
     exportSessionHistoryPdf: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Historial de sesiones 2026-10-13 10-00-00.pdf' })),
-    exportOffice: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Documento.docx' })),
+    exportOffice: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Presentación.pptx' })),
     localAi: {
       getStatus: vi.fn(async () => localAiStatus),
       startDownload: vi.fn(async () => {

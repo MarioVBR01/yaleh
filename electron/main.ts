@@ -354,7 +354,7 @@ function registerIpcHandlers(): void {
   handle(IPC_INVOKE.localAiGenerate, (_event, request) => localAi.generate(parseLocalAiRequest(request)));
   handle(IPC_INVOKE.localAiAbort, (_event, requestId) => localAi.abort(parseId(requestId, 'Pedido')));
 
-  // Ofimática: se guarda directo en Documentos\\YALEH, sin diálogo del sistema (brief, sección 6.1).
+  // Exportar a .pptx (presentación de Gemini): carpeta de exportaciones, sin diálogo del sistema.
   handle(IPC_INVOKE.officeExport, async (_event, request): Promise<OfficeExportResult> => {
     try {
       const filePath = await exportOfficeFile(parseOfficeRequest(request), exportDirectory());

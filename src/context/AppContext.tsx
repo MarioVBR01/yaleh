@@ -34,7 +34,6 @@ interface AppContextValue {
     title: string;
     url?: string;
     icon?: string;
-    editorType?: 'docs' | 'sheets' | 'slides';
   }) => void;
   /** Cierra una pestaña por ID */
   closeTab: (id: string) => void;
@@ -76,8 +75,7 @@ export function AppProvider({
       title: string;
       url?: string;
       icon?: string;
-      editorType?: 'docs' | 'sheets' | 'slides';
-      }) => {
+        }) => {
       const newTab: Tab = {
         id: generateId(),
         ...config,

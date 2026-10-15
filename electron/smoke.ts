@@ -45,14 +45,11 @@ const SESSION_FILE_SCRIPT = `(async () => {
   return { expiredRejected: !r1.ok && /caducó/.test(r1.message), invalidRejected: !r2.ok, stillIdle: state.status === 'idle' };
 })()`;
 
-/** Exporta un documento, una hoja y una presentación por IPC (los guarda el proceso principal). */
+/** Exporta una presentación (.pptx) por IPC (la guarda el proceso principal). */
 const OFFICE_SCRIPT = `(async () => {
   const api = window.electronAPI;
-  const doc = await api.exportOffice({ kind: 'docx', title: 'Prueba', document: { type: 'doc', content: [
-    { type: 'paragraph', content: [{ type: 'text', text: 'Hola YALEH' }] } ] } });
-  const sheet = await api.exportOffice({ kind: 'xlsx', title: 'Prueba', rows: [['1', '=A1*2']] });
   const deck = await api.exportOffice({ kind: 'pptx', title: 'Prueba', slides: [{ title: 'Uno', content: 'Dos', background: '#1e293b' }] });
-  return { doc, sheet, deck };
+  return { deck };
 })()`;
 
 /** Código que se ejecuta en la página: genera archivos y los entrega a la dropzone. */
@@ -162,7 +159,7 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           fs.readFileSync(historyPdf.path).subarray(0, 5).toString() === '%PDF-';
 
         const office = await win.webContents.executeJavaScript(OFFICE_SCRIPT);
-        const officeOk = ['doc', 'sheet', 'deck'].every(
+        const officeOk = ['deck'].every(
           k => office[k].ok && /YALEH[\\/]Prueba .+\.(docx|xlsx|pptx)$/.test(office[k].path)
         );
 

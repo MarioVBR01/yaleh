@@ -193,11 +193,13 @@ Barra superior completa (buscador y botón de configuración), Enciclopedia SRB,
 | Asistente de IA | Sí (Gemini, "Asistente en línea") | Sí, si se descargó el modelo ("Asistente sin conexión"): chat, resumen y tarjetas. Cuestionario, informe y Wikipedia, solo con conexión |
 | Workspace, Canva, Gamma, Moodle, Classroom | Pestañas internas | No visibles |
 | Reproductor de YouTube | Sí | No |
-| Editores de ofimática | Sí | Sí |
+| Editores de ofimática | Eliminados (ORION #12): Google Docs, Hojas y Presentaciones en las pestañas | Eliminados: notas e IA sin conexión |
 | Notas, archivos y Pomodoro | Sí | Sí |
 | Historial y estadísticas | SQLite (este equipo) | SQLite (este equipo) |
 
 ### 6.1 Editores de ofimática
+
+> **Eliminados (ORION #12, 14/10/2026).** Los editores propios eran muy sencillos frente a Word, Excel y PowerPoint, y clonar Office no es viable. Con conexión se usan Google Docs, Hojas y Presentaciones en las pestañas internas; sin conexión quedan las notas de la sesión y la IA sin conexión. Se conserva la generación de `.pptx` para la presentación de Gemini. Abrir el Office instalado (con permiso del estudiante) queda para analizar más adelante. Lo que sigue es el diseño original.
 
 Se construyen dentro de la aplicación con librerías web. **No se usa FreeOffice**: es un programa aparte que rompería el aislamiento del kiosko y no se puede incluir en el instalador.
 

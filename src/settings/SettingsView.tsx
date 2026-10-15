@@ -326,7 +326,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
                   Asistente sin conexión: {LOCAL_AI.displayName}, del {LOCAL_AI.author}, licencia {LOCAL_AI.license} ({LOCAL_AI.licenseUrl}).
                 </li>
                 <li>llama.cpp y node-llama-cpp (MIT) · Electron, React y Vite (MIT) · Firebase SDK (Apache 2.0).</li>
-                <li>docx, ExcelJS y PptxGenJS (MIT) · pdf.js (Apache 2.0) · mammoth (BSD-2) · TipTap (MIT) · Recharts (MIT).</li>
+                <li>PptxGenJS (MIT) · pdf.js (Apache 2.0) · mammoth (BSD-2) · Recharts (MIT).</li>
               </ul>
             </div>
           </div>

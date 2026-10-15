@@ -16,8 +16,8 @@ const common = {
   bundle: true,
   platform: 'node',
   target: 'node24',
-  // Las librerías de ofimática se cargan desde node_modules (el instalador las incluye).
-  external: ['electron', 'docx', 'exceljs', 'pptxgenjs', 'node-llama-cpp'],
+  // PptxGenJS y node-llama-cpp se cargan desde node_modules (el instalador los incluye).
+  external: ['electron', 'pptxgenjs', 'node-llama-cpp'],
   sourcemap: true,
   logLevel: 'info',
   define: { __YALEH_VERSION__: JSON.stringify(pkg.version) },
