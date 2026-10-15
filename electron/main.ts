@@ -373,6 +373,7 @@ function registerIpcHandlers(): void {
   handle(IPC_INVOKE.tabsClose, (_event, tabId) => tabs.close(parseId(tabId, 'Pestaña')));
   handle(IPC_INVOKE.tabsShow, (_event, tabId) => tabs.show(tabId === null ? null : parseId(tabId, 'Pestaña')));
   handle(IPC_INVOKE.tabsSetBounds, (_event, tabId, bounds) => tabs.setBounds(parseId(tabId, 'Pestaña'), parseBounds(bounds)));
+  handle(IPC_INVOKE.tabsReload, (_event, tabId) => tabs.reload(parseId(tabId, 'Pestaña')));
 
   handle(IPC_INVOKE.appClose, () => {
     if (isLocked()) {

@@ -45,6 +45,7 @@ export const IPC_INVOKE = {
   tabsClose: 'tabs:close',
   tabsShow: 'tabs:show',
   tabsSetBounds: 'tabs:set-bounds',
+  tabsReload: 'tabs:reload',
   appClose: 'app:close',
 } as const;
 
@@ -178,7 +179,8 @@ export type OpenTabResult = { ok: true; tabId: string; url: string; title: strin
 export interface TabUpdatedPayload {
   tabId: string;
   title?: string;
-  error?: string;
+  /** Mensaje de error; null = se recargó y ya no hay error (ORION #24). */
+  error?: string | null;
 }
 
 export interface TabBounds {
@@ -197,6 +199,8 @@ export interface TabsAPI {
   show: (tabId: string | null) => Promise<void>;
   /** Dónde dibujar la vista (coordenadas de la ventana, en píxeles CSS). */
   setBounds: (tabId: string, bounds: TabBounds) => Promise<void>;
+  /** Vuelve a cargar la página actual de la pestaña (no la de inicio), con la lista de sitios de siempre (ORION #24). */
+  reload: (tabId: string) => Promise<void>;
   onUpdated: (callback: (payload: TabUpdatedPayload) => void) => () => void;
   onOpenRequest: (callback: (payload: { url: string }) => void) => () => void;
 }

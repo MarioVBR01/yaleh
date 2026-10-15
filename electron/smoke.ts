@@ -144,14 +144,24 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           await new Promise(r => setTimeout(r, 6000));
           const player = webContents.getAllWebContents().find(wc => wc.getURL().includes('/youtube.html?v=dQw4w9WgXcQ'));
           const embed = player?.mainFrame.framesInSubtree.find(fr => fr.url.includes('youtube-nocookie.com/embed/'));
+          // Recargar (ORION #24): vuelve a cargar la misma página, no la de inicio.
+          let reloadedSamePage = false;
+          if (opened.youtube.ok && player) {
+            const before = player.getURL();
+            await win.webContents.executeJavaScript(`window.electronAPI.tabs.reload('${opened.youtube.tabId}')`);
+            await new Promise(r => setTimeout(r, 4000));
+            reloadedSamePage = !player.isDestroyed() && player.getURL() === before;
+          }
           tabsCheck = {
             playerTab: opened.youtube.ok && String(opened.youtube.url).includes('youtube.html'),
             blocked: !opened.blocked.ok,
             embedLoaded: Boolean(embed),
+            reloadedSamePage,
           };
           if (opened.youtube.ok) await win.webContents.executeJavaScript(`window.electronAPI.tabs.close('${opened.youtube.tabId}')`);
         }
-        const tabsOk = tabsCheck.skipped === true || (tabsCheck.playerTab && tabsCheck.blocked && tabsCheck.embedLoaded);
+        const tabsOk =
+          tabsCheck.skipped === true || (tabsCheck.playerTab && tabsCheck.blocked && tabsCheck.embedLoaded && tabsCheck.reloadedSamePage);
 
         const historyPdf = await win.webContents.executeJavaScript('window.electronAPI.exportSessionHistoryPdf()');
         const historyPdfOk =

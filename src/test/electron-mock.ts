@@ -188,6 +188,7 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
       close: vi.fn(async () => {}),
       show: vi.fn(async () => {}),
       setBounds: vi.fn(async () => {}),
+      reload: vi.fn(async () => {}),
       onUpdated: vi.fn(() => () => {}),
       onOpenRequest: vi.fn(() => () => {}),
     },

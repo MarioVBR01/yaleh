@@ -82,7 +82,11 @@ export function useExternalTabsSync(options: { overlayOpen: boolean; onlineTools
     const api = getElectronAPI();
     if (!api) return;
     const offUpdated = api.tabs.onUpdated(({ tabId, title, error }) => {
-      dispatch({ type: 'UPDATE_TAB', payload: { id: tabId, ...(title ? { title } : {}), ...(error ? { error } : {}) } });
+      // error null: la pestaña se recargó y se borra el error anterior (ORION #24).
+      dispatch({
+        type: 'UPDATE_TAB',
+        payload: { id: tabId, ...(title ? { title } : {}), ...(error ? { error } : error === null ? { error: undefined } : {}) },
+      });
     });
     const offRequest = api.tabs.onOpenRequest(({ url }) => void openRef.current(url));
     return () => {

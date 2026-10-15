@@ -104,6 +104,17 @@ export class TabManager {
     }
   }
 
+  /**
+   * Recarga la página en la que está el estudiante (ORION #24). Recargar no cambia la URL: la
+   * lista de sitios permitidos (webRequest) se sigue aplicando como en cualquier carga.
+   */
+  reload(id: string): void {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed()) return;
+    this.deps.send(this.deps.events.updated, { tabId: id, error: null });
+    view.webContents.reload();
+  }
+
   close(id: string): void {
     const view = this.views.get(id);
     if (!view) return;

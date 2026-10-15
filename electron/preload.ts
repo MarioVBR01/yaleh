@@ -71,6 +71,7 @@ const api: ElectronAPI = {
     close: tabId => ipcRenderer.invoke(IPC_INVOKE.tabsClose, tabId),
     show: tabId => ipcRenderer.invoke(IPC_INVOKE.tabsShow, tabId),
     setBounds: (tabId, bounds) => ipcRenderer.invoke(IPC_INVOKE.tabsSetBounds, tabId, bounds),
+    reload: tabId => ipcRenderer.invoke(IPC_INVOKE.tabsReload, tabId),
     onUpdated: callback => subscribe(IPC_EVENT.tabsUpdated, callback),
     onOpenRequest: callback => subscribe(IPC_EVENT.tabsOpenRequest, callback),
   },
