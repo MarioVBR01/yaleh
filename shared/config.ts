@@ -121,6 +121,9 @@ export const QUICK_SESSION_MINUTES = [25, 50, 90] as const;
 /** Minutos para extender una sesión al terminar (ORION #2). */
 export const EXTEND_SESSION_MINUTES = [15, 25, 50] as const;
 
+/** Desde la barra inferior se puede extender durante los últimos 5 minutos (ORION #10). */
+export const EXTEND_ACTIVE_WINDOW_SECONDS = 5 * 60;
+
 // ─── Inteligencia artificial (brief, sección 7) ──────────────────────────────
 
 export const AI = {

@@ -9,9 +9,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Calendar, TimerReset } from 'lucide-react';
-import { EXTEND_SESSION_MINUTES } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import { closeApp, getElectronAPI } from '../lib/electron';
+import ExtendControls from '../kiosk/ExtendControls';
 
 /**
  * Formatea la fecha/hora actual en español.
@@ -41,7 +41,6 @@ function formatMinutes(seconds: number): number {
 export default function SessionCompletePhase() {
   const { state, dispatch } = useApp();
   const api = getElectronAPI();
-  const [extending, setExtending] = useState<number | null>(null);
   const [extendError, setExtendError] = useState<string | null>(null);
   // Se puede desactivar en la configuración (ORION #7).
   const canExtend = Boolean(api) && state.settings?.settings.allowExtend !== false;
@@ -49,7 +48,6 @@ export default function SessionCompletePhase() {
   /** Vuelve al kiosko con la misma sesión y más minutos (lo decide el proceso principal). */
   const handleExtend = async (minutes: number) => {
     if (!api) return;
-    setExtending(minutes);
     setExtendError(null);
     try {
       const snapshot = await api.extendSession(minutes * 60);
@@ -64,7 +62,6 @@ export default function SessionCompletePhase() {
     } catch (err) {
       console.error('No se pudo extender la sesión:', err);
       setExtendError('No se pudo extender la sesión. Puedes empezar una nueva desde la bienvenida.');
-      setExtending(null);
     }
   };
 
@@ -211,18 +208,7 @@ export default function SessionCompletePhase() {
               <p className="text-ink-soft text-sm font-medium mb-2 flex items-center gap-2">
                 <TimerReset size={16} className="text-accent" /> Extender la sesión
               </p>
-              <div className="grid grid-cols-3 gap-2">
-                {EXTEND_SESSION_MINUTES.map(minutes => (
-                  <button
-                    key={minutes}
-                    onClick={() => void handleExtend(minutes)}
-                    disabled={extending !== null}
-                    className="py-2 rounded-xl text-sm border border-line text-ink-soft hover:text-ink hover:border-accent disabled:opacity-50"
-                  >
-                    {extending === minutes ? 'Extendiendo…' : `+${minutes} min`}
-                  </button>
-                ))}
-              </div>
+              <ExtendControls onExtend={handleExtend} />
               {extendError && (
                 <p role="alert" className="mt-2 text-xs text-danger">
                   {extendError}

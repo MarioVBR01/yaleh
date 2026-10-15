@@ -2,15 +2,19 @@
  * @file BottomBar.tsx
  * @description Barra Inferior del entorno Kiosko de YALEH.
  * Contiene: Temporizador regresivo de sesión (HH:MM:SS, solo lo muestra;
- * la cuenta la lleva KioskLayout), el recuadro del Pomodoro (ORION #4) y
+ * la cuenta la lleva KioskLayout) con "Extender tiempo" en los últimos 5 minutos (ORION #10),
+ * el recuadro del Pomodoro (ORION #4) y
  * Sistema de gestión de pestañas responsivas con botón "Nueva Pestaña".
  * Las pestañas reducen su ancho proporcionalmente al acumularse,
  * emulando el comportamiento nativo de Chrome/Firefox.
  */
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Clock, Home } from 'lucide-react';
+import { Plus, X, Clock, Home, TimerReset } from 'lucide-react';
+import { EXTEND_ACTIVE_WINDOW_SECONDS } from '@shared/config';
+import { getElectronAPI } from '../lib/electron';
+import ExtendControls from './ExtendControls';
 import { useApp } from '../context/AppContext';
 import type { Tab } from '../store/appStore';
 import PomodoroMini from '../pomodoro/PomodoroMini';
@@ -40,6 +44,32 @@ interface BottomBarProps {
 export default function BottomBar({ onNewTab }: BottomBarProps) {
   const { state, dispatch } = useApp();
   const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [extendError, setExtendError] = useState<string | null>(null);
+  const api = getElectronAPI();
+  // Extender antes de que termine (ORION #10): últimos 5 minutos, si la configuración lo permite.
+  const canExtendNow =
+    Boolean(api) &&
+    state.settings?.settings.allowExtend !== false &&
+    state.sessionDuration > 0 &&
+    state.timeRemaining > 0 &&
+    state.timeRemaining <= EXTEND_ACTIVE_WINDOW_SECONDS;
+
+  const extendNow = async (minutes: number) => {
+    if (!api) return;
+    setExtendError(null);
+    try {
+      const snapshot = await api.extendSession(minutes * 60);
+      dispatch({
+        type: 'RESUME_SESSION',
+        payload: { durationSeconds: snapshot.durationSeconds, remainingSeconds: snapshot.remainingSeconds, mode: snapshot.mode },
+      });
+      setExtendOpen(false);
+    } catch (err) {
+      console.error('No se pudo extender la sesión:', err);
+      setExtendError('No se pudo extender.');
+    }
+  };
 
   const timePercent = calcTimePercent(state.timeRemaining, state.sessionDuration);
   const isLowTime = state.timeRemaining < 300; // Menos de 5 minutos
@@ -97,7 +127,25 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
         </div>
         )}
 
-        {showEndWarning && (
+        {canExtendNow &&
+          (extendOpen ? (
+            <div className="flex items-center gap-1.5 flex-shrink-0" aria-label="Extender tiempo">
+              <ExtendControls compact onExtend={extendNow} />
+              <button onClick={() => setExtendOpen(false)} className="p-1 text-ink-muted hover:text-ink" title="Cancelar">
+                <X size={12} />
+              </button>
+              {extendError && <span role="alert" className="text-[11px] text-danger">{extendError}</span>}
+            </div>
+          ) : (
+            <button
+              onClick={() => setExtendOpen(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-accent/40 bg-accent/10 text-accent-soft text-xs font-medium flex-shrink-0 hover:text-ink"
+            >
+              <TimerReset size={12} /> Extender tiempo
+            </button>
+          ))}
+
+        {showEndWarning && !extendOpen && (
           <span role="alert" className="px-2 py-1 rounded-lg border border-warning/40 bg-warning/10 text-warning text-xs font-medium flex-shrink-0">
             Quedan {Math.ceil(state.timeRemaining / 60)} min de sesión
           </span>

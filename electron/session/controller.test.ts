@@ -339,11 +339,29 @@ describe('SessionController: extender la sesión (ORION #2)', () => {
     expect(store.session).toMatchObject({ status: 'finished', durationSeconds: 180 });
   });
 
-  it('no se puede extender sin una sesión terminada (inactiva, activa o interrumpida)', () => {
+  it('no se puede extender sin sesión, ni una sesión en curso antes de los últimos 5 minutos', () => {
     const { controller } = setup();
     expect(() => controller.extend(900)).toThrow(/acaba de terminar/);
-    controller.start(120, 'offline');
-    expect(() => controller.extend(900)).toThrow(/acaba de terminar/);
+    controller.start(3600, 'offline');
+    expect(() => controller.extend(900)).toThrow(/últimos 5 minutos/);
+  });
+
+  it('en curso, en los últimos 5 minutos: suma el tiempo sin liberar el kiosko (ORION #10)', () => {
+    const { controller, store, unlock, onTick, onEnded } = setup();
+    controller.start(600, 'offline');
+    vi.advanceTimersByTime(400_000); // quedan 200 s
+    const snapshot = controller.extend(10 * 60);
+    expect(snapshot).toMatchObject({ status: 'active', durationSeconds: 1200, remainingSeconds: 800 });
+    expect(onTick).toHaveBeenLastCalledWith(800);
+    expect(unlock).not.toHaveBeenCalled();
+    expect(store.session).toMatchObject({ status: 'active', durationSeconds: 1200 });
+    expect(store.events.at(-1)).toMatchObject({ type: 'session-extended', detail: '600s (en curso)' });
+    // El reloj sigue: termina a los 800 s.
+    vi.advanceTimersByTime(799_000);
+    expect(onEnded).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1_000);
+    expect(onEnded).toHaveBeenCalledWith('completed');
+    expect(store.session).toMatchObject({ status: 'finished', durationSeconds: 1200 });
   });
 
   it('rechaza duraciones fuera de los límites', () => {

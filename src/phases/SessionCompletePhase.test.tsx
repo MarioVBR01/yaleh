@@ -49,6 +49,26 @@ describe('SessionCompletePhase: extender la sesión', () => {
     expect(screen.getByTestId('probe').textContent).toBe('session-complete|1500|0');
   });
 
+  it('también acepta minutos propios (ORION #10)', async () => {
+    const mock = createElectronMock({ snapshot: { status: 'finished', durationSeconds: 1500, mode: 'offline', sessionId: 's1' } });
+    mock.install();
+    renderComplete();
+    fireEvent.change(screen.getByLabelText('Minutos para extender'), { target: { value: '7' } });
+    fireEvent.click(screen.getByText('Extender'));
+    expect(mock.api.extendSession).toHaveBeenCalledWith(420);
+    expect((await screen.findByText('kiosk|1920|420')).textContent).toBe('kiosk|1920|420');
+  });
+
+  it('minutos propios fuera de rango: no extiende', () => {
+    const mock = createElectronMock();
+    mock.install();
+    renderComplete();
+    fireEvent.change(screen.getByLabelText('Minutos para extender'), { target: { value: '0' } });
+    fireEvent.click(screen.getByText('Extender'));
+    expect(screen.getByText('Entre 1 y 180 minutos.')).toBeTruthy();
+    expect(mock.api.extendSession).not.toHaveBeenCalled();
+  });
+
   it('en el navegador no ofrece extender', () => {
     renderComplete();
     expect(screen.queryByText('+15 min')).toBeNull();

@@ -15,6 +15,7 @@ import type {
   SessionSnapshot,
   SessionStatus,
 } from '../../shared/ipc-types';
+import { EXTEND_ACTIVE_WINDOW_SECONDS } from '../../shared/config';
 import type { PersistedSession, SessionEvent, SessionStore } from './store';
 
 export interface SessionControllerDeps {
@@ -131,17 +132,32 @@ export class SessionController {
   }
 
   /**
-   * Extiende la sesión que acaba de terminar (ORION #2): la misma sesión vuelve a estar activa
-   * con `extraSeconds` más, el equipo se bloquea otra vez y la duración se suma. Solo es posible
-   * con la sesión terminada en esta ejecución de la app (tras reiniciar, la pantalla de sesión
-   * completada ya no existe).
+   * Extiende la sesión (ORION #2 y #10). La duración se suma a la misma sesión.
+   * - Terminada (en esta ejecución de la app): vuelve a estar activa con `extraSeconds` y el
+   *   equipo se bloquea otra vez.
+   * - En curso, durante los últimos 5 minutos: se suma al tiempo que queda; el kiosko sigue
+   *   bloqueado y el reloj sigue corriendo.
    */
   extend(extraSeconds: number): SessionSnapshot {
-    if (this.status !== 'finished' || !this.current) {
-      throw new Error('Solo se puede extender una sesión que acaba de terminar.');
-    }
     if (!Number.isInteger(extraSeconds) || extraSeconds < this.deps.minSeconds || extraSeconds > this.deps.maxSeconds) {
       throw new Error('Duración de la extensión no válida.');
+    }
+    if (this.status === 'active' && this.current) {
+      if (this.remainingSeconds() > EXTEND_ACTIVE_WINDOW_SECONDS) {
+        throw new Error('Se puede extender durante los últimos 5 minutos de la sesión.');
+      }
+      this.current = {
+        ...this.current,
+        endsAt: this.current.endsAt + extraSeconds * 1000,
+        durationSeconds: this.current.durationSeconds + extraSeconds,
+      };
+      this.deps.store.saveSession(this.current);
+      this.log('session-extended', this.current.id, `${extraSeconds}s (en curso)`);
+      this.deps.onTick(this.remainingSeconds());
+      return this.getSnapshot();
+    }
+    if (this.status !== 'finished' || !this.current) {
+      throw new Error('Solo se puede extender una sesión que acaba de terminar.');
     }
     this.current = {
       ...this.current,
