@@ -19,6 +19,7 @@ import ExternalTabPanel from '../panels/ExternalTabPanel';
 import HistoryPanel from '../panels/HistoryPanel';
 import PomodoroPanel from '../panels/PomodoroPanel';
 import SettingsView from '../settings/SettingsView';
+import TimeWarningToast from './TimeWarningToast';
 import { PomodoroProvider } from '../pomodoro/PomodoroContext';
 import DownloadsPanel from '../panels/DownloadsPanel';
 import StatsPanel from '../panels/StatsPanel';
@@ -129,55 +130,59 @@ export default function KioskLayout() {
           </div>
 
           {/* ── WORKSPACE CENTRAL (Pestañas) ──────────────────────────────── */}
-          <div className="flex-1 min-w-0 overflow-hidden relative">
+          <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          {/* Aviso de tiempo restante (ORION #13): ocupa su lugar y la pestaña externa se achica. */}
+          <TimeWarningToast />
+          <div className="flex-1 min-h-0 overflow-hidden relative">
 
-            {/* Conexión perdida en una sesión online: el kiosko sigue bloqueado y el tiempo corre. */}
-            {offlineNotice && (
-              <div
-                role="status"
-                className="absolute top-0 inset-x-0 z-20 px-4 py-2 bg-warning/15 border-b border-warning/40 text-ink-soft text-sm text-center"
-              >
-                Sin conexión: puedes seguir con los módulos locales
-              </div>
-            )}
-
-            {/* Avisos (por ejemplo, límite de pestañas o sitio no permitido). */}
-            {state.notice && (
-              <div
-                role="alert"
-                className="absolute top-0 inset-x-0 z-30 px-4 py-2 bg-danger/15 border-b border-danger/40 text-ink-soft text-sm flex items-center justify-center gap-3"
-              >
-                <span>{state.notice}</span>
-                <button
-                  onClick={() => dispatch({ type: 'SET_NOTICE', payload: null })}
-                  className="text-xs underline text-ink-muted hover:text-ink"
+              {/* Conexión perdida en una sesión online: el kiosko sigue bloqueado y el tiempo corre. */}
+              {offlineNotice && (
+                <div
+                  role="status"
+                  className="absolute top-0 inset-x-0 z-20 px-4 py-2 bg-warning/15 border-b border-warning/40 text-ink-soft text-sm text-center"
                 >
-                  Entendido
-                </button>
-              </div>
-            )}
+                  Sin conexión: puedes seguir con los módulos locales
+                </div>
+              )}
 
-            {/*
-             * Renderiza TODAS las pestañas pero solo muestra la activa.
-             * Esto preserva el estado (editores, formularios, reproductores)
-             * al cambiar entre pestañas sin desmontarlos.
-             */}
-            {state.tabs.map(tab => (
-              <div
-                key={tab.id}
-                className={`absolute inset-0 ${tab.id === state.activeTabId ? 'z-10' : 'z-0 pointer-events-none'}`}
-                style={{ display: tab.id === state.activeTabId ? 'block' : 'none' }}
-              >
-                <TabContent tab={tab} />
-              </div>
-            ))}
+              {/* Avisos (por ejemplo, límite de pestañas o sitio no permitido). */}
+              {state.notice && (
+                <div
+                  role="alert"
+                  className="absolute top-0 inset-x-0 z-30 px-4 py-2 bg-danger/15 border-b border-danger/40 text-ink-soft text-sm flex items-center justify-center gap-3"
+                >
+                  <span>{state.notice}</span>
+                  <button
+                    onClick={() => dispatch({ type: 'SET_NOTICE', payload: null })}
+                    className="text-xs underline text-ink-muted hover:text-ink"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              )}
 
-            {/* Estado vacío */}
-            {state.tabs.length === 0 && (
-              <div className="flex items-center justify-center h-full text-slate-600">
-                <p className="text-sm">Abre una nueva pestaña para comenzar</p>
-              </div>
-            )}
+              {/*
+               * Renderiza TODAS las pestañas pero solo muestra la activa.
+               * Esto preserva el estado (editores, formularios, reproductores)
+               * al cambiar entre pestañas sin desmontarlos.
+               */}
+              {state.tabs.map(tab => (
+                <div
+                  key={tab.id}
+                  className={`absolute inset-0 ${tab.id === state.activeTabId ? 'z-10' : 'z-0 pointer-events-none'}`}
+                  style={{ display: tab.id === state.activeTabId ? 'block' : 'none' }}
+                >
+                  <TabContent tab={tab} />
+                </div>
+              ))}
+
+              {/* Estado vacío */}
+              {state.tabs.length === 0 && (
+                <div className="flex items-center justify-center h-full text-slate-600">
+                  <p className="text-sm">Abre una nueva pestaña para comenzar</p>
+                </div>
+              )}
+          </div>
           </div>
         </div>
 

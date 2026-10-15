@@ -12,7 +12,7 @@ export type TextScale = 'normal' | 'large' | 'xlarge';
 export interface AppSettings {
   /** Duración que se propone al elegir el tiempo (minutos); null = sin predeterminada. */
   defaultSessionMinutes: number | null;
-  /** Aviso antes de que termine la sesión (minutos); 0 = sin aviso. */
+  /** Aviso "Te quedan N minutos" antes de que termine la sesión (minutos); 0 = desactivado (ORION #13). */
   endWarningMinutes: number;
   /** Ofrecer "Extender la sesión" al terminar (ORION #2). */
   allowExtend: boolean;
@@ -37,7 +37,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   darkMode: true,
 };
 
-export const END_WARNING_OPTIONS = [0, 1, 5, 10] as const;
+export const END_WARNING_OPTIONS = [0, 1, 5, 10, 15] as const;
 
 export const TEXT_SCALES: Record<TextScale, { label: string; percent: number }> = {
   normal: { label: 'Normal', percent: 100 },

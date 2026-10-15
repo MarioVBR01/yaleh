@@ -158,7 +158,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
             />
             <span className="text-ink-subtle text-xs">min</span>
           </Row>
-          <Row label="Aviso antes de que termine" hint="Un aviso dentro del kiosko cuando queda poco tiempo.">
+          <Row label="Aviso antes de que termine" hint="Notificación dentro de YALEH (no de Windows): sale una vez por sesión y otra si la extiendes.">
             <select
               value={settings.endWarningMinutes}
               disabled={inSession}
@@ -168,7 +168,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
             >
               {END_WARNING_OPTIONS.map(m => (
                 <option key={m} value={m}>
-                  {m === 0 ? 'Sin aviso' : `${m} min antes`}
+                  {m === 0 ? 'Desactivado' : `${m} min antes`}
                 </option>
               ))}
             </select>
