@@ -10,7 +10,7 @@ import { getAI, getGenerativeModel, GoogleAIBackend, Schema, type Content, type 
 import { AI } from '@shared/config';
 import { getFirebaseApp } from '../firebase/app';
 import type { SearchResult } from './search';
-import { parseStudyOutput, type StudyContent, type StudyKind } from './study-items';
+import { INFOGRAPHIC_ICONS, parseStudyOutput, type StudyContent, type StudyKind } from './study-items';
 
 export interface SourceText {
   name: string;
@@ -109,6 +109,8 @@ export async function askTutor(
 
 // ─── Estudio: salida estructurada ────────────────────────────────────────────
 
+const ICON_LIST = INFOGRAPHIC_ICONS.join(', ');
+
 const SCHEMAS: Record<Exclude<StudyKind, 'report'>, Schema> = {
   summary: Schema.object({
     properties: {
@@ -145,6 +147,60 @@ const SCHEMAS: Record<Exclude<StudyKind, 'report'>, Schema> = {
       }),
     },
   }),
+  mindmap: Schema.object({
+    properties: {
+      central: Schema.string({ description: 'Tema central, pocas palabras' }),
+      branches: Schema.array({
+        description: 'Entre 3 y 6 ramas',
+        items: Schema.object({
+          properties: {
+            label: Schema.string({ description: 'Tema principal' }),
+            children: Schema.array({ items: Schema.string(), description: 'Entre 2 y 4 subtemas cortos' }),
+          },
+        }),
+      }),
+    },
+  }),
+  table: Schema.object({
+    properties: {
+      title: Schema.string(),
+      columns: Schema.array({ items: Schema.string(), description: 'Entre 2 y 5 encabezados' }),
+      rows: Schema.array({ items: Schema.array({ items: Schema.string() }), description: 'Entre 4 y 10 filas, una celda por columna' }),
+    },
+  }),
+  infographic: Schema.object({
+    properties: {
+      title: Schema.string(),
+      subtitle: Schema.string(),
+      stats: Schema.array({
+        description: 'Entre 2 y 4 datos destacados',
+        items: Schema.object({
+          properties: {
+            icon: Schema.string({ description: `Uno de: ${ICON_LIST}` }),
+            value: Schema.string({ description: 'Valor corto (número, fecha o palabra)' }),
+            label: Schema.string(),
+          },
+        }),
+      }),
+      points: Schema.array({
+        description: 'Entre 3 y 5 puntos clave',
+        items: Schema.object({
+          properties: { icon: Schema.string({ description: `Uno de: ${ICON_LIST}` }), text: Schema.string() },
+        }),
+      }),
+    },
+  }),
+  presentation: Schema.object({
+    properties: {
+      title: Schema.string(),
+      slides: Schema.array({
+        description: 'Entre 5 y 8 diapositivas',
+        items: Schema.object({
+          properties: { title: Schema.string(), bullets: Schema.array({ items: Schema.string(), description: 'Entre 2 y 5 viñetas' }) },
+        }),
+      }),
+    },
+  }),
 };
 
 const PROMPTS: Record<StudyKind, string> = {
@@ -153,6 +209,13 @@ const PROMPTS: Record<StudyKind, string> = {
   flashcards: 'Genera tarjetas de estudio (anverso y reverso) con los conceptos más importantes de las fuentes.',
   report:
     'Redacta un informe académico en markdown sobre las fuentes: introducción, desarrollo por secciones con títulos, conclusiones. Menciona las fuentes por su nombre. Sin enlaces.',
+  mindmap:
+    'Genera un mapa mental de las fuentes: un tema central breve, entre 3 y 6 ramas con los temas principales y, en cada rama, entre 2 y 4 subtemas cortos (pocas palabras).',
+  table:
+    'Genera una tabla de datos con la información clave de las fuentes (conceptos, fechas, cifras, comparaciones): un título, entre 2 y 5 columnas y entre 4 y 10 filas. Celdas breves.',
+  infographic: `Genera el contenido de una infografía simple de las fuentes: título, subtítulo de una frase, entre 2 y 4 datos destacados (valor corto y etiqueta) y entre 3 y 5 puntos clave de una frase. A cada dato y punto asígnale un ícono de esta lista: ${INFOGRAPHIC_ICONS.join(', ')}.`,
+  presentation:
+    'Genera el esquema de una presentación sobre las fuentes: título y entre 5 y 8 diapositivas, cada una con un título y entre 2 y 5 viñetas breves.',
 };
 
 export async function generateStudyItem(kind: StudyKind, sources: SourceText[]): Promise<StudyContent> {

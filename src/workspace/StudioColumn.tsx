@@ -1,14 +1,15 @@
 /**
  * @file StudioColumn.tsx
- * @description Columna "Estudio" (brief, secciones 5.2 y 7.3): resumen, cuestionario,
- * tarjetas e informe generados por la IA, y el recuadro de notas.
+ * @description Columna "Estudio" (brief, secciones 5.2 y 7.3): resumen, cuestionario, tarjetas,
+ * informe, mapa mental, tabla de datos, infografía y presentación (.pptx) generados por la IA
+ * (los cuatro últimos: ORION #18), y el recuadro de notas.
  * Los resultados se guardan en Firestore (studyItems) cuando hay cuenta.
  * Sin conexión, el modelo local (si está instalado) hace el resumen y las tarjetas; el cuestionario y
  * el informe siguen solo con conexión (revisión 1.8). Sin asistente: "Disponible próximamente"; las notas funcionan.
  */
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, FileBarChart, HelpCircle, Layers, ListChecks, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileBarChart, HelpCircle, LayoutDashboard, Layers, ListChecks, Loader2, Network, Presentation as PresentationIcon, Table2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { describeAIError } from '../ai/errors';
 import type { AssistantProvider } from '../ai/provider';
@@ -19,12 +20,17 @@ import { useAssistant, useModeFlags } from '../lib/mode';
 import AIUnavailable, { AssistantBadge, LocalSlowNotice } from './AIUnavailable';
 import Markdown from './Markdown';
 import NotesBox from './NotesBox';
+import { DataTable, Infographic, MindMap, Presentation } from './StudyVisuals';
 
 const ACTIONS: { kind: StudyKind; icon: typeof ListChecks }[] = [
   { kind: 'summary', icon: ListChecks },
   { kind: 'quiz', icon: HelpCircle },
   { kind: 'flashcards', icon: Layers },
   { kind: 'report', icon: FileBarChart },
+  { kind: 'mindmap', icon: Network },
+  { kind: 'table', icon: Table2 },
+  { kind: 'infographic', icon: LayoutDashboard },
+  { kind: 'presentation', icon: PresentationIcon },
 ];
 
 interface Item {
@@ -152,6 +158,14 @@ function renderContent(content: StudyContent) {
       return <Flashcards cards={content.data.cards} />;
     case 'report':
       return <Markdown text={content.data} />;
+    case 'mindmap':
+      return <MindMap data={content.data} />;
+    case 'table':
+      return <DataTable data={content.data} />;
+    case 'infographic':
+      return <Infographic data={content.data} />;
+    case 'presentation':
+      return <Presentation data={content.data} />;
   }
 }
 
