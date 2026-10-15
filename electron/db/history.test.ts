@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { listSessionHistory } from './history';
 import { runMigrations } from './migrations';
 import { SqliteSessionStore } from './sqlite-session-store';
+import { WorkspaceRepository } from './workspace-repository';
 
 function setup() {
   const db = new DatabaseSync(':memory:');
@@ -57,5 +58,18 @@ describe('tiempo estudiado en el historial (ORION #11)', () => {
 
     const byId = Object.fromEntries(listSessionHistory(db).map(h => [h.id, h.studiedSeconds]));
     expect(byId).toEqual({ medida: 240, 'vieja-completa': 900, 'vieja-liberada': 300, 'vieja-cortada': 0 });
+  });
+});
+
+describe('archivos de cada sesión (ORION #20)', () => {
+  it('lista los archivos cargados en la sesión, en orden; sin archivos, lista vacía', () => {
+    const { db, store } = setup();
+    const repo = new WorkspaceRepository(db);
+    store.saveSession({ id: 'con', mode: 'offline', startedAt: 2, endsAt: 3, durationSeconds: 60, status: 'finished' });
+    store.saveSession({ id: 'sin', mode: 'offline', startedAt: 1, endsAt: 2, durationSeconds: 60, status: 'finished' });
+    repo.addSource('con', { id: 'a', name: 'clase 1.pdf', type: 'application/pdf', size: 1 }, 'uno');
+    repo.addSource('con', { id: 'b', name: 'apuntes, tema 2.txt', type: 'text/plain', size: 1 }, 'dos');
+    const byId = Object.fromEntries(listSessionHistory(db).map(h => [h.id, h.files]));
+    expect(byId).toEqual({ con: ['clase 1.pdf', 'apuntes, tema 2.txt'], sin: [] });
   });
 });

@@ -19,6 +19,7 @@ function session(overrides: Partial<SessionHistoryEntry>): SessionHistoryEntry {
     connectionLost: 0,
     interruptions: 0,
     endReason: 'completed',
+    files: [],
     ...overrides,
   };
 }

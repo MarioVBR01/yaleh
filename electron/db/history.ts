@@ -1,7 +1,7 @@
 /**
  * @file history.ts
  * @description Historial de sesiones del escritorio (fase 10), desde SQLite:
- * fecha, duración, modo, estado, pérdidas de foco, cortes de red e interrupciones.
+ * fecha, duración, modo, estado, archivos cargados (ORION #20), pérdidas de foco, cortes de red e interrupciones.
  */
 
 import type { DatabaseSync } from 'node:sqlite';
@@ -15,6 +15,7 @@ interface HistoryRow {
   duration_seconds: number;
   studied_seconds: number | null;
   finished_at: string | null;
+  files: string | null;
   status: SessionHistoryEntry['status'];
   focus_lost: number;
   connection_lost: number;
@@ -44,6 +45,7 @@ export function listSessionHistory(db: DatabaseSync, limit = 500): SessionHistor
       `SELECT s.id, s.mode, s.started_at, s.ends_at, s.duration_seconds, s.studied_seconds, s.status,
          (SELECT e.at FROM session_events e
             WHERE e.session_id = s.id AND e.type = 'session-finished' ORDER BY e.id DESC LIMIT 1) AS finished_at,
+         (SELECT group_concat(name, char(31)) FROM (SELECT f.name FROM sources f WHERE f.workspace_id = s.id ORDER BY f.created_at, f.rowid)) AS files,
          ${count('focus-lost')} AS focus_lost,
          ${count('connection-lost')} AS connection_lost,
          ${count('session-interrupted')} AS interruptions,
@@ -69,6 +71,7 @@ export function listSessionHistory(db: DatabaseSync, limit = 500): SessionHistor
       connectionLost: r.connection_lost,
       interruptions: r.interruptions,
       endReason,
+      files: r.files ? r.files.split('\u001f') : [],
     };
   });
 }

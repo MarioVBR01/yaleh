@@ -154,6 +154,8 @@ export interface SessionHistoryEntry {
   interruptions: number;
   /** Cómo terminó: tiempo cumplido o salida de desarrollo (null si no terminó). */
   endReason: SessionEndReason | null;
+  /** Nombres de los archivos cargados en la sesión, en orden de carga (ORION #20). */
+  files: string[];
 }
 
 export interface OfficeSlide {

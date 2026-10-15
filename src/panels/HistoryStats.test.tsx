@@ -14,12 +14,12 @@ const history: SessionHistoryEntry[] = [
   {
     id: 'b', mode: 'offline', startedAt: now - 3_600_000, endsAt: now, durationSeconds: 90 * 60,
     studiedSeconds: 20 * 60,
-    status: 'interrupted', focusLost: 4, connectionLost: 0, interruptions: 1, endReason: null,
+    status: 'interrupted', focusLost: 4, connectionLost: 0, interruptions: 1, endReason: null, files: ['clase1.pdf', 'clase2.pdf', 'resumen.docx'],
   },
   {
     id: 'a', mode: 'online', startedAt: now - 7_200_000, endsAt: now, durationSeconds: 25 * 60,
     studiedSeconds: 25 * 60,
-    status: 'finished', focusLost: 2, connectionLost: 1, interruptions: 0, endReason: 'completed',
+    status: 'finished', focusLost: 2, connectionLost: 1, interruptions: 0, endReason: 'completed', files: [],
   },
 ];
 
@@ -37,6 +37,10 @@ describe('HistoryPanel', () => {
     expect(screen.getByText('Tiempo estudiado')).toBeTruthy();
     expect(screen.getByText('20 min')).toBeTruthy();
     expect(screen.getByText('Con conexión')).toBeTruthy();
+    // Columna Archivos (ORION #20): los primeros y +N; sin archivos, —.
+    expect(screen.getByText('Archivos')).toBeTruthy();
+    expect(screen.getByText('clase1.pdf, clase2.pdf +1').getAttribute('title')).toBe('clase1.pdf\nclase2.pdf\nresumen.docx');
+    expect(screen.getByText('—')).toBeTruthy();
   });
 
   it('Exportar PDF: lo pide al proceso principal y muestra dónde quedó (ORION #8)', async () => {

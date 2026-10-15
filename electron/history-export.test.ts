@@ -14,7 +14,7 @@ const NOW = new Date(2026, 9, 13, 10, 0, 0);
 const entry = (overrides: Partial<SessionHistoryEntry>): SessionHistoryEntry => ({
   id: 's1', mode: 'offline', startedAt: NOW.getTime() - 3_600_000, endsAt: NOW.getTime(), durationSeconds: 1500,
   studiedSeconds: 1500,
-  status: 'finished', focusLost: 2, connectionLost: 0, interruptions: 0, endReason: 'completed', ...overrides,
+  status: 'finished', focusLost: 2, connectionLost: 0, interruptions: 0, endReason: 'completed', files: ['apuntes.pdf'], ...overrides,
 });
 
 const dirs: string[] = [];
@@ -30,6 +30,8 @@ describe('buildHistoryHtml', () => {
     expect(html).toContain('Interrumpida');
     expect(html).toContain('Con conexión');
     expect(html).toContain('25 min');
+    expect(html).toContain('<th>Archivos</th>');
+    expect(html).toContain('apuntes.pdf');
   });
 
   it('no tiene scripts ni recursos externos', () => {

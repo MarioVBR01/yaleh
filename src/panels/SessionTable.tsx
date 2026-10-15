@@ -1,6 +1,6 @@
 /**
  * @file SessionTable.tsx
- * @description Tabla de sesiones del historial (SQLite): fecha, duración, tiempo estudiado, modo, estado,
+ * @description Tabla de sesiones del historial (SQLite): fecha, duración, tiempo estudiado, modo, estado, archivos,
  * pérdidas de foco, cortes de red e interrupciones. La usan el Historial (todas las sesiones)
  * y las Estadísticas (las 10 últimas, ORION #6).
  */
@@ -21,6 +21,13 @@ export function formatSessionDate(ms: number): string {
   return new Date(ms).toLocaleString('es-BO', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+/** Archivos de la sesión: los primeros y "+N" si son muchos; "—" si no hay (ORION #20). */
+export function formatFiles(files: string[], shown = 2): string {
+  if (files.length === 0) return '—';
+  const extra = files.length - shown;
+  return extra > 0 ? `${files.slice(0, shown).join(', ')} +${extra}` : files.join(', ');
+}
+
 export default function SessionTable({ entries }: { entries: SessionHistoryEntry[] }) {
   return (
     <table className="w-full text-sm">
@@ -31,6 +38,7 @@ export default function SessionTable({ entries }: { entries: SessionHistoryEntry
           <th className="py-2 pr-3 font-medium">Tiempo estudiado</th>
           <th className="py-2 pr-3 font-medium">Modo</th>
           <th className="py-2 pr-3 font-medium">Estado</th>
+          <th className="py-2 pr-3 font-medium">Archivos</th>
           <th className="py-2 pr-3 font-medium text-right">Pérdidas de foco</th>
           <th className="py-2 pr-3 font-medium text-right">Cortes de red</th>
           <th className="py-2 font-medium text-right">Interrupciones</th>
@@ -49,6 +57,9 @@ export default function SessionTable({ entries }: { entries: SessionHistoryEntry
                 <span className={`inline-block px-2 py-0.5 rounded-full border text-[11px] ${status.className}`}>
                   {status.text}
                 </span>
+              </td>
+              <td className="py-2 pr-3 max-w-[16rem] truncate" title={s.files.join('\n')}>
+                {formatFiles(s.files)}
               </td>
               <td className="py-2 pr-3 text-right">{s.focusLost}</td>
               <td className="py-2 pr-3 text-right">{s.connectionLost}</td>
