@@ -42,7 +42,6 @@ export const ALLOWED_SITES: readonly AllowedSite[] = [
   { host: 'accounts.youtube.com', reason: 'Paso del inicio de sesión de Google que fija la sesión' },
   { host: 'www.google.com', pathPrefix: '/recaptcha/', reason: 'App Check (Fraud Defense) en la fase 4' },
 
-  { host: 'canva.com', includeSubdomains: true, reason: 'Canva' },
   { host: 'gamma.app', includeSubdomains: true, reason: 'Gamma' },
   { host: 'www.youtube-nocookie.com', reason: 'Reproductor de YouTube embebido (fase 8)' },
 ];
@@ -68,7 +67,6 @@ export interface ToolLink {
 /** Herramientas autorizadas (brief, secciones 5.3 y 9). */
 export const TOOL_LINKS: readonly ToolLink[] = [
   { id: 'classroom', name: 'Google Classroom', url: 'https://classroom.google.com', icon: '🖥️' },
-  { id: 'canva', name: 'Canva', url: 'https://www.canva.com', icon: '🎨' },
   { id: 'gamma', name: 'Gamma', url: 'https://gamma.app', icon: '📊' },
 ];
 

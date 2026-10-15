@@ -13,7 +13,7 @@ import { getElectronAPI, isElectron } from './electron';
 export interface ModeFlags {
   /** true en la app de escritorio. */
   isDesktop: boolean;
-  /** Herramientas online (Workspace, Classroom, Canva, Gamma). */
+  /** Herramientas online (Workspace, Classroom, Gamma). */
   onlineTools: boolean;
   /** Qué asistente de IA responde (revisión 1.8): en línea, sin conexión o ninguno. */
   assistant: AssistantChoice;

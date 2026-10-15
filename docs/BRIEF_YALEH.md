@@ -15,7 +15,7 @@ YALEH es un entorno de estudio para estudiantes del TECBA con problemas de conce
 - **Web:** el centro de trabajo con IA. El estudiante inicia sesión, carga sus materiales, trabaja con el asistente y prepara su sesión de concentración.
 - **Escritorio (Electron):** bloquea el sistema operativo durante la sesión, al estilo de Safe Exam Browser. Funciona con o sin internet.
 
-No hay navegación libre por internet. La información la busca el asistente de IA, y el estudiante solo accede a herramientas autorizadas: Google Workspace, Canva, Gamma y Classroom (Moodle se retiró, ORION #14).
+No hay navegación libre por internet. La información la busca el asistente de IA, y el estudiante solo accede a herramientas autorizadas: Google Workspace, Gamma y Classroom (Moodle y Canva se retiraron, ORION #14 y #15).
 
 El proyecto parte del MVP existente ("Safe Research Browser"), que se **reorganiza**, no se rehace.
 
@@ -116,7 +116,7 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 3. Confirma la sesión en la pantalla de confirmación.
 4. Se activa el kiosko. El modo lo decide el proceso principal según la conexión en ese momento.
 
-**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Canva, Gamma) no se muestran. La IA la atiende el asistente sin conexión si está descargado (sección 7.5); si no, muestra "Disponible próximamente" con la indicación para descargarlo.
+**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Gamma) no se muestran. La IA la atiende el asistente sin conexión si está descargado (sección 7.5); si no, muestra "Disponible próximamente" con la indicación para descargarlo.
 
 ### 4.3 Durante la sesión (ambos modos)
 
@@ -167,7 +167,7 @@ En pantallas angostas, las columnas se convierten en pestañas. El mapa mental q
 
 - **Estadísticas** (dashboard).
 - **Pomodoro.**
-- **Herramientas:** Google Workspace, Canva, Gamma y Classroom. En el navegador se abren en una pestaña nueva del navegador; en el kiosko, en pestañas internas.
+- **Herramientas:** Google Workspace, Gamma y Classroom. En el navegador se abren en una pestaña nueva del navegador; en el kiosko, en pestañas internas.
 - **Actividades recientes:** sesiones pasadas.
 - **Configuración:** botón visible; su función se define después.
 
@@ -191,7 +191,7 @@ Barra superior completa (buscador y botón de configuración), Enciclopedia SRB,
 | Inicio | Bienvenida: "Iniciar" (flujo local) o "Abrir archivo de sesión (.yaleh)" | Igual |
 | Vista principal | La interfaz de YALEH (Fuentes · Chat · Estudio) con las fuentes guardadas en SQLite | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
 | Asistente de IA | Sí (Gemini, "Asistente en línea") | Sí, si se descargó el modelo ("Asistente sin conexión"): chat, resumen y tarjetas. Cuestionario, informe y Wikipedia, solo con conexión |
-| Workspace, Canva, Gamma, Classroom | Pestañas internas | No visibles |
+| Workspace, Gamma, Classroom | Pestañas internas | No visibles |
 | Reproductor de YouTube | Sí | No |
 | Editores de ofimática | Eliminados (ORION #12): Google Docs, Hojas y Presentaciones en las pestañas | Eliminados: notas e IA sin conexión |
 | Notas, archivos y Pomodoro | Sí | Sí |
@@ -352,7 +352,7 @@ Todo el bloqueo se aplica en el **proceso principal**, nunca en la interfaz. Ver
 
 - [x] Pantalla completa en modo kiosko, sin menú y siempre al frente (nivel `screen-saver`) durante la sesión; si la ventana pierde el foco, lo recupera y registra la pérdida. *(fase 2)*
 - [x] Atajos del sistema bloqueados con `before-input-event` y `globalShortcut` donde Windows lo permite (Alt+F4, F5, F11, F12, Ctrl+W, Ctrl+R, Ctrl+Shift+I y similares). *(fase 2)* **Windows no permite capturar Alt+Tab ni la tecla Windows** con `globalShortcut`; se mitiga con la ventana siempre al frente al máximo nivel, recuperando el foco si se pierde y registrando cada pérdida de foco. Estas limitaciones y Ctrl+Alt+Supr se documentan.
-- [x] Lista de sitios permitidos con `session.webRequest.onBeforeRequest`, filtrando solo `mainFrame` y `subFrame`, para no bloquear los recursos que cargan Google o Canva (ni las llamadas a la API de Wikipedia). *(fase 2)*
+- [x] Lista de sitios permitidos con `session.webRequest.onBeforeRequest`, filtrando solo `mainFrame` y `subFrame`, para no bloquear los recursos que cargan los sitios de Google (ni las llamadas a la API de Wikipedia). *(fase 2)*
 - [x] `will-navigate` y `setWindowOpenHandler` controlados en todas las vistas: toda ventana o página nueva se abre como pestaña interna o se bloquea. *(fase 2: por ahora se deniegan; en la fase 8 se abren como pestañas)*
 - [x] `shell.openExternal` restringido a la web de YALEH (`yaleh-fbe1c.web.app` y `yaleh-fbe1c.firebaseapp.com`), desde la que se inicia sesión con Google. *(fase 2)*
 - [x] DevTools deshabilitadas en la versión empaquetada. *(fase 2)*
@@ -372,7 +372,6 @@ Todo el bloqueo se aplica en el **proceso principal**, nunca en la interfaz. Ver
 | `accounts.google.com` | Inicio de sesión de Google |
 | `accounts.youtube.com` | Paso del inicio de sesión de Google que fija la sesión; sin él el login se interrumpe |
 | `www.google.com`, solo la ruta `/recaptcha/` | App Check (Fraud Defense) carga su marco desde ahí (fase 4) |
-| `canva.com` y subdominios | Canva |
 | `gamma.app` y subdominios | Gamma |
 | `www.youtube-nocookie.com` | Reproductor de YouTube embebido (fase 8) |
 | `localhost:5173` | Servidor de Vite, solo sin empaquetar |
@@ -386,7 +385,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 - Máximo **ocho pestañas**. Al llegar al límite se muestra un aviso.
 - Las ventanas nuevas que abre un sitio permitido (`target="_blank"`, `window.open`) se convierten en pestañas internas. Las de sitios no permitidos se descartan.
 - Los enlaces de YouTube (desde cualquier pestaña) se abren en el reproductor propio (sección 6.2), alojado en Firebase Hosting (`/youtube.html?v=<id>`), por lo que solo funciona con conexión. youtube.com no se puede abrir directamente.
-- En el escritorio, las páginas externas se cargan con **`WebContentsView`**, no con iframes. Google y Canva no permiten mostrarse en iframes, y ese es el error actual del MVP. Como `WebContentsView` se dibuja encima de la interfaz, la vista se oculta mientras haya un menú o diálogo de la interfaz abierto.
+- En el escritorio, las páginas externas se cargan con **`WebContentsView`**, no con iframes. Google no permite mostrarse en iframes, y ese es el error actual del MVP. Como `WebContentsView` se dibuja encima de la interfaz, la vista se oculta mientras haya un menú o diálogo de la interfaz abierto.
 - En el navegador web, las pestañas internas solo contienen vistas propias (chat, estudio, notas, estadísticas).
 - Cada pestaña conserva su estado al cambiar entre ellas.
 
@@ -431,7 +430,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | Riesgo | Plan |
 | --- | --- |
 | Google bloquea su login dentro de Electron | Login en el navegador del sistema + `signInWithCredential` (sección 4.5) |
-| Workspace, Classroom o Canva no permiten iniciar sesión dentro de `WebContentsView` | **Riesgo aceptado.** Workspace es complemento. Moodle se retiró porque no cargaba tras iniciar sesión (ORION #14) |
+| Workspace o Classroom no permiten iniciar sesión dentro de `WebContentsView` | **Riesgo aceptado.** Workspace es complemento. Moodle y Canva se retiraron porque no cargaban tras iniciar sesión (ORION #14 y #15) |
 | Retiro de modelos de Gemini (`gemini-2.5-flash` se apaga el 16/10/2026) | Resuelto: v1 usa `gemini-3.8-flash`. El modelo se cambia en `shared/config.ts` |
 | App Check (Fraud Defense) puntúa mal o falla dentro de Electron | Probarlo al inicio de la fase de Firebase, antes de activar el enforcement (obligatorio desde el 2/11/2026) |
 | Se supera el límite gratuito de Gemini, Firestore o Fraud Defense | Mensaje claro al usuario; revisar el uso en la consola de Firebase |

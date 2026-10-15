@@ -1,7 +1,7 @@
 /**
  * @file tab-manager.ts
  * @description Pestañas internas con WebContentsView (brief, sección 10).
- * Las herramientas (Workspace, Classroom, Canva, Gamma) y el reproductor
+ * Las herramientas (Workspace, Classroom, Gamma) y el reproductor
  * de YouTube se cargan en vistas controladas por el proceso principal, no en iframes.
  *
  * La interfaz dibuja la barra de pestañas y avisa dónde mostrar la vista activa

@@ -9,8 +9,6 @@ describe('isUrlAllowed', () => {
     'https://docs.google.com/document/d/abc/edit',
     'https://classroom.google.com/c/123',
     'https://accounts.google.com/signin',
-    'https://www.canva.com/design/xyz',
-    'https://canva.com/',
     'https://gamma.app/docs/abc',
     'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
     'https://www.google.com/recaptcha/enterprise/anchor?k=x',
@@ -25,7 +23,9 @@ describe('isUrlAllowed', () => {
     ['google.com fuera de reCAPTCHA', 'https://www.google.com/search?q=x'],
     ['youtube.com', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
     ['Moodle del TECBA (ORION #14)', 'https://moodle-108854-0.cloudclusters.net/login/'],
-    ['dominio que solo termina igual', 'https://evilcanva.com/'],
+    ['Canva (ORION #15)', 'https://www.canva.com/design/xyz'],
+    ['Canva sin www (ORION #15)', 'https://canva.com/'],
+    ['dominio que solo termina igual', 'https://evilgamma.app/'],
     ['dominio con sufijo engañoso', 'https://docs.google.com.evil.io/'],
     ['credenciales incrustadas', 'https://user@docs.google.com/'],
     ['puerto no estándar', 'https://docs.google.com:8443/'],
@@ -49,6 +49,6 @@ describe('isUrlAllowed', () => {
 
 describe('displayHost', () => {
   it('quita www. y devuelve el host', () => {
-    expect(displayHost('https://www.canva.com/x')).toBe('canva.com');
+    expect(displayHost('https://www.youtube-nocookie.com/embed/x')).toBe('youtube-nocookie.com');
   });
 });
