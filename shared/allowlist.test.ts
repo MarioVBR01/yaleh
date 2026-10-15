@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { displayHost, isUrlAllowed } from './allowlist';
-import { TECBA_MOODLE_URL } from './config';
 
 describe('isUrlAllowed', () => {
   it.each([
@@ -15,7 +14,6 @@ describe('isUrlAllowed', () => {
     'https://gamma.app/docs/abc',
     'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
     'https://www.google.com/recaptcha/enterprise/anchor?k=x',
-    TECBA_MOODLE_URL,
   ])('permite %s', url => {
     expect(isUrlAllowed(url)).toBe(true);
   });
@@ -26,6 +24,7 @@ describe('isUrlAllowed', () => {
     ['subdominio no autorizado de Google', 'https://mail.google.com/'],
     ['google.com fuera de reCAPTCHA', 'https://www.google.com/search?q=x'],
     ['youtube.com', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
+    ['Moodle del TECBA (ORION #14)', 'https://moodle-108854-0.cloudclusters.net/login/'],
     ['dominio que solo termina igual', 'https://evilcanva.com/'],
     ['dominio con sufijo engañoso', 'https://docs.google.com.evil.io/'],
     ['credenciales incrustadas', 'https://user@docs.google.com/'],

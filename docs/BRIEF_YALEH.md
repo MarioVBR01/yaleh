@@ -15,7 +15,7 @@ YALEH es un entorno de estudio para estudiantes del TECBA con problemas de conce
 - **Web:** el centro de trabajo con IA. El estudiante inicia sesión, carga sus materiales, trabaja con el asistente y prepara su sesión de concentración.
 - **Escritorio (Electron):** bloquea el sistema operativo durante la sesión, al estilo de Safe Exam Browser. Funciona con o sin internet.
 
-No hay navegación libre por internet. La información la busca el asistente de IA, y el estudiante solo accede a herramientas autorizadas: Google Workspace, Canva, Gamma, Moodle y Classroom.
+No hay navegación libre por internet. La información la busca el asistente de IA, y el estudiante solo accede a herramientas autorizadas: Google Workspace, Canva, Gamma y Classroom (Moodle se retiró, ORION #14).
 
 El proyecto parte del MVP existente ("Safe Research Browser"), que se **reorganiza**, no se rehace.
 
@@ -116,7 +116,7 @@ Se descartó el monorepo (`apps/web`, `apps/desktop`, `packages/shared`): con un
 3. Confirma la sesión en la pantalla de confirmación.
 4. Se activa el kiosko. El modo lo decide el proceso principal según la conexión en ese momento.
 
-**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Moodle, Canva, Gamma) no se muestran. La IA la atiende el asistente sin conexión si está descargado (sección 7.5); si no, muestra "Disponible próximamente" con la indicación para descargarlo.
+**Kiosko en modo offline:** solo módulos locales (editores, Pomodoro, archivos, historial y estadísticas). Las herramientas online (Workspace, Classroom, Canva, Gamma) no se muestran. La IA la atiende el asistente sin conexión si está descargado (sección 7.5); si no, muestra "Disponible próximamente" con la indicación para descargarlo.
 
 ### 4.3 Durante la sesión (ambos modos)
 
@@ -167,7 +167,7 @@ En pantallas angostas, las columnas se convierten en pestañas. El mapa mental q
 
 - **Estadísticas** (dashboard).
 - **Pomodoro.**
-- **Herramientas:** Google Workspace, Canva, Gamma, Moodle y Classroom. En el navegador se abren en una pestaña nueva del navegador; en el kiosko, en pestañas internas.
+- **Herramientas:** Google Workspace, Canva, Gamma y Classroom. En el navegador se abren en una pestaña nueva del navegador; en el kiosko, en pestañas internas.
 - **Actividades recientes:** sesiones pasadas.
 - **Configuración:** botón visible; su función se define después.
 
@@ -191,7 +191,7 @@ Barra superior completa (buscador y botón de configuración), Enciclopedia SRB,
 | Inicio | Bienvenida: "Iniciar" (flujo local) o "Abrir archivo de sesión (.yaleh)" | Igual |
 | Vista principal | La interfaz de YALEH (Fuentes · Chat · Estudio) con las fuentes guardadas en SQLite | Misma distribución; el **chat** y las **funciones de IA de la columna de estudio** muestran **"Disponible próximamente"**. Las **notas** funcionan |
 | Asistente de IA | Sí (Gemini, "Asistente en línea") | Sí, si se descargó el modelo ("Asistente sin conexión"): chat, resumen y tarjetas. Cuestionario, informe y Wikipedia, solo con conexión |
-| Workspace, Canva, Gamma, Moodle, Classroom | Pestañas internas | No visibles |
+| Workspace, Canva, Gamma, Classroom | Pestañas internas | No visibles |
 | Reproductor de YouTube | Sí | No |
 | Editores de ofimática | Eliminados (ORION #12): Google Docs, Hojas y Presentaciones en las pestañas | Eliminados: notas e IA sin conexión |
 | Notas, archivos y Pomodoro | Sí | Sí |
@@ -216,7 +216,7 @@ Se construyen dentro de la aplicación con librerías web. **No se usa FreeOffic
 
 ### 6.2 Reproductor de YouTube (modo online)
 
-1. Si el estudiante hace clic en un enlace de YouTube dentro de Moodle o Classroom, el proceso principal intercepta la navegación.
+1. Si el estudiante hace clic en un enlace de YouTube dentro de Classroom o de un documento de Google, el proceso principal intercepta la navegación.
 2. Extrae el identificador del video (`youtube.com/watch?v=`, `youtu.be/`, `youtube.com/shorts/`).
 3. Lo abre en una pestaña interna con el reproductor oficial embebido (`https://www.youtube-nocookie.com/embed/<id>`), **insertado desde una página propia de YALEH** con `referrerpolicy="strict-origin-when-cross-origin"`. Desde finales de 2025, YouTube muestra el "Error 153" si el reproductor no recibe un `Referer`, así que no se puede cargar la URL de inserción directamente.
 4. Cualquier intento de ir a youtube.com desde el reproductor se bloquea.
@@ -374,7 +374,6 @@ Todo el bloqueo se aplica en el **proceso principal**, nunca en la interfaz. Ver
 | `www.google.com`, solo la ruta `/recaptcha/` | App Check (Fraud Defense) carga su marco desde ahí (fase 4) |
 | `canva.com` y subdominios | Canva |
 | `gamma.app` y subdominios | Gamma |
-| `moodle-108854-0.cloudclusters.net` | Moodle del TECBA (entrada: `/login/`) |
 | `www.youtube-nocookie.com` | Reproductor de YouTube embebido (fase 8) |
 | `localhost:5173` | Servidor de Vite, solo sin empaquetar |
 
@@ -432,7 +431,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | Riesgo | Plan |
 | --- | --- |
 | Google bloquea su login dentro de Electron | Login en el navegador del sistema + `signInWithCredential` (sección 4.5) |
-| Workspace, Classroom o Canva no permiten iniciar sesión dentro de `WebContentsView` | **Riesgo aceptado.** Los editores propios cubren la ofimática; Workspace es complemento. Moodle no depende de Google |
+| Workspace, Classroom o Canva no permiten iniciar sesión dentro de `WebContentsView` | **Riesgo aceptado.** Workspace es complemento. Moodle se retiró porque no cargaba tras iniciar sesión (ORION #14) |
 | Retiro de modelos de Gemini (`gemini-2.5-flash` se apaga el 16/10/2026) | Resuelto: v1 usa `gemini-3.8-flash`. El modelo se cambia en `shared/config.ts` |
 | App Check (Fraud Defense) puntúa mal o falla dentro de Electron | Probarlo al inicio de la fase de Firebase, antes de activar el enforcement (obligatorio desde el 2/11/2026) |
 | Se supera el límite gratuito de Gemini, Firestore o Fraud Defense | Mensaje claro al usuario; revisar el uso en la consola de Firebase |
@@ -513,7 +512,7 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 
 | # | Tema | Decisión |
 | --- | --- | --- |
-| 24 | Moodle del TECBA | `https://moodle-108854-0.cloudclusters.net/login/` |
+| 24 | Moodle del TECBA | `https://moodle-108854-0.cloudclusters.net/login/` (retirado el 14/10/2026, ORION #14: la página principal no cargaba después de iniciar sesión) |
 | 25 | Lista de sitios | Se aceptan `accounts.youtube.com` y `www.google.com/recaptcha/` (motivos en la sección 9) |
 | 26 | Detección del modo | En el proceso principal: `net.isOnline()` + petición HTTPS a la web de YALEH (< 5 s, cualquier respuesta HTTP). Nueva comprobación cada 30 s, al volver de la suspensión y con los eventos de red |
 | 27 | Inicio del escritorio | Sin login propio ni acceso como invitado. Pantallas "No estás conectado…" y "Inicia tu sesión desde la web" (sección 4.2) |

@@ -18,11 +18,6 @@ export interface AllowedSite {
   reason: string;
 }
 
-/** Moodle del TECBA (página de inicio de sesión). */
-export const TECBA_MOODLE_URL = 'https://moodle-108854-0.cloudclusters.net/login/';
-
-const moodleHost = new URL(TECBA_MOODLE_URL).hostname;
-
 /** Orígenes de la web de YALEH (Firebase Hosting). */
 export const YALEH_WEB_ORIGINS = [
   'https://yaleh-fbe1c.web.app',
@@ -49,7 +44,6 @@ export const ALLOWED_SITES: readonly AllowedSite[] = [
 
   { host: 'canva.com', includeSubdomains: true, reason: 'Canva' },
   { host: 'gamma.app', includeSubdomains: true, reason: 'Gamma' },
-  { host: moodleHost, reason: 'Moodle del TECBA' },
   { host: 'www.youtube-nocookie.com', reason: 'Reproductor de YouTube embebido (fase 8)' },
 ];
 
@@ -74,7 +68,6 @@ export interface ToolLink {
 /** Herramientas autorizadas (brief, secciones 5.3 y 9). */
 export const TOOL_LINKS: readonly ToolLink[] = [
   { id: 'classroom', name: 'Google Classroom', url: 'https://classroom.google.com', icon: '🖥️' },
-  { id: 'moodle', name: 'Moodle', url: TECBA_MOODLE_URL, icon: '🏫' },
   { id: 'canva', name: 'Canva', url: 'https://www.canva.com', icon: '🎨' },
   { id: 'gamma', name: 'Gamma', url: 'https://gamma.app', icon: '📊' },
 ];

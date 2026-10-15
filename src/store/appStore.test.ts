@@ -44,7 +44,7 @@ describe('appReducer', () => {
   });
 
   it('ADD_TAB no duplica pestañas con la misma URL', () => {
-    const tab: Tab = { id: 'a', type: 'workspace-url', title: 'Moodle', url: 'https://moodle.org' };
+    const tab: Tab = { id: 'a', type: 'workspace-url', title: 'Google Classroom', url: 'https://classroom.google.com' };
     const once = appReducer(initialState, { type: 'ADD_TAB', payload: tab });
     const twice = appReducer(once, { type: 'ADD_TAB', payload: { ...tab, id: 'b' } });
     expect(twice.tabs.filter(t => t.url === tab.url)).toHaveLength(1);
