@@ -113,13 +113,27 @@ describe('chat y estudio sin conexión', () => {
     expect(screen.queryByText(/puede tardar hasta un minuto/)).toBeNull();
   });
 
-  it('estudio sin conexión: cuestionario e informe deshabilitados', () => {
+  it('estudio sin conexión: todo habilitado menos la presentación (ORION #17)', () => {
     renderWith(
       { ...offlineState({ state: 'installed' }), uploadedFiles: [{ id: 'f1', name: 'a.txt', size: 1, type: 'text/plain', status: 'ready' } as never] },
       <StudioColumn />
     );
-    expect((screen.getByText('Cuestionario').closest('button') as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByText('Informe').closest('button') as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByText('Resumen').closest('button') as HTMLButtonElement).disabled).toBe(false);
+    for (const label of ['Resumen', 'Cuestionario', 'Tarjetas de estudio', 'Informe', 'Mapa mental', 'Tabla de datos', 'Infografía']) {
+      expect((screen.getByText(label).closest('button') as HTMLButtonElement).disabled).toBe(false);
+    }
+    expect((screen.getByText('Presentación').closest('button') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('El asistente sin conexión es más lento; puede tardar hasta un minuto.')).toBeTruthy();
+  });
+
+  it('estudio sin conexión: el mapa mental del modelo local se ve como en línea', async () => {
+    const json = JSON.stringify({ central: 'Reptiles', branches: [{ label: 'Tipos', children: ['Tortugas'] }, { label: 'Hábitat', children: [] }, { label: 'Dieta', children: [] }] });
+    renderWith(
+      { ...offlineState({ state: 'installed' }), uploadedFiles: [{ id: 'f1', name: 'a.txt', size: 1, type: 'text/plain', status: 'ready' } as never] },
+      <StudioColumn />,
+      json
+    );
+    fireEvent.click(screen.getByText('Mapa mental'));
+    expect(await screen.findByTestId('mindmap')).toBeTruthy();
+    expect(screen.getByText('Tortugas')).toBeTruthy();
   });
 });

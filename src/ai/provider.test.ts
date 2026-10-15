@@ -40,11 +40,12 @@ describe('selectAssistant', () => {
 });
 
 describe('funciones de cada proveedor', () => {
-  it('en línea: todo; sin conexión: chat, resumen y tarjetas', () => {
+  it('en línea: todo; sin conexión: todo menos la presentación y Wikipedia (ORION #17)', () => {
     const local = createLocalProvider(createElectronMock().api);
-    expect(['chat', 'summary', 'quiz', 'flashcards', 'report', 'wikipedia'].every(f => geminiProvider.supports(f as never))).toBe(true);
-    expect(['chat', 'summary', 'flashcards'].every(f => local.supports(f as never))).toBe(true);
-    expect(['quiz', 'report', 'wikipedia'].some(f => local.supports(f as never))).toBe(false);
+    const study = ['summary', 'quiz', 'flashcards', 'report', 'mindmap', 'table', 'infographic'];
+    expect([...study, 'chat', 'presentation', 'wikipedia'].every(f => geminiProvider.supports(f as never))).toBe(true);
+    expect(['chat', ...study].every(f => local.supports(f as never))).toBe(true);
+    expect(['presentation', 'wikipedia'].some(f => local.supports(f as never))).toBe(false);
     expect(local.label).toBe('Asistente sin conexión');
     expect(geminiProvider.label).toBe('Asistente en línea');
   });
@@ -78,9 +79,9 @@ describe('proveedor local', () => {
     await expect(createLocalProvider(mock.api).study('summary', context)).rejects.toThrow(AssistantError);
   });
 
-  it('cuestionario e informe: solo con conexión', async () => {
+  it('presentación: solo con conexión', async () => {
     const mock = createElectronMock();
-    await expect(createLocalProvider(mock.api).study('quiz', context)).rejects.toThrow(/solo está disponible con conexión/);
+    await expect(createLocalProvider(mock.api).study('presentation', context)).rejects.toThrow(/solo está disponible con conexión/);
     expect(mock.api.localAi.generate).not.toHaveBeenCalled();
   });
 

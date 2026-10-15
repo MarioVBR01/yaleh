@@ -4,8 +4,8 @@
  * informe, mapa mental, tabla de datos, infografía y presentación (.pptx) generados por la IA
  * (los cuatro últimos: ORION #18), y el recuadro de notas.
  * Los resultados se guardan en Firestore (studyItems) cuando hay cuenta.
- * Sin conexión, el modelo local (si está instalado) hace el resumen y las tarjetas; el cuestionario y
- * el informe siguen solo con conexión (revisión 1.8). Sin asistente: "Disponible próximamente"; las notas funcionan.
+ * Sin conexión, el modelo local (si está instalado) hace todo menos la presentación, en versión corta
+ * (revisión 1.8 y ORION #17). Sin asistente: "Disponible próximamente"; las notas funcionan.
  */
 
 import { useState } from 'react';
@@ -104,7 +104,7 @@ function StudyTools({ provider }: { provider: AssistantProvider }) {
       {provider.kind === 'local' && (
         <>
           <LocalSlowNotice />
-          <p className="text-ink-subtle text-[11px]">Sin conexión: resumen (4 ideas clave) y 5 tarjetas. El cuestionario y el informe necesitan conexión.</p>
+          <p className="text-ink-subtle text-[11px]">Sin conexión, en versión corta: resumen, 5 tarjetas, 5 preguntas, informe de una página, mapa mental, tabla e infografía. La presentación necesita conexión.</p>
         </>
       )}
       {busy && provider.kind === 'local' && (

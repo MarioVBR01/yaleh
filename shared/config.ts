@@ -175,9 +175,10 @@ export const LOCAL_AI = {
   /**
    * Límites de salida. Respuestas breves para que el estudiante no espere de más: el chat responde en
    * ~150 tokens salvo que pida más detalle (chatDetailed). Resumen: 4 ideas clave; tarjetas: 5.
-   * Los límites de resumen y tarjetas dejan margen sobre el largo máximo del esquema (el JSON debe cerrar).
+   * Los límites de los resultados con esquema dejan margen sobre su largo máximo (el JSON debe cerrar).
+   * Cuestionario de 5 preguntas, informe de 200–300 palabras, mapa mental, tabla e infografía chicos (ORION #17).
    */
-  maxTokens: { chat: 160, chatDetailed: 500, summary: 600, flashcards: 700 },
+  maxTokens: { chat: 160, chatDetailed: 500, summary: 600, flashcards: 700, quiz: 900, report: 800, mindmap: 450, table: 500, infographic: 500 },
 } as const;
 
 /** Búsqueda de información (brief, sección 7.2): API pública de Wikipedia en español. */

@@ -5,7 +5,7 @@
  * - Con conexión (web, o sesión online del escritorio con conexión): Gemini.
  * - Sin conexión y con el modelo instalado: el local.
  * - Sin modelo: no hay asistente ("Disponible próximamente" con la indicación para descargarlo).
- * El modelo local solo hace chat, resumen y tarjetas; cuestionario, informe y Wikipedia siguen en línea.
+ * El modelo local hace chat y todo Estudio menos la presentación (ORION #17); Wikipedia sigue en línea.
  */
 
 import type { ConnectionMode, ElectronAPI, LocalAiStatus, LocalAiTask, SessionMode } from '@shared/ipc-types';
@@ -62,7 +62,8 @@ export const geminiProvider: AssistantProvider = {
   study: async (kind, context) => generateStudyItem(kind, await context.loadSources()),
 };
 
-const LOCAL_FEATURES: readonly AssistantFeature[] = ['chat', 'summary', 'flashcards'];
+/** El modelo local hace todo menos la presentación y Wikipedia (ORION #17). */
+const LOCAL_FEATURES: readonly AssistantFeature[] = ['chat', 'summary', 'flashcards', 'quiz', 'report', 'mindmap', 'table', 'infographic'];
 let requestCounter = 0;
 
 export function createLocalProvider(api: Pick<ElectronAPI, 'localAi'>): AssistantProvider {
@@ -107,7 +108,7 @@ export function createLocalProvider(api: Pick<ElectronAPI, 'localAi'>): Assistan
       return text;
     },
     study: async (kind, context, onProgress) => {
-      if (kind !== 'summary' && kind !== 'flashcards') {
+      if (kind === 'presentation') {
         throw new AssistantError('Esta función solo está disponible con conexión.');
       }
       const raw = await run(kind, context, {}, (_text, tokens) => onProgress?.(tokens));

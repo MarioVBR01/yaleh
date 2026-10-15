@@ -245,7 +245,7 @@ export interface LocalAiStatus {
   model: { name: string; author: string; license: string; licenseUrl: string; sizeBytes: number };
 }
 
-export type LocalAiTask = 'chat' | 'summary' | 'flashcards';
+export type LocalAiTask = 'chat' | 'summary' | 'flashcards' | 'quiz' | 'report' | 'mindmap' | 'table' | 'infographic';
 
 export interface LocalAiTurn {
   role: 'user' | 'assistant';

@@ -76,7 +76,7 @@ export function parseNoteInput(note: unknown) {
   return { id: parseId(n.id, 'Nota'), text: n.text };
 }
 
-const LOCAL_AI_TASKS: readonly LocalAiTask[] = ['chat', 'summary', 'flashcards'];
+const LOCAL_AI_TASKS: readonly LocalAiTask[] = ['chat', 'summary', 'flashcards', 'quiz', 'report', 'mindmap', 'table', 'infographic'];
 
 /** Pedido al asistente sin conexión. */
 export function parseLocalAiRequest(value: unknown): LocalAiRequest {

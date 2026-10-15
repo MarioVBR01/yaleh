@@ -67,6 +67,11 @@ async function main(): Promise<void> {
     { name: 'Chat (segunda pregunta, modelo ya cargado)', request: { task: 'chat', workspaceId: 'bench', question: '¿Cómo se une la aplicación web con la de escritorio?' } },
     { name: 'Resumen', request: { task: 'summary', workspaceId: 'bench' } },
     { name: 'Tarjetas de estudio', request: { task: 'flashcards', workspaceId: 'bench' } },
+    { name: 'Cuestionario (5 preguntas)', request: { task: 'quiz', workspaceId: 'bench' } },
+    { name: 'Informe corto', request: { task: 'report', workspaceId: 'bench' } },
+    { name: 'Mapa mental', request: { task: 'mindmap', workspaceId: 'bench' } },
+    { name: 'Tabla de datos', request: { task: 'table', workspaceId: 'bench' } },
+    { name: 'Infografía', request: { task: 'infographic', workspaceId: 'bench' } },
   ];
 
   const rows: Row[] = [];
@@ -85,7 +90,19 @@ async function main(): Promise<void> {
               ? `${content.data.title} — ${content.data.keyPoints.length} puntos clave`
               : content.kind === 'flashcards'
                 ? `${content.data.cards.length} tarjetas; primera: ${content.data.cards[0].front}`
-                : '';
+                : content.kind === 'quiz'
+                  ? `${content.data.questions.length} preguntas; primera: ${content.data.questions[0].question}`
+                  : content.kind === 'report'
+                    ? `${content.data.split(/\s+/).length} palabras: ${content.data.slice(0, 200)}`
+                    : content.kind === 'mindmap'
+                      ? `${content.data.central} — ${content.data.branches.length} ramas`
+                      : content.kind === 'table'
+                        ? `${content.data.title} — ${content.data.columns.length} columnas × ${content.data.rows.length} filas`
+                        : content.kind === 'infographic'
+                          ? `${content.data.title} — ${content.data.stats.length} datos, ${content.data.points.length} puntos`
+                          : '';
+          // Si llegó al límite de tokens, el resultado se cortó.
+          if (result.stats.tokens >= LOCAL_AI.maxTokens[run.request.task]) valid = 'no (llegó al límite de tokens)';
         } catch (error) {
           valid = `no (${(error as Error).message})`;
         }

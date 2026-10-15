@@ -2,7 +2,8 @@
 
 Mediciones reales del 3 y 4 de octubre de 2026 en el equipo de desarrollo, con el mismo código que usa la app (`LocalAiService`, recuperación FTS5, instrucciones y `utilityProcess` con node-llama-cpp). Se repiten con `npm run bench:local-ai` (configuración por defecto), `BENCH_GPU=off` (solo CPU) o `BENCH_GPU=auto` (GPU). El detalle de cada corrida, con muestras de las respuestas, está en [mediciones/](mediciones/):
 
-- [ia-local-gpu.md](mediciones/ia-local-gpu.md): configuración actual (GPU, respuestas breves), 04/10/2026.
+- [ia-local-gpu.md](mediciones/ia-local-gpu.md): configuración actual con las funciones nuevas (ORION #17), 15/10/2026.
+- [ia-local-gpu-2026-10-04.md](mediciones/ia-local-gpu-2026-10-04.md): GPU con respuestas breves, 04/10/2026.
 - [ia-local-gpu-antes.md](mediciones/ia-local-gpu-antes.md): GPU con las respuestas largas anteriores, 03/10/2026.
 - [ia-local-cpu.md](mediciones/ia-local-cpu.md): solo CPU con las respuestas largas anteriores, 03/10/2026.
 
@@ -27,6 +28,20 @@ Chat de unos 150 tokens como máximo (500 si el estudiante pide más detalle), r
 | Chat, segunda pregunta | — | 20,2 s | 91 | 3,8 | 44,4 s | sí |
 | Resumen (título, síntesis y 4 ideas clave) | — | 21,4 s | 270 | 3,3 | 103,2 s | sí |
 | Tarjetas de estudio (5 tarjetas) | — | 22,7 s | 420 | 3,5 | 143,5 s | sí |
+
+## Funciones nuevas sin conexión (ORION #17, 15/10/2026)
+
+Mismo equipo y fuente. Todo con esquema JSON de tamaño fijo, salvo el informe (markdown de 200 a 300 palabras).
+
+| Prueba | Hasta el primer texto | Tokens generados | Tokens/s | Tiempo total | Salida válida |
+| --- | --- | --- | --- | --- | --- |
+| Cuestionario (5 preguntas, 3 opciones) | 22,6 s | 618 | 3,4 | 205,5 s | sí |
+| Informe corto (228 palabras) | 19,4 s | 314 | 3,2 | 116,8 s | sí |
+| Mapa mental (3 ramas, hasta 3 subtemas) | 19,4 s | 129 | 3,1 | 61,1 s | sí |
+| Tabla de datos (3 columnas × 5 filas) | 18,6 s | 198 | 3,2 | 80,5 s | sí |
+| Infografía (3 datos, 3 puntos, íconos) | 19,7 s | 275 | 3,4 | 100,4 s | sí |
+
+En la misma corrida: chat 47–85 s, resumen 87 s y tarjetas 165 s (iguales a la medición anterior). Ningún resultado llegó al límite de tokens (no se cortó). Frente a lo estimado en la tarjeta: el cuestionario tardó algo más (3,4 min frente a 2–3) y el informe menos (2 min frente a 3–4).
 
 ## Antes y después de acortar las respuestas (GPU)
 

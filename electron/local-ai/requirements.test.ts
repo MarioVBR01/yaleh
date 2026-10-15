@@ -62,6 +62,20 @@ describe('buildWorkerRequest', () => {
     expect(wantsDetail('¿Cuál es la capital de Bolivia?')).toBe(false);
   });
 
+  it('tareas nuevas sin conexión (ORION #17): esquema chico; el informe es texto libre', () => {
+    expect(LOCAL_SCHEMAS.quiz.properties.questions).toMatchObject({ minItems: 5, maxItems: 5 });
+    expect(LOCAL_SCHEMAS.table.properties.rows).toMatchObject({ minItems: 5, maxItems: 5 });
+    expect(LOCAL_SCHEMAS.mindmap.properties.branches).toMatchObject({ minItems: 3, maxItems: 4 });
+    for (const task of ['quiz', 'mindmap', 'table', 'infographic'] as const) {
+      const req = buildWorkerRequest({ requestId: 'r', task, workspaceId: 'w' }, 'F');
+      expect(req.schema).toBe(LOCAL_SCHEMAS[task]);
+      expect(req.maxTokens).toBe(LOCAL_AI.maxTokens[task]);
+    }
+    const report = buildWorkerRequest({ requestId: 'r', task: 'report', workspaceId: 'w' }, 'F');
+    expect(report.schema).toBeUndefined();
+    expect(report.prompt).toMatch(/entre 200 y 300 palabras/);
+  });
+
   it('resumen de 4 ideas clave y 5 tarjetas', () => {
     expect(LOCAL_SCHEMAS.summary.properties.keyPoints).toMatchObject({ minItems: 4, maxItems: 4 });
     expect(LOCAL_SCHEMAS.flashcards.properties.cards).toMatchObject({ minItems: 5, maxItems: 5 });
