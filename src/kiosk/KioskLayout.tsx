@@ -131,35 +131,34 @@ export default function KioskLayout() {
 
           {/* ── WORKSPACE CENTRAL (Pestañas) ──────────────────────────────── */}
           <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          {/* Aviso de tiempo restante (ORION #13): ocupa su lugar y la pestaña externa se achica. */}
+          {/*
+           * Avisos arriba del área de trabajo. Ocupan su propio lugar (no flotan): así la pestaña
+           * externa (WebContentsView, que se dibuja encima de la interfaz) se achica y no los tapa.
+           */}
+          {/* Avisos de la interfaz, por ejemplo el límite de pestañas (ORION #21: fondo sólido). */}
+          {state.notice && (
+            <div
+              role="alert"
+              className="flex-shrink-0 px-4 py-2.5 bg-danger text-ink text-sm font-medium flex items-center justify-center gap-3"
+            >
+              <span>{state.notice}</span>
+              <button
+                onClick={() => dispatch({ type: 'SET_NOTICE', payload: null })}
+                className="px-3 py-1 rounded-lg bg-ink text-canvas text-xs font-semibold hover:opacity-90"
+              >
+                Entendido
+              </button>
+            </div>
+          )}
+          {/* Conexión perdida en una sesión online: el kiosko sigue bloqueado y el tiempo corre. */}
+          {offlineNotice && (
+            <div role="status" className="flex-shrink-0 px-4 py-2 bg-warning/15 border-b border-warning/40 text-ink-soft text-sm text-center">
+              Sin conexión: puedes seguir con los módulos locales
+            </div>
+          )}
+          {/* Aviso de tiempo restante (ORION #13). */}
           <TimeWarningToast />
           <div className="flex-1 min-h-0 overflow-hidden relative">
-
-              {/* Conexión perdida en una sesión online: el kiosko sigue bloqueado y el tiempo corre. */}
-              {offlineNotice && (
-                <div
-                  role="status"
-                  className="absolute top-0 inset-x-0 z-20 px-4 py-2 bg-warning/15 border-b border-warning/40 text-ink-soft text-sm text-center"
-                >
-                  Sin conexión: puedes seguir con los módulos locales
-                </div>
-              )}
-
-              {/* Avisos (por ejemplo, límite de pestañas o sitio no permitido). */}
-              {state.notice && (
-                <div
-                  role="alert"
-                  className="absolute top-0 inset-x-0 z-30 px-4 py-2 bg-danger/15 border-b border-danger/40 text-ink-soft text-sm flex items-center justify-center gap-3"
-                >
-                  <span>{state.notice}</span>
-                  <button
-                    onClick={() => dispatch({ type: 'SET_NOTICE', payload: null })}
-                    className="text-xs underline text-ink-muted hover:text-ink"
-                  >
-                    Entendido
-                  </button>
-                </div>
-              )}
 
               {/*
                * Renderiza TODAS las pestañas pero solo muestra la activa.
