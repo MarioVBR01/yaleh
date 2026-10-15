@@ -38,6 +38,10 @@ export class SessionController {
   private status: SessionStatus = 'idle';
   private current: PersistedSession | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** Tiempo estudiado (ORION #11): segundos de los tramos anteriores y comienzo del tramo actual. */
+  private studiedBefore = 0;
+  private activeSince: number | null = null;
+  private lastCheckpoint = 0;
   private readonly now: () => number;
   private readonly newId: () => string;
 
@@ -109,7 +113,9 @@ export class SessionController {
       endsAt: startedAt + durationSeconds * 1000,
       durationSeconds,
       status: 'active',
+      studiedSeconds: 0,
     };
+    this.studiedBefore = 0;
     this.deps.store.saveSession(this.current);
     this.log('session-started', this.current.id, `${mode}, ${durationSeconds}s`);
     this.activate();
@@ -126,6 +132,8 @@ export class SessionController {
       this.status = 'idle';
       throw new Error('El tiempo de la sesión interrumpida ya terminó.');
     }
+    // Lo estudiado antes de la interrupción (último guardado, cada 15 s).
+    this.studiedBefore = this.current.studiedSeconds ?? 0;
     this.log('session-resumed', this.current.id, `${this.remainingSeconds()}s restantes`);
     this.activate();
     return this.getSnapshot();
@@ -159,6 +167,7 @@ export class SessionController {
     if (this.status !== 'finished' || !this.current) {
       throw new Error('Solo se puede extender una sesión que acaba de terminar.');
     }
+    this.studiedBefore = this.current.studiedSeconds ?? 0;
     this.current = {
       ...this.current,
       status: 'active',
@@ -212,7 +221,25 @@ export class SessionController {
     return Math.max(0, Math.ceil((this.current.endsAt - this.now()) / 1000));
   }
 
+  /** Segundos estudiados hasta ahora: tramos anteriores + el tramo activo, sin pasar la duración. */
+  private studiedNow(): number {
+    if (!this.current) return 0;
+    const running = this.activeSince === null ? 0 : Math.floor((this.now() - this.activeSince) / 1000);
+    return Math.min(this.current.durationSeconds, this.studiedBefore + Math.max(0, running));
+  }
+
+  /** Guarda el tiempo estudiado (cada 15 s): si la app se cierra a la fuerza, se pierde poco. */
+  private checkpoint(force = false): void {
+    if (!this.current || this.activeSince === null) return;
+    if (!force && this.now() - this.lastCheckpoint < 15_000) return;
+    this.lastCheckpoint = this.now();
+    this.current = { ...this.current, studiedSeconds: this.studiedNow() };
+    this.deps.store.saveSession(this.current);
+  }
+
   private activate(): void {
+    this.activeSince = this.now();
+    this.lastCheckpoint = this.now();
     this.status = 'active';
     this.deps.lock();
     this.deps.onTick(this.remainingSeconds());
@@ -225,6 +252,7 @@ export class SessionController {
     if (remaining <= 0) {
       this.finish('completed');
     } else {
+      this.checkpoint();
       this.deps.onTick(remaining);
     }
   }
@@ -232,7 +260,8 @@ export class SessionController {
   private finish(reason: SessionEndReason): void {
     this.clearTimer();
     if (this.current) {
-      this.current = { ...this.current, status: 'finished' };
+      this.current = { ...this.current, status: 'finished', studiedSeconds: this.studiedNow() };
+      this.activeSince = null;
       this.deps.store.saveSession(this.current);
       this.log('session-finished', this.current.id, reason);
     }

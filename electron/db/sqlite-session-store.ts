@@ -14,6 +14,7 @@ interface SessionRow {
   ends_at: number;
   duration_seconds: number;
   status: PersistedSession['status'];
+  studied_seconds: number | null;
 }
 
 interface EventRow {
@@ -31,19 +32,20 @@ export class SqliteSessionStore implements SessionStore {
 
   constructor(private readonly db: DatabaseSync) {
     this.selectLatest = db.prepare(
-      `SELECT id, mode, started_at, ends_at, duration_seconds, status
+      `SELECT id, mode, started_at, ends_at, duration_seconds, status, studied_seconds
        FROM sessions ORDER BY started_at DESC, rowid DESC LIMIT 1`
     );
     // owner_uid y synced_at no se tocan aquí: los gestiona la sincronización (fase 10).
     this.upsertSession = db.prepare(
-      `INSERT INTO sessions (id, mode, started_at, ends_at, duration_seconds, status)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO sessions (id, mode, started_at, ends_at, duration_seconds, status, studied_seconds)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          mode = excluded.mode,
          started_at = excluded.started_at,
          ends_at = excluded.ends_at,
          duration_seconds = excluded.duration_seconds,
-         status = excluded.status`
+         status = excluded.status,
+         studied_seconds = excluded.studied_seconds`
     );
     this.insertEvent = db.prepare('INSERT INTO session_events (session_id, type, at, detail) VALUES (?, ?, ?, ?)');
     this.selectEvents = db.prepare('SELECT session_id, type, at, detail FROM session_events ORDER BY id');
@@ -68,6 +70,7 @@ export class SqliteSessionStore implements SessionStore {
       endsAt: row.ends_at,
       durationSeconds: row.duration_seconds,
       status: row.status,
+      ...(row.studied_seconds !== null && row.studied_seconds !== undefined ? { studiedSeconds: row.studied_seconds } : {}),
     };
   }
 
@@ -78,7 +81,8 @@ export class SqliteSessionStore implements SessionStore {
       session.startedAt,
       session.endsAt,
       session.durationSeconds,
-      session.status
+      session.status,
+      session.studiedSeconds ?? null
     );
   }
 

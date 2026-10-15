@@ -13,6 +13,7 @@ function session(overrides: Partial<SessionHistoryEntry>): SessionHistoryEntry {
     startedAt: at(0),
     endsAt: at(0) + 3_000_000,
     durationSeconds: 50 * 60,
+    studiedSeconds: 50 * 60,
     status: 'finished',
     focusLost: 0,
     connectionLost: 0,
@@ -33,10 +34,10 @@ describe('computeStats', () => {
   it('suma los minutos de las sesiones completadas por día y por semana', () => {
     const stats = computeStats(
       [
-        session({ startedAt: at(0), durationSeconds: 25 * 60 }),
-        session({ startedAt: at(0, 15), durationSeconds: 50 * 60 }),
-        session({ startedAt: at(2), durationSeconds: 90 * 60 }),
-        session({ startedAt: at(10), durationSeconds: 30 * 60 }),
+        session({ startedAt: at(0), durationSeconds: 25 * 60, studiedSeconds: 25 * 60 }),
+        session({ startedAt: at(0, 15), durationSeconds: 50 * 60, studiedSeconds: 50 * 60 }),
+        session({ startedAt: at(2), durationSeconds: 90 * 60, studiedSeconds: 90 * 60 }),
+        session({ startedAt: at(10), durationSeconds: 30 * 60, studiedSeconds: 30 * 60 }),
       ],
       NOW
     );
@@ -48,16 +49,25 @@ describe('computeStats', () => {
     expect(stats.totalMinutes).toBe(195);
   });
 
-  it('las interrumpidas y las liberadas en desarrollo no suman minutos', () => {
+  it('interrumpidas y liberadas suman el tiempo realmente estudiado (ORION #11)', () => {
     const stats = computeStats(
       [
-        session({ status: 'interrupted', endReason: null }),
-        session({ endReason: 'dev-release' }),
+        session({ status: 'interrupted', endReason: null, studiedSeconds: 20 * 60 }),
+        session({ endReason: 'dev-release', studiedSeconds: 10 * 60 }),
         session({}),
       ],
       NOW
     );
-    expect(stats).toMatchObject({ totalMinutes: 50, completed: 1, interrupted: 1, other: 1, sessions: 3 });
+    expect(stats).toMatchObject({ totalMinutes: 80, completed: 1, interrupted: 1, other: 1, sessions: 3 });
+    expect(stats.perDay.at(-1)?.minutes).toBe(80);
+  });
+
+  it('una sesión extendida suma lo original más la extensión; la sesión en curso no cuenta', () => {
+    const stats = computeStats(
+      [session({ durationSeconds: 40 * 60, studiedSeconds: 40 * 60 }), session({ status: 'active', endReason: null, studiedSeconds: 600 })],
+      NOW
+    );
+    expect(stats.totalMinutes).toBe(40);
   });
 
   it('promedio de pérdidas de foco por sesión, sin la sesión en curso', () => {

@@ -20,6 +20,8 @@ export interface PersistedSession {
   endsAt: number;
   durationSeconds: number;
   status: PersistedSessionStatus;
+  /** Tiempo realmente estudiado (segundos), guardado cada 15 s y al terminar (ORION #11). */
+  studiedSeconds?: number;
 }
 
 export type SessionEventType =

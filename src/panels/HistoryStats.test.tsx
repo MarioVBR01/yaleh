@@ -13,10 +13,12 @@ const now = Date.now();
 const history: SessionHistoryEntry[] = [
   {
     id: 'b', mode: 'offline', startedAt: now - 3_600_000, endsAt: now, durationSeconds: 90 * 60,
+    studiedSeconds: 20 * 60,
     status: 'interrupted', focusLost: 4, connectionLost: 0, interruptions: 1, endReason: null,
   },
   {
     id: 'a', mode: 'online', startedAt: now - 7_200_000, endsAt: now, durationSeconds: 25 * 60,
+    studiedSeconds: 25 * 60,
     status: 'finished', focusLost: 2, connectionLost: 1, interruptions: 0, endReason: 'completed',
   },
 ];
@@ -31,6 +33,9 @@ describe('HistoryPanel', () => {
     expect(screen.getByText('Interrumpida')).toBeTruthy();
     expect(screen.getByText('Completada')).toBeTruthy();
     expect(screen.getByText('1 h 30 min')).toBeTruthy();
+    // Tiempo realmente estudiado (ORION #11): la interrumpida estudió 20 min de 90.
+    expect(screen.getByText('Tiempo estudiado')).toBeTruthy();
+    expect(screen.getByText('20 min')).toBeTruthy();
     expect(screen.getByText('Con conexión')).toBeTruthy();
   });
 

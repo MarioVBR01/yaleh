@@ -1,6 +1,6 @@
 /**
  * @file SessionTable.tsx
- * @description Tabla de sesiones del historial (SQLite): fecha, duración, modo, estado,
+ * @description Tabla de sesiones del historial (SQLite): fecha, duración, tiempo estudiado, modo, estado,
  * pérdidas de foco, cortes de red e interrupciones. La usan el Historial (todas las sesiones)
  * y las Estadísticas (las 10 últimas, ORION #6).
  */
@@ -28,6 +28,7 @@ export default function SessionTable({ entries }: { entries: SessionHistoryEntry
         <tr className="text-left text-xs text-ink-subtle border-b border-line">
           <th className="py-2 pr-3 font-medium">Fecha</th>
           <th className="py-2 pr-3 font-medium">Duración</th>
+          <th className="py-2 pr-3 font-medium">Tiempo estudiado</th>
           <th className="py-2 pr-3 font-medium">Modo</th>
           <th className="py-2 pr-3 font-medium">Estado</th>
           <th className="py-2 pr-3 font-medium text-right">Pérdidas de foco</th>
@@ -42,6 +43,7 @@ export default function SessionTable({ entries }: { entries: SessionHistoryEntry
             <tr key={s.id} className="border-b border-line/50 text-ink-soft">
               <td className="py-2 pr-3 whitespace-nowrap">{formatSessionDate(s.startedAt)}</td>
               <td className="py-2 pr-3 whitespace-nowrap">{formatDuration(s.durationSeconds)}</td>
+              <td className="py-2 pr-3 whitespace-nowrap">{formatDuration(s.studiedSeconds)}</td>
               <td className="py-2 pr-3">{s.mode === 'online' ? 'Con conexión' : 'Sin conexión'}</td>
               <td className="py-2 pr-3">
                 <span className={`inline-block px-2 py-0.5 rounded-full border text-[11px] ${status.className}`}>

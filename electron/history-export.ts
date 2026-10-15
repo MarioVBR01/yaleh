@@ -30,6 +30,7 @@ export function buildHistoryHtml(entries: SessionHistoryEntry[], generatedAt: Da
       s => `<tr>
         <td>${escapeHtml(formatDate(s.startedAt))}</td>
         <td>${escapeHtml(formatDuration(s.durationSeconds))}</td>
+        <td>${escapeHtml(formatDuration(s.studiedSeconds))}</td>
         <td>${s.mode === 'online' ? 'Con conexión' : 'Sin conexión'}</td>
         <td class="status-${s.status}">${escapeHtml(sessionStatusText(s))}</td>
         <td class="num">${s.focusLost}</td>
@@ -75,7 +76,7 @@ export function buildHistoryHtml(entries: SessionHistoryEntry[], generatedAt: Da
       ? '<p class="empty">Todavía no hay sesiones.</p>'
       : `<table>
     <thead><tr>
-      <th>Fecha</th><th>Duración</th><th>Modo</th><th>Estado</th>
+      <th>Fecha</th><th>Duración</th><th>Tiempo estudiado</th><th>Modo</th><th>Estado</th>
       <th class="num">Pérdidas de foco</th><th class="num">Cortes de red</th><th class="num">Interrupciones</th>
     </tr></thead>
     <tbody>

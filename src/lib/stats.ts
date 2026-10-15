@@ -2,9 +2,10 @@
  * @file stats.ts
  * @description Estadísticas de concentración a partir del historial de SQLite (fase 10).
  *
- * Minutos de concentración: solo cuentan las sesiones que terminaron al cumplirse el
- * tiempo (su duración completa). Las interrumpidas y las liberadas con la salida de
- * desarrollo no cuentan, porque no se registra cuánto tiempo duraron en realidad.
+ * Minutos de concentración (regla de ORION #11): el tiempo realmente estudiado de cada sesión
+ * terminada o interrumpida (`studiedSeconds`, medido por el proceso principal), incluidas las
+ * extensiones. La sesión en curso no cuenta hasta que termina. Así, la barra de cada día es la
+ * suma de la columna "Tiempo estudiado" del Historial para ese día.
  */
 
 import type { SessionHistoryEntry } from '@shared/ipc-types';
@@ -70,8 +71,8 @@ export function computeStats(
 
   let totalMinutes = 0;
   for (const s of closed) {
-    if (!isCompleted(s)) continue;
-    const minutes = Math.round(s.durationSeconds / 60);
+    const minutes = Math.round(s.studiedSeconds / 60);
+    if (minutes === 0) continue;
     totalMinutes += minutes;
     const started = new Date(s.startedAt);
     const day = perDay.find(b => b.key === dayKey(started));

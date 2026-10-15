@@ -374,3 +374,47 @@ describe('SessionController: extender la sesión (ORION #2)', () => {
     expect(controller.getSnapshot().status).toBe('finished');
   });
 });
+
+describe('SessionController: tiempo realmente estudiado (ORION #11)', () => {
+  it('completa: estudia la duración entera', () => {
+    const { controller, store } = setup();
+    controller.start(120, 'offline');
+    vi.advanceTimersByTime(120_000);
+    expect(store.session?.studiedSeconds).toBe(120);
+  });
+
+  it('liberada antes (salida de desarrollo): solo lo que pasó', () => {
+    const { controller, store } = setup();
+    controller.start(600, 'offline');
+    vi.advanceTimersByTime(200_000);
+    controller.forceRelease();
+    expect(store.session).toMatchObject({ status: 'finished', studiedSeconds: 200 });
+  });
+
+  it('se guarda cada 15 s: si la app se cierra a la fuerza, al retomar suma lo anterior', () => {
+    const store = new MemorySessionStore();
+    const first = setup(store);
+    first.controller.start(600, 'offline');
+    vi.advanceTimersByTime(100_000); // último guardado a los 90 s
+    first.controller.dispose(); // cierre forzado: no termina
+    expect(store.session).toMatchObject({ status: 'active', studiedSeconds: 90 });
+
+    vi.advanceTimersByTime(60_000);
+    const second = setup(store);
+    second.controller.recover();
+    second.controller.resume();
+    vi.advanceTimersByTime(30_000);
+    second.controller.forceRelease();
+    expect(store.session?.studiedSeconds).toBe(120);
+  });
+
+  it('extendida al terminar: suma lo original y la extensión, sin contar la pausa en la pantalla final', () => {
+    const { controller, store } = setup();
+    controller.start(60, 'offline');
+    vi.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(45_000); // en la pantalla final
+    controller.extend(120);
+    vi.advanceTimersByTime(120_000);
+    expect(store.session).toMatchObject({ status: 'finished', durationSeconds: 180, studiedSeconds: 180 });
+  });
+});

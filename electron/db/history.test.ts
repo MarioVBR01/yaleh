@@ -43,3 +43,19 @@ describe('listSessionHistory', () => {
     expect(listSessionHistory(setup().db)).toEqual([]);
   });
 });
+
+describe('tiempo estudiado en el historial (ORION #11)', () => {
+  it('usa el tiempo medido; en sesiones anteriores lo estima', () => {
+    const { db, store } = setup();
+    const t0 = Date.parse('2026-10-12T10:00:00Z');
+    store.saveSession({ id: 'medida', mode: 'offline', startedAt: t0, endsAt: t0 + 600_000, durationSeconds: 600, status: 'interrupted', studiedSeconds: 240 });
+    store.saveSession({ id: 'vieja-completa', mode: 'offline', startedAt: t0 + 1, endsAt: t0, durationSeconds: 900, status: 'finished' });
+    store.appendEvent({ type: 'session-finished', at: new Date(t0).toISOString(), sessionId: 'vieja-completa', detail: 'completed' });
+    store.saveSession({ id: 'vieja-liberada', mode: 'offline', startedAt: t0 + 2, endsAt: t0, durationSeconds: 900, status: 'finished' });
+    store.appendEvent({ type: 'session-finished', at: new Date(t0 + 2 + 300_000).toISOString(), sessionId: 'vieja-liberada', detail: 'dev-release' });
+    store.saveSession({ id: 'vieja-cortada', mode: 'offline', startedAt: t0 + 3, endsAt: t0, durationSeconds: 900, status: 'interrupted' });
+
+    const byId = Object.fromEntries(listSessionHistory(db).map(h => [h.id, h.studiedSeconds]));
+    expect(byId).toEqual({ medida: 240, 'vieja-completa': 900, 'vieja-liberada': 300, 'vieja-cortada': 0 });
+  });
+});

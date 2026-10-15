@@ -159,7 +159,7 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 
 - **Pestañas (`TabManager`):** cada página externa es una `WebContentsView` con sandbox, dibujada encima del hueco de `ExternalTabPanel` (la interfaz informa los límites; se oculta mientras hay un diálogo). Máximo `LIMITS.maxTabs` (8): al llegar, aviso en la interfaz. Ventanas nuevas de sitios permitidos → `tabs:open-request` → pestaña nueva. Los enlaces de YouTube se convierten en `YOUTUBE_PLAYER_URL?v=<id>` (página propia en Hosting con `youtube-nocookie` y `referrerpolicy`); youtube.com sigue bloqueado. Al terminar la sesión se cierran todas.
 - **Ofimática:** la interfaz envía el contenido (JSON de TipTap, filas o diapositivas) por `office:export`; el proceso principal valida (`parseOfficeRequest`) y guarda en `Documentos\YALEH` como `Título AAAA-MM-DD HH-mm-ss.ext`, sin sobrescribir. Sin diálogo. Funciona sin conexión. `docx`, `exceljs` y `pptxgenjs` son externos en esbuild (se cargan de `node_modules`).
-- **Historial y estadísticas:** `history:list` → `listSessionHistory(db)` (contadores de `focus-lost`, `connection-lost`, `session-interrupted` y motivo del fin). `computeStats` en la interfaz. Solo suman minutos las sesiones completadas (no se registra cuánto duró una interrumpida). En el navegador: "Disponible en la aplicación de escritorio".
+- **Historial y estadísticas:** `history:list` → `listSessionHistory(db)` (contadores de `focus-lost`, `connection-lost`, `session-interrupted` y motivo del fin). `computeStats` en la interfaz. **Regla de los minutos (ORION #11):** el tiempo realmente estudiado de cada sesión (`studiedSeconds`, migración 5): el controlador lo mide y lo guarda cada 15 s y al terminar; incluye extensiones, interrumpidas y liberadas; la sesión en curso no cuenta. La barra de cada día = suma de "Tiempo estudiado" del Historial. Sesiones anteriores a la migración: completadas = duración; liberadas = desde el inicio hasta el fin registrado; interrumpidas = 0. En el navegador: "Disponible en la aplicación de escritorio".
 - **Sincronización con Firestore:** versión 2 (revisión 1.7).
 
 ## Configuración (ORION #7)
@@ -248,7 +248,7 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 - Iniciar sesión de Google dentro de una pestaña (Classroom, Drive) puede abrir ventanas emergentes que se descartan si no son de sitios permitidos.
 - El registro de Windows puede conservar el protocolo `yaleh://` de ejecuciones anteriores (apunta a Electron en desarrollo); ya no se usa.
 - El historial del chat vive en memoria.
-- Las estadísticas solo cuentan minutos de las sesiones completadas.
+- El tiempo estudiado de una sesión interrumpida puede perder hasta 15 s (se guarda cada 15 s).
 - Sin pruebas de reglas con el emulador ni del login de Google.
 - `local_profile` y `settings` existen, pero todavía nadie las lee (serán la cuenta de destino de la sincronización, versión 2).
 - `state.activityHistory` (registro de actividad del MVP) sigue en el reducer pero ya no se muestra.

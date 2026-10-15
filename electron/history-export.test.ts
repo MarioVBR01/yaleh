@@ -13,6 +13,7 @@ import { buildHistoryHtml, exportHistoryPdf } from './history-export';
 const NOW = new Date(2026, 9, 13, 10, 0, 0);
 const entry = (overrides: Partial<SessionHistoryEntry>): SessionHistoryEntry => ({
   id: 's1', mode: 'offline', startedAt: NOW.getTime() - 3_600_000, endsAt: NOW.getTime(), durationSeconds: 1500,
+  studiedSeconds: 1500,
   status: 'finished', focusLost: 2, connectionLost: 0, interruptions: 0, endReason: 'completed', ...overrides,
 });
 

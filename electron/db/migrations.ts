@@ -131,6 +131,15 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 5,
+    name: 'studied-seconds',
+    sql: `
+      -- Estadísticas (ORION #11): tiempo realmente estudiado de cada sesión, medido por el
+      -- proceso principal (se guarda cada 15 s y al terminar). NULL en las sesiones anteriores.
+      ALTER TABLE sessions ADD COLUMN studied_seconds INTEGER;
+    `,
+  },
 ];
 
 /**

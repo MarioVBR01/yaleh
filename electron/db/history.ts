@@ -13,6 +13,8 @@ interface HistoryRow {
   started_at: number;
   ends_at: number;
   duration_seconds: number;
+  studied_seconds: number | null;
+  finished_at: string | null;
   status: SessionHistoryEntry['status'];
   focus_lost: number;
   connection_lost: number;
@@ -20,12 +22,28 @@ interface HistoryRow {
   end_reason: string | null;
 }
 
+/**
+ * Sesiones anteriores a la migración 5 (sin tiempo medido): completadas, la duración;
+ * liberadas en desarrollo, desde el inicio hasta el fin registrado; interrumpidas, 0
+ * (no se sabe cuándo se cortaron).
+ */
+function estimateStudied(r: HistoryRow, endReason: SessionHistoryEntry['endReason']): number {
+  if (r.status === 'finished' && endReason === 'completed') return r.duration_seconds;
+  if (r.status === 'finished' && r.finished_at) {
+    const elapsed = Math.floor((Date.parse(r.finished_at) - r.started_at) / 1000);
+    return Math.max(0, Math.min(r.duration_seconds, elapsed));
+  }
+  return 0;
+}
+
 export function listSessionHistory(db: DatabaseSync, limit = 500): SessionHistoryEntry[] {
   const count = (type: string) =>
     `(SELECT COUNT(*) FROM session_events e WHERE e.session_id = s.id AND e.type = '${type}')`;
   const rows = db
     .prepare(
-      `SELECT s.id, s.mode, s.started_at, s.ends_at, s.duration_seconds, s.status,
+      `SELECT s.id, s.mode, s.started_at, s.ends_at, s.duration_seconds, s.studied_seconds, s.status,
+         (SELECT e.at FROM session_events e
+            WHERE e.session_id = s.id AND e.type = 'session-finished' ORDER BY e.id DESC LIMIT 1) AS finished_at,
          ${count('focus-lost')} AS focus_lost,
          ${count('connection-lost')} AS connection_lost,
          ${count('session-interrupted')} AS interruptions,
@@ -37,18 +55,22 @@ export function listSessionHistory(db: DatabaseSync, limit = 500): SessionHistor
     )
     .all(limit) as unknown as HistoryRow[];
 
-  return rows.map(r => ({
-    id: r.id,
-    mode: r.mode,
-    startedAt: r.started_at,
-    endsAt: r.ends_at,
-    durationSeconds: r.duration_seconds,
-    status: r.status,
-    focusLost: r.focus_lost,
-    connectionLost: r.connection_lost,
-    interruptions: r.interruptions,
-    endReason: r.end_reason === 'completed' || r.end_reason === 'dev-release' ? r.end_reason : null,
-  }));
+  return rows.map(r => {
+    const endReason = r.end_reason === 'completed' || r.end_reason === 'dev-release' ? r.end_reason : null;
+    return {
+      id: r.id,
+      mode: r.mode,
+      startedAt: r.started_at,
+      endsAt: r.ends_at,
+      durationSeconds: r.duration_seconds,
+      studiedSeconds: r.studied_seconds ?? estimateStudied(r, endReason),
+      status: r.status,
+      focusLost: r.focus_lost,
+      connectionLost: r.connection_lost,
+      interruptions: r.interruptions,
+      endReason,
+    };
+  });
 }
 
 /**

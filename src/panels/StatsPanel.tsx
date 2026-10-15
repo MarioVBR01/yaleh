@@ -93,7 +93,7 @@ export default function StatsPanel() {
           <h1 className="text-xl font-bold text-ink mb-1">📊 Estadísticas</h1>
           <p className="text-ink-muted text-sm">
             {available
-              ? 'Calculadas con las sesiones guardadas en este equipo. Solo suman minutos las sesiones completadas.'
+              ? 'Calculadas con las sesiones guardadas en este equipo. Los minutos son el tiempo realmente estudiado de cada sesión (completadas, extendidas e interrumpidas): la barra de cada día es la suma de "Tiempo estudiado" del Historial.'
               : 'Disponible en la aplicación de escritorio.'}
           </p>
         </div>

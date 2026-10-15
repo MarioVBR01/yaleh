@@ -145,6 +145,8 @@ export interface SessionHistoryEntry {
   startedAt: number;
   endsAt: number;
   durationSeconds: number;
+  /** Tiempo realmente estudiado (segundos). Es lo que suman las estadísticas (ORION #11). */
+  studiedSeconds: number;
   status: 'active' | 'finished' | 'interrupted';
   focusLost: number;
   connectionLost: number;
