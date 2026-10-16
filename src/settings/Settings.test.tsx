@@ -209,7 +209,7 @@ describe('la configuración en el resto de la app', () => {
         <TimerSelectPhase />
       </AppProvider>
     );
-    expect(screen.getByText('Continuar con 40 minutos')).toBeTruthy();
+    expect(screen.getByText('Continuar con 40 min')).toBeTruthy();
   });
 
   it('si extender está desactivado, la pantalla final no lo ofrece', () => {

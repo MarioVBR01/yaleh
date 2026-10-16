@@ -1,5 +1,5 @@
 /**
- * ORION #3: vista compacta de la duración de la sesión.
+ * Duración de la sesión: ORION #3 (vista compacta) y ORION #38 (tarjetas del diseño nuevo).
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -22,32 +22,41 @@ function renderTimer() {
   );
 }
 
-describe('TimerSelectPhase (vista compacta)', () => {
-  it('muestra 25, 50 y 90 min y la entrada personalizada, sin el aviso de "Modo kiosko" ni los consejos', () => {
+const card = (minutes: number) => screen.getByText(String(minutes)).closest('button')!;
+
+describe('TimerSelectPhase (ORION #38)', () => {
+  it('tres tarjetas sin emojis con su explicación adentro, minutos propios y el aviso de kiosko', () => {
     renderTimer();
-    expect(screen.getByText('25 min')).toBeTruthy();
-    expect(screen.getByText('50 min')).toBeTruthy();
-    expect(screen.getByText('90 min')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Ej: 45')).toBeTruthy();
-    expect(screen.getByText('Al confirmar, el entorno se bloqueará hasta que el tiempo expire.')).toBeTruthy();
-    expect(screen.queryByText(/Modo Kiosko/i)).toBeNull();
-    expect(screen.queryByText(/Pomodoro/)).toBeNull();
-    expect(screen.queryByText(/ultradian/)).toBeNull();
+    expect(screen.getByRole('heading', { name: '¿Cuánto tiempo vas a estudiar?' })).toBeTruthy();
+    expect(card(25).textContent).toBe('25minPomodoroUn bloque corto');
+    expect(card(50).textContent).toBe('50minEstándarFlujo profundo');
+    expect(card(90).textContent).toBe('90minExtendidaUn ciclo ultradiano');
+    expect(screen.getByLabelText('Minutos propios')).toBeTruthy();
+    expect(screen.getByText('minutos (1 a 180)')).toBeTruthy();
+    expect(screen.getByTestId('kiosk-note').textContent).toBe('Modo kiosko. No vas a poder salir de YALEH hasta que el tiempo llegue a cero.');
+    expect(screen.getByTestId('kiosk-note').querySelector('svg')).toBeTruthy();
+    // Sin emojis ni las cajitas de explicación de abajo.
+    expect(document.body.textContent).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+    expect(screen.queryByText(/^Sesión:/)).toBeNull();
   });
 
-  it('elegir una opción muestra "Sesión: …" y "Continuar con …"', () => {
+  it('la elegida queda en naranja y el botón dice "Continuar con N min"', () => {
     renderTimer();
-    fireEvent.click(screen.getByText('50 min'));
-    expect(screen.getByText('Sesión: 50 minutos')).toBeTruthy();
-    fireEvent.click(screen.getByText('Continuar con 50 minutos'));
+    fireEvent.click(card(50));
+    expect(card(50).getAttribute('aria-pressed')).toBe('true');
+    expect(card(50).className).toContain('border-accent');
+    expect(card(25).getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(screen.getByText('Continuar con 50 min'));
     expect(screen.getByTestId('probe').textContent).toBe('confirm-session|3000');
   });
 
-  it('los minutos personalizados reemplazan la opción rápida', () => {
+  it('los minutos propios (1 a 180) reemplazan la tarjeta elegida', () => {
     renderTimer();
-    fireEvent.click(screen.getByText('25 min'));
-    fireEvent.change(screen.getByPlaceholderText('Ej: 45'), { target: { value: '40' } });
-    expect(screen.getByText('Sesión: 40 minutos')).toBeTruthy();
-    expect(screen.getByText('Continuar con 40 minutos')).toBeTruthy();
+    fireEvent.click(card(25));
+    fireEvent.change(screen.getByLabelText('Minutos propios'), { target: { value: '40' } });
+    expect(card(25).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByText('Continuar con 40 min')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Minutos propios'), { target: { value: '500' } });
+    expect((screen.getByText('Elegí una duración') as HTMLButtonElement).disabled).toBe(true);
   });
 });

@@ -27,6 +27,9 @@ vi.mock('../firebase/auth', () => ({
 vi.mock('../firebase/sessions', () => ({ createDraftSession: vi.fn(async () => 'draft1') }));
 
 const { default: App } = await import('../App');
+const { default: WebAccountBar } = await import('./WebAccountBar');
+const { AppProvider } = await import('../context/AppContext');
+const { initialState } = await import('../store/appStore');
 
 const user = (uid: string, email: string) =>
   ({ uid, email, displayName: `Usuario ${uid}`, photoURL: null }) as unknown as User;
@@ -56,22 +59,49 @@ describe('BUG-002: sesión de Google guardada en el navegador', () => {
     await waitFor(() => expect(screen.queryByText('Continuar con Google')).toBeNull());
 
     await act(async () => {
-      fireEvent.click(screen.getByText('Cerrar sesión'));
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     });
     expect(signOut).toHaveBeenCalled();
     expect(await screen.findByText('Continuar con Google')).toBeTruthy();
     expect(screen.queryByLabelText('Cuenta de Google')).toBeNull();
   });
 
-  it('"Cambiar de cuenta" abre la ventana de Google y, con otra cuenta, muestra la nueva', async () => {
+  it('"Cambiar" abre la ventana de Google y, con otra cuenta, muestra la nueva', async () => {
     render(<App />);
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
     await act(async () => {
-      fireEvent.click(await screen.findByText('Cambiar de cuenta'));
+      fireEvent.click(await screen.findByText('Cambiar'));
     });
     expect(signInWithGoogle).toHaveBeenCalled();
     act(() => emit?.(user('u2', 'beto@tecba.edu.bo')));
     expect(await screen.findByText('beto@tecba.edu.bo')).toBeTruthy();
     expect(screen.queryByText('ana@tecba.edu.bo')).toBeNull();
+  });
+});
+
+describe('Barra superior de la web (ORION #38)', () => {
+  it('logo, pasos (Material actual en naranja) y la cuenta con Cambiar y Cerrar sesión', async () => {
+    render(<App />);
+    act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
+    expect(await screen.findByText('ana@tecba.edu.bo')).toBeTruthy();
+    const bar = screen.getByLabelText('Cuenta de Google');
+    expect(bar.querySelector('[data-testid="yaleh-logo"]')).toBeTruthy();
+    const steps = [...bar.querySelectorAll('li')];
+    expect(steps.map(s => s.textContent)).toEqual(['1Material', '2Duración', '3Confirmar', '4Descargar']);
+    expect(steps[0].getAttribute('aria-current')).toBe('step');
+    expect(steps[0].querySelector('span')!.className).toContain('bg-accent');
+    expect(screen.getByText('Cambiar')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
+  });
+
+  it('marca con ✓ los pasos hechos', () => {
+    render(
+      <AppProvider initial={{ ...initialState, phase: 'confirm-session', authChecked: true }}>
+        <WebAccountBar step={2} />
+      </AppProvider>
+    );
+    const steps = [...screen.getAllByRole('listitem')];
+    expect(steps.map(s => s.dataset.state)).toEqual(['done', 'done', 'now', 'todo']);
+    expect(steps[0].textContent).toBe('✓Material');
   });
 });

@@ -24,7 +24,8 @@ export default function ConfirmSessionPhase() {
   const { state, dispatch, logActivity } = useApp();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [downloaded, setDownloaded] = useState<string | null>(null);
+  const downloaded = state.downloadedFile;
+  const setDownloaded = (name: string | null) => dispatch({ type: 'SET_DOWNLOADED_FILE', payload: name });
 
   const minutes = Math.round(state.sessionDuration / 60);
   const files = state.uploadedFiles;
@@ -79,7 +80,7 @@ export default function ConfirmSessionPhase() {
 
   if (downloaded) {
     return (
-      <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
+      <div className="min-h-full bg-canvas flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-8">
           <div className="text-center">
             <CheckCircle2 size={44} className="text-success mx-auto mb-4" aria-hidden="true" />
@@ -123,7 +124,7 @@ export default function ConfirmSessionPhase() {
   const changeLink = 'text-accent-soft hover:underline text-xs font-semibold whitespace-nowrap disabled:opacity-50';
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
+    <div className="min-h-full bg-canvas flex items-center justify-center p-4">
       <motion.div
         className="w-full max-w-lg"
         initial={{ opacity: 0, y: 30 }}

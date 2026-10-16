@@ -255,15 +255,17 @@ function AppContent() {
   const Phase = PHASE_COMPONENTS[phase];
   // Web: con qué cuenta se entró, y cerrar sesión o cambiar de cuenta (BUG-002).
   const showAccount = !getElectronAPI() && state.session.isAuthenticated && phase !== 'login';
+  // Paso actual de la barra de pasos (ORION #38): Material, Duración, Confirmar, Descargar.
+  const webStep = phase === 'timer-select' ? 1 : phase === 'confirm-session' ? (state.downloadedFile ? 3 : 2) : 0;
 
   return (
     <MotionConfig reducedMotion={state.settings?.settings.reduceMotion ? 'always' : 'user'}>
-      <div className="min-h-screen bg-canvas text-ink">
-        {showAccount && <WebAccountBar />}
+      <div className="h-screen flex flex-col bg-canvas text-ink">
+        {showAccount && <WebAccountBar step={webStep} />}
         <AnimatePresence mode="wait">
           <motion.div
             key={phase}
-            className={phase === 'kiosk' ? 'h-screen' : 'h-screen overflow-y-auto'}
+            className={phase === 'kiosk' ? 'h-screen' : 'flex-1 min-h-0 overflow-y-auto'}
             initial={fadeOut}
             animate={fadeIn}
             exit={fadeOut}

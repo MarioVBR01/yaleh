@@ -113,6 +113,8 @@ export interface AppState {
   authChecked: boolean;
   /** Escritorio: configuración guardada en SQLite (ORION #7); null en la web o mientras se lee. */
   settings: SettingsSnapshot | null;
+  /** Web: nombre del .yaleh recién descargado (paso "Descargar" de la barra de pasos, ORION #38). */
+  downloadedFile: string | null;
 }
 
 export interface ActivityRecord {
@@ -144,6 +146,7 @@ export type AppAction =
   | { type: 'SET_SESSION_MODE'; payload: SessionMode | null }
   | { type: 'SET_WORKSPACE'; payload: string | null }
   | { type: 'SET_NOTICE'; payload: string | null }
+  | { type: 'SET_DOWNLOADED_FILE'; payload: string | null }
   | { type: 'UPDATE_TAB'; payload: { id: string } & Partial<Pick<Tab, 'title' | 'error' | 'url'>> }
   | { type: 'SET_FILES'; payload: UploadedFile[] }
   | { type: 'UPDATE_FILE'; payload: { id: string } & Partial<UploadedFile> }
@@ -191,6 +194,7 @@ export const initialState: AppState = {
   localAi: null,
   authChecked: true,
   settings: null,
+  downloadedFile: null,
 };
 
 /**
@@ -200,7 +204,7 @@ export const initialState: AppState = {
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_PHASE':
-      return { ...state, phase: action.payload };
+      return { ...state, phase: action.payload, downloadedFile: null };
 
     case 'SET_SESSION':
       return { ...state, session: action.payload };
@@ -275,6 +279,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'SET_NOTICE':
       return { ...state, notice: action.payload };
+
+    case 'SET_DOWNLOADED_FILE':
+      return { ...state, downloadedFile: action.payload };
 
     case 'SET_FILES':
       return { ...state, uploadedFiles: action.payload };

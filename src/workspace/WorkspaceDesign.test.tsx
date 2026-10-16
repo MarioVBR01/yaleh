@@ -43,7 +43,7 @@ describe('Fuentes (ORION #35)', () => {
     const items = screen.getAllByTestId('source-item');
     expect(items).toHaveLength(2);
     expect(within(items[0]).getByText('Biología celular.pdf')).toBeTruthy();
-    expect(within(items[0]).getByText('2.4 MB')).toBeTruthy();
+    expect(within(items[0]).getByText('2,4 MB')).toBeTruthy();
     expect(within(items[0]).getByLabelText('Se usa en el chat y en Estudio')).toBeTruthy();
     expect(items[0].className).toContain('border-accent');
     expect(screen.getByTestId('sources-count').textContent).toBe('2 de 2');

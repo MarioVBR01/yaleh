@@ -4,7 +4,8 @@ export function formatBytes(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  // Coma decimal, como se escribe en español ("3,2 MB"; ORION #38).
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1)).toString().replace(".", ",")} ${sizes[i]}`;
 }
 
 /** Formatea minutos a texto legible ("45 minutos", "1h 30min", "2 horas"). */

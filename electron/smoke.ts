@@ -93,8 +93,8 @@ const INGEST_SCRIPT = `(async () => {
   await wait(500);
   const text = document.body.innerText;
   return {
-    txt: /apuntes\\.txt[\\s\\S]{0,80}caracteres/.test(text),
-    pdf: /clase\\.pdf[\\s\\S]{0,80}caracteres/.test(text),
+    txt: /apuntes\\.txt[\\s\\S]{0,80}texto listo/.test(text),
+    pdf: /clase\\.pdf[\\s\\S]{0,80}texto listo/.test(text),
     docxRejected: /roto\\.docx[\\s\\S]{0,120}No se pudo leer/.test(text),
     mp4Rejected: text.includes('video.mp4') && text.includes('formato no admitido'),
   };
@@ -120,14 +120,21 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
             history: window.electronAPI ? Array.isArray(await window.electronAPI.listSessionHistory()) : false,
             localAi: window.electronAPI ? (await window.electronAPI.localAi.getStatus()).state : null,
             settings: window.electronAPI ? (await window.electronAPI.settings.get()).settings.endWarningMinutes : null,
-            localAiCard: (() => {
-              const card = document.querySelector('[aria-label="Asistente sin conexión"]');
-              if (!card) return null;
-              const t = card.textContent;
-              if (t.includes('Descargar asistente sin conexión')) return 'download';
-              if (t.includes('Conéctate a internet')) return 'connect';
-              if (t.includes('no puede usar el asistente')) return 'unsupported';
-              return 'other';
+            // ORION #30: el asistente sin conexión ya no está en la bienvenida, sino en Configuración.
+            localAiCardOnWelcome: Boolean(document.querySelector('[aria-label="Asistente sin conexión"]')),
+            localAiCard: await (async () => {
+              const wait = ms => new Promise(r => setTimeout(r, ms));
+              document.querySelector('button[aria-label="Configuración"]')?.click();
+              let card = null;
+              for (let i = 0; i < 20 && !card; i++) {
+                await wait(250);
+                card = document.querySelector('[aria-label="Asistente sin conexión"]');
+              }
+              const t = card?.textContent ?? '';
+              const kind = !card ? null : t.includes('Descargar asistente sin conexión') ? 'download' : t.includes('Conéctate a internet') ? 'connect' : t.includes('no puede usar el asistente') ? 'unsupported' : 'other';
+              [...document.querySelectorAll('button')].find(b => b.textContent.includes('Volver al inicio'))?.click();
+              await wait(800);
+              return kind;
             })(),
           }))()`
         );
@@ -206,6 +213,7 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           base.history &&
           base.settings === 5 &&
           ['not-installed', 'unsupported'].includes(base.localAi) &&
+          !base.localAiCardOnWelcome &&
           (base.localAiCard === 'download' || base.localAiCard === 'connect' || base.localAiCard === 'unsupported') &&
           migrations.length > 0 &&
           ingestOk &&
