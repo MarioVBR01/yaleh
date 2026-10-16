@@ -136,7 +136,7 @@ function Chat({ provider }: { provider: AssistantProvider }) {
         {messages.map(m =>
           m.role === 'user' ? (
             <div key={m.id} className="flex justify-end">
-              <p className="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-sm bg-accent-strong text-ink text-sm whitespace-pre-wrap">
+              <p className="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-sm bg-accent text-on-accent text-sm whitespace-pre-wrap">
                 {m.text}
               </p>
             </div>
@@ -201,7 +201,7 @@ function Chat({ provider }: { provider: AssistantProvider }) {
             <button
               type="submit"
               disabled={!input.trim() || busy !== false}
-              className="px-3 rounded-xl bg-accent-strong hover:bg-accent text-ink disabled:opacity-50"
+              className="px-3 rounded-xl bg-accent hover:bg-accent-strong text-on-accent disabled:opacity-50"
               title="Enviar"
             >
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

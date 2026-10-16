@@ -77,9 +77,9 @@ export default function TimerSelectPhase() {
             animate={{ rotate: [0, 5, -5, 0] }}
             transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
           >
-            <Clock size={32} className="text-white" />
+            <Clock size={32} className="text-ink" />
           </motion.div>
-          <h1 className="text-2xl font-bold text-white mb-2">¿Cuánto tiempo estudiarás?</h1>
+          <h1 className="text-2xl font-bold text-ink mb-2">¿Cuánto tiempo estudiarás?</h1>
           <p className="text-slate-400 text-sm">
             Al confirmar, el entorno se bloqueará hasta que el tiempo expire.
           </p>
@@ -114,7 +114,7 @@ export default function TimerSelectPhase() {
                     animate={{ opacity: 0.1 }}
                   />
                 )}
-                <div className="relative text-white font-bold">{opt.label}</div>
+                <div className="relative text-ink font-bold">{opt.label}</div>
               </motion.button>
             ))}
           </div>
@@ -142,7 +142,7 @@ export default function TimerSelectPhase() {
                   setCustomMinutes(e.target.value);
                   setSelectedMinutes(null);
                 }}
-                className="flex-1 bg-slate-800 border border-slate-600 focus:border-blue-500 rounded-xl px-4 py-3 text-white text-sm placeholder-slate-600 focus:outline-none transition-colors"
+                className="flex-1 bg-slate-800 border border-slate-600 focus:border-blue-500 rounded-xl px-4 py-3 text-ink text-sm placeholder-slate-600 focus:outline-none transition-colors"
               />
               <div className="text-slate-500 text-sm">minutos</div>
             </div>
@@ -169,7 +169,7 @@ export default function TimerSelectPhase() {
             disabled={!isValid}
             className={`w-full py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 transition-all ${
               isValid
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/20'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-on-accent shadow-lg shadow-blue-500/20'
                 : 'bg-slate-800 text-slate-600 cursor-not-allowed'
             }`}
             whileHover={isValid ? { scale: 1.02 } : {}}

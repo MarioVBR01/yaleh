@@ -4,7 +4,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, type AppSettings } from '@shared/settings';
+import { DEFAULT_SETTINGS, isKioskSafePatch, type AppSettings } from '@shared/settings';
 import App from '../App';
 import { AppProvider } from '../context/AppContext';
 import BottomBar from '../kiosk/BottomBar';
@@ -19,6 +19,7 @@ afterEach(() => {
   uninstallElectronMock();
   document.documentElement.style.fontSize = '';
   document.documentElement.classList.remove('reduce-motion', 'high-contrast', 'dyslexia-font');
+  delete document.documentElement.dataset.theme;
 });
 
 const snapshot = (settings: Partial<AppSettings> = {}, sessionActive = false) => ({
@@ -42,13 +43,13 @@ function renderSettings(inSession: boolean, options: Parameters<typeof createEle
 const section = (name: string) => screen.getByRole('region', { name });
 
 describe('SettingsView', () => {
-  it('muestra todas las secciones; el modo oscuro existe pero está deshabilitado', async () => {
+  it('muestra todas las secciones; el modo oscuro se cambia (ORION #29)', async () => {
     renderSettings(false);
     for (const name of ['Sesión', 'Modo nocturno', 'IA sin conexión', 'Datos', 'Apariencia y accesibilidad', 'Perfil', 'Acerca de']) {
       expect(await screen.findByRole('region', { name })).toBeTruthy();
     }
     const dark = screen.getByRole('switch', { name: 'Modo oscuro' }) as HTMLButtonElement;
-    expect(dark.disabled).toBe(true);
+    expect(dark.disabled).toBe(false);
     expect(within(section('Acerca de')).getByText(/Qwen3\.5-4B.*Apache 2\.0/)).toBeTruthy();
   });
 
@@ -161,6 +162,24 @@ describe('opciones del kiosko (ORION #19)', () => {
     render(<App />);
     await waitFor(() => expect(document.documentElement.classList.contains('high-contrast')).toBe(true));
     expect(document.documentElement.classList.contains('dyslexia-font')).toBe(true);
+  });
+});
+
+describe('modo claro/oscuro y logo (ORION #29)', () => {
+  it('el interruptor guarda la elección y la app cambia de tema, también durante la sesión', async () => {
+    const mock = createElectronMock({ sessionActive: true });
+    mock.install();
+    render(<App />);
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'));
+    expect(isKioskSafePatch({ darkMode: false })).toBe(true);
+    await mock.api.settings.update({ darkMode: false });
+    expect(mock.api.settings.update).toHaveBeenCalledWith({ darkMode: false });
+  });
+
+  it('con el modo oscuro apagado, la app usa el modo claro', async () => {
+    createElectronMock({ settings: { darkMode: false } }).install();
+    render(<App />);
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('light'));
   });
 });
 

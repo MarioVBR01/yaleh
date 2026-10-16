@@ -123,7 +123,7 @@ export default function FolderPicker({
           <button
             onClick={() => listing && onSelect(listing.path)}
             disabled={!listing || loading}
-            className="px-4 py-1.5 rounded-lg text-sm bg-accent-strong hover:bg-accent text-ink disabled:opacity-50"
+            className="px-4 py-1.5 rounded-lg text-sm bg-accent hover:bg-accent-strong text-on-accent disabled:opacity-50"
           >
             {confirmLabel}
           </button>

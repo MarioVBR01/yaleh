@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>YALEH · Espacio de trabajo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&family=Lexend:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="yaleh.css">
+<style>
+  .work { flex: 1; min-height: 0; display: grid; grid-template-columns: 280px 1fr 340px; gap: 16px; padding: 16px 24px 20px; }
+  .col { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .col-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 12px; }
+  .col-head h2 { font-family: var(--f-display); font-size: 17px; font-weight: 700; margin: 0; flex: 1; }
+  .col-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+
+  .source { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--bg); }
+  .source .doc { width: 36px; height: 44px; border-radius: 6px; background: var(--accent-tint); color: var(--accent-strong); display: grid; place-items: center; flex-shrink: 0; }
+  .source b { font-weight: 500; font-size: 13px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .source small { color: var(--ink-muted); font-size: 12px; }
+  .source > div { min-width: 0; flex: 1; }
+  .source.on { border-color: var(--accent); }
+  .check { width: 18px; height: 18px; border-radius: 5px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; flex-shrink: 0; }
+  .check svg { width: 12px; height: 12px; stroke-width: 3; }
+  .drop { margin-top: 4px; border: 1.5px dashed var(--line); border-radius: var(--r-md); padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--ink-muted); font-size: 12px; text-align: center; }
+  .drop b { color: var(--ink); font-weight: 500; font-size: 13px; }
+
+  .chat { flex: 1; min-height: 0; padding: 4px 24px 16px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
+  .msg-user { align-self: flex-end; max-width: 70%; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 16px 16px 4px 16px; }
+  .msg-ai { display: flex; gap: 12px; max-width: 92%; }
+  .msg-ai .av { width: 32px; height: 32px; border-radius: 10px; background: var(--accent-tint); color: var(--accent-strong); display: grid; place-items: center; flex-shrink: 0; }
+  .msg-ai .av svg { width: 16px; height: 16px; }
+  .msg-ai .txt { min-width: 0; color: var(--ink); }
+  .msg-ai p { margin: 0 0 8px; }
+  .msg-ai ol { margin: 0 0 8px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .msg-ai .cite { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-muted); background: var(--surface-2); border-radius: 6px; padding: 2px 6px; }
+  .suggest { display: flex; flex-wrap: wrap; gap: 8px; }
+  .suggest span { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  .composer { margin: 0 16px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--bg); padding: 10px 10px 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .composer .row { display: flex; align-items: center; gap: 10px; }
+  .composer .ph { flex: 1; color: var(--ink-muted); }
+  .composer small { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); font-size: 12px; }
+  .box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--ink-muted); }
+
+  .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tool { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: var(--r-md); background: var(--bg); border: 1px solid var(--line); font-size: 13px; color: var(--ink); text-align: left; }
+  .tool svg { color: var(--accent-strong); width: 17px; height: 17px; }
+  .tool:hover { border-color: var(--accent); }
+  .made { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface-2); font-size: 13px; }
+  .made svg { color: var(--accent-strong); }
+  .made div { flex: 1; min-width: 0; }
+  .made small { display: block; color: var(--ink-muted); font-size: 11.5px; }
+  .notes-box { border-top: 1px solid var(--line); margin-top: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .notes-box h3 { margin: 0; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .notes-box .area { min-height: 70px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); padding: 10px 12px; color: var(--ink-soft); font-size: 13px; }
+  .lbl { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); margin: 6px 4px 0; }
+</style>
+</head>
+<body>
+<header class="deck">
+  <div class="grow">
+    <h1>Espacio de trabajo · últimos 5 minutos</h1>
+    <p>Estado mostrado: sesión con conexión, quedan 4:52, aviso de tiempo activo y botón de extender visible.</p>
+  </div>
+  <nav aria-label="Vistas">
+    <a href="guia-de-estilo.html">Guía de estilo</a>
+    <a href="bienvenida.html">Bienvenida</a>
+    <a href="web.html">Web</a>
+    <a href="espacio-de-trabajo.html" aria-current="page">Espacio de trabajo</a>
+    <a href="historial.html">Historial</a>
+  </nav>
+  <div class="theme-switch" role="group" aria-label="Tema">
+    <button class="theme-btn" data-set="dark" type="button">Oscuro</button>
+    <button class="theme-btn" data-set="light" type="button">Claro</button>
+  </div>
+</header>
+
+<div class="stage">
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span data-logo></span><div><b>YALEH</b><small>Entorno de estudio</small></div></div>
+    <nav class="nav">
+      <button class="nav-item" aria-current="page" type="button"><i data-i="home"></i><span class="grow">Espacio de trabajo</span></button>
+      <button class="nav-item" type="button"><i data-i="chart"></i><span class="grow">Estadísticas</span></button>
+      <button class="nav-item" type="button"><i data-i="clock"></i><span class="grow">Pomodoro</span></button>
+      <button class="nav-item" type="button"><i data-i="wrench"></i><span class="grow">Herramientas</span><i data-i="chevR"></i></button>
+      <button class="nav-item" type="button"><i data-i="history"></i><span class="grow">Historial de sesiones</span></button>
+      <button class="nav-item" type="button"><i data-i="settings"></i><span class="grow">Configuración</span></button>
+    </nav>
+    <div class="side-foot">
+      <b><i data-i="shield"></i>Sesión protegida</b>
+      Solo se abren los sitios de estudio permitidos. Si se corta internet, el asistente sin conexión sigue funcionando.
+    </div>
+  </aside>
+
+  <section class="main">
+    <div class="time-alert" role="alert">
+      <div class="bell"><i data-i="bell"></i></div>
+      <div>
+        <h2>Te quedan 5 minutos de sesión</h2>
+        <p>Guardá tus notas. Si necesitás más tiempo, extendé la sesión ahora.</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-lg" type="button">+15 min</button>
+        <button class="btn btn-lg soft" type="button">Otro tiempo</button>
+        <button class="close" type="button" aria-label="Cerrar aviso"><i data-i="x"></i></button>
+      </div>
+      <span class="countdown"></span>
+    </div>
+
+    <div class="work">
+      <div class="card col">
+        <div class="col-head"><h2>Fuentes</h2><span class="pill pill-plain num">2 de 2</span></div>
+        <div class="col-body">
+          <div class="source on"><span class="doc"><i data-i="file"></i></span><div><b>Practica_Aula_Actividad_2_MikroTik.pdf</b><small>14 páginas</small></div><span class="check"><i data-i="check"></i></span></div>
+          <div class="source on"><span class="doc"><i data-i="file"></i></span><div><b>UT4 Marco Teórico.pdf</b><small>32 páginas</small></div><span class="check"><i data-i="check"></i></span></div>
+          <div class="drop"><i data-i="upload"></i><b>Agregar fuente</b>PDF, Word o texto. Arrastralo acá.</div>
+        </div>
+      </div>
+
+      <div class="card col">
+        <div class="col-head"><h2>Chat</h2><span class="pill pill-info">Asistente en línea</span></div>
+        <div class="chat">
+          <div class="msg-user">Explicame las ideas principales de la práctica de MikroTik</div>
+          <div class="msg-ai">
+            <span class="av"><i data-i="sparkles"></i></span>
+            <div class="txt">
+              <p>La práctica arma una red pequeña en cuatro pasos:</p>
+              <ol>
+                <li><b>Bridge e interfaces:</b> se agrupan los puertos LAN en un bridge para que se vean como una sola red.</li>
+                <li><b>Servidor DHCP:</b> el router reparte direcciones del rango 192.168.88.10–254.</li>
+                <li><b>NAT con masquerade:</b> permite que la LAN salga a internet por la interfaz WAN.</li>
+                <li><b>Reglas de firewall:</b> se bloquea el acceso externo al router y se deja pasar lo establecido.</li>
+              </ol>
+              <span class="cite"><i data-i="file" style="width:12px;height:12px"></i>Practica_Aula_Actividad_2_MikroTik.pdf · pág. 3–9</span>
+            </div>
+          </div>
+          <div class="suggest" style="margin-top:auto">
+            <span>¿Qué conceptos debería repasar?</span>
+            <span>Dame un ejemplo práctico</span>
+            <span>Haceme 3 preguntas de examen</span>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="row"><span class="ph">Escribí tu pregunta…</span><button class="btn btn-primary btn-icon" type="button" aria-label="Enviar"><i data-i="send"></i></button></div>
+          <small><span class="box"></span><i data-i="book" style="width:14px;height:14px"></i>Buscar también en Wikipedia</small>
+        </div>
+      </div>
+
+      <div class="card col">
+        <div class="col-head"><h2>Estudio</h2><span class="pill pill-info">Gemini</span></div>
+        <div class="col-body">
+          <div class="tools">
+            <button class="tool" type="button"><i data-i="list"></i>Resumen</button>
+            <button class="tool" type="button"><i data-i="cards"></i>Tarjetas</button>
+            <button class="tool" type="button"><i data-i="quiz"></i>Cuestionario</button>
+            <button class="tool" type="button"><i data-i="report"></i>Informe</button>
+            <button class="tool" type="button"><i data-i="mind"></i>Mapa mental</button>
+            <button class="tool" type="button"><i data-i="table"></i>Tabla</button>
+            <button class="tool" type="button"><i data-i="slides"></i>Presentación</button>
+            <button class="tool" type="button"><i data-i="image"></i>Infografía</button>
+          </div>
+          <p class="lbl">Generado en esta sesión</p>
+          <div class="made"><i data-i="cards"></i><div>Tarjetas de estudio<small class="num">12 tarjetas · hace 8 min</small></div></div>
+          <div class="made"><i data-i="list"></i><div>Resumen de la práctica<small class="num">1 página · hace 21 min</small></div></div>
+        </div>
+        <div class="notes-box">
+          <h3><i data-i="note"></i>Notas</h3>
+          <div class="area">Revisar el orden de las reglas del firewall: la de “established” va primero.</div>
+          <button class="btn btn-sm" type="button" style="align-self:flex-end">Guardar nota</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="dock">
+    <div class="dock-progress"><span style="width:8%"></span></div>
+    <div class="timer low">
+      <svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="var(--line)" stroke-width="4"/><circle cx="18" cy="18" r="15" fill="none" stroke="var(--accent)" stroke-width="4" stroke-dasharray="94.2" stroke-dashoffset="86.7" stroke-linecap="round"/></svg>
+      <div><small>Quedan</small><span class="t num">00:04:52</span></div>
+    </div>
+    <div class="extend" role="group" aria-label="Extender tiempo">
+      <span class="lead"><i data-i="extend"></i>Extender</span>
+      <button type="button">+15</button>
+      <button type="button">+25</button>
+      <button type="button">+50</button>
+      <button type="button" aria-label="Elegir minutos">…</button>
+    </div>
+    <div class="pomo"><i data-i="clock"></i>Pomodoro <b class="num">12:30</b></div>
+    <span class="dock-sep"></span>
+    <div class="tabs" role="tablist">
+      <div class="tab" role="tab" aria-selected="true"><i data-i="home"></i><span>Espacio de trabajo</span></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="file"></i><span>UT4 Marco Teórico.pdf</span><i data-i="x" class="x"></i></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="globe"></i><span>Documentos de Google</span><i data-i="x" class="x"></i></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="book"></i><span>Wikipedia · NAT</span><i data-i="x" class="x"></i></div>
+    </div>
+    <button class="btn btn-ghost newtab" type="button"><i data-i="plus"></i>Nueva pestaña</button>
+  </footer>
+</div>
+</div>
+
+<section class="notes" aria-label="Notas de diseño">
+  <div class="note"><span class="tag">Tarjeta 4ª ronda</span><h3>Extender tiempo</h3><p>Ahora es un grupo naranja grande en la barra inferior (la barra pasa de 40 a 64 px) con los minutos a la vista: un clic extiende, sin abrir un menú. Aparece solo en los últimos minutos, igual que hoy.</p></div>
+  <div class="note"><span class="tag">Tarjeta 4ª ronda</span><h3>Aviso de tiempo</h3><p>Ocupa todo el ancho arriba del área de trabajo, con campana que se sacude, pulso y una barra que se vacía en 10 s antes de cerrarse sola. Sigue sin flotar, para que la pestaña externa no lo tape.</p></div>
+  <div class="note"><span class="tag">Cambios generales</span><h3>Lo que cambió del diseño actual</h3><ul><li>Logo nuevo y naranja en lugar de azul y celeste.</li><li>Reloj más grande con anillo de progreso.</li><li>El pie de la barra lateral explica la protección y la IA sin conexión en vez de “en línea”.</li></ul></div>
+</section>
+<script src="yaleh.js"></script>
+</body>
+</html>

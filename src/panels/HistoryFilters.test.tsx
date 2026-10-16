@@ -106,7 +106,7 @@ describe('HistoryPanel con filtros', () => {
     await screen.findByText(/25 sesiones guardadas/);
     expect(screen.queryByTestId('custom-range')).toBeNull();
     fireEvent.click(screen.getByText('Elegir fechas'));
-    expect(screen.getByTestId('custom-range').className).toContain('border-brand');
+    expect(screen.getByTestId('custom-range').className).toContain('border-accent');
     fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-18' } });
     fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-19' } });
     expect(rows()).toBe(2);

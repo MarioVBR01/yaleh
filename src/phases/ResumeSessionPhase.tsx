@@ -88,7 +88,7 @@ export default function ResumeSessionPhase() {
           <button
             onClick={handleResume}
             disabled={busy || remainingSeconds === null || error !== null}
-            className="w-full py-3 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors disabled:opacity-60"
+            className="w-full py-3 rounded-xl font-semibold text-sm bg-accent hover:bg-accent-strong text-on-accent transition-colors disabled:opacity-60"
           >
             Retomar sesión
           </button>

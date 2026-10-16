@@ -28,7 +28,7 @@ import { getElectronAPI } from '../lib/electron';
 export function MindMap({ data }: { data: MindMapContent }) {
   return (
     <div className="space-y-3" data-testid="mindmap">
-      <div className="mx-auto w-fit max-w-full px-4 py-2 rounded-xl bg-accent-strong text-ink text-sm font-semibold text-center">
+      <div className="mx-auto w-fit max-w-full px-4 py-2 rounded-xl bg-accent text-on-accent text-sm font-semibold text-center">
         {data.central}
       </div>
       <div className="grid gap-2 sm:grid-cols-2">

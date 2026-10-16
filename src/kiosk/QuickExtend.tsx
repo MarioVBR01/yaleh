@@ -35,10 +35,10 @@ export default function QuickExtend({ onExtend }: { onExtend: (minutes: number) 
     void extend(minutes);
   };
 
-  const chip = 'h-8 px-2.5 rounded-lg bg-black/85 text-brand text-xs font-bold hover:bg-black disabled:opacity-60';
+  const chip = 'h-8 px-2.5 rounded-lg bg-black/85 text-accent text-xs font-bold hover:bg-black disabled:opacity-60';
 
   return (
-    <div role="group" aria-label="Extender" className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-xl bg-brand text-black flex-shrink-0">
+    <div role="group" aria-label="Extender" className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-xl bg-accent text-on-accent flex-shrink-0">
       <span className="text-xs font-bold mr-0.5">Extender</span>
       {EXTEND_SESSION_MINUTES.map(minutes => (
         <button key={minutes} onClick={() => void extend(minutes)} disabled={busy} className={chip}>
@@ -63,7 +63,7 @@ export default function QuickExtend({ onExtend }: { onExtend: (minutes: number) 
               if (e.key === 'Enter') extendCustom();
               if (e.key === 'Escape') setCustomOpen(false);
             }}
-            className={`w-16 h-8 px-2 rounded-lg bg-white text-black text-xs focus:outline-none border-2 ${invalid ? 'border-danger' : 'border-transparent focus:border-black'}`}
+            className={`w-16 h-8 px-2 rounded-lg bg-white text-on-accent text-xs focus:outline-none border-2 ${invalid ? 'border-danger' : 'border-transparent focus:border-on-accent'}`}
           />
           <button onClick={extendCustom} disabled={busy || custom.trim() === ''} className={chip}>
             OK

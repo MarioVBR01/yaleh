@@ -87,17 +87,17 @@ export default function TimeWarningToast() {
   };
 
   if (visibleMinutes === null) return null;
-  const button = 'h-11 px-4 rounded-xl bg-black text-brand text-sm font-bold hover:bg-black/80 disabled:opacity-60 flex-shrink-0';
+  const button = 'h-11 px-4 rounded-xl bg-black text-accent text-sm font-bold hover:bg-black/80 disabled:opacity-60 flex-shrink-0';
   return (
     <div
       role="alert"
       data-testid="time-warning"
-      className="relative flex-shrink-0 w-full bg-brand text-black overflow-hidden motion-safe:animate-[warning-in_0.45s_cubic-bezier(0.34,1.56,0.64,1)]"
+      className="relative flex-shrink-0 w-full bg-accent text-on-accent overflow-hidden motion-safe:animate-[warning-in_0.45s_cubic-bezier(0.34,1.56,0.64,1)]"
     >
       <div className="flex items-center gap-4 px-5 py-4">
         <div className="relative flex-shrink-0">
           <span className="absolute inset-0 rounded-full bg-black/40 motion-safe:animate-ping" aria-hidden="true" />
-          <span className="relative flex items-center justify-center w-12 h-12 rounded-full bg-black text-brand">
+          <span className="relative flex items-center justify-center w-12 h-12 rounded-full bg-black text-accent">
             <BellRing size={24} className="motion-safe:animate-[bell-shake_1.2s_ease-in-out_infinite] origin-top" />
           </span>
         </div>
@@ -123,7 +123,7 @@ export default function TimeWarningToast() {
                   if (e.key === 'Enter') extendCustom();
                   if (e.key === 'Escape') setCustomOpen(false);
                 }}
-                className="w-28 h-11 px-3 rounded-xl bg-white text-black text-sm border-2 border-transparent focus:border-black focus:outline-none"
+                className="w-28 h-11 px-3 rounded-xl bg-white text-on-accent text-sm border-2 border-transparent focus:border-on-accent focus:outline-none"
               />
               <button onClick={extendCustom} disabled={busy || custom.trim() === ''} className={button}>
                 Extender
@@ -137,13 +137,13 @@ export default function TimeWarningToast() {
               <button
                 onClick={() => setCustomOpen(true)}
                 disabled={busy}
-                className="h-11 px-4 rounded-xl border-2 border-black text-black text-sm font-bold hover:bg-black/10 disabled:opacity-60 flex-shrink-0"
+                className="h-11 px-4 rounded-xl border-2 border-on-accent text-on-accent text-sm font-bold hover:bg-black/10 disabled:opacity-60 flex-shrink-0"
               >
                 Otro tiempo
               </button>
             </>
           ))}
-        <button onClick={() => setVisibleMinutes(null)} className="p-2 rounded-lg text-black hover:bg-black/10 flex-shrink-0" title="Cerrar aviso">
+        <button onClick={() => setVisibleMinutes(null)} className="p-2 rounded-lg text-on-accent hover:bg-black/10 flex-shrink-0" title="Cerrar aviso">
           <X size={20} />
         </button>
       </div>

@@ -128,7 +128,7 @@ export default function HistoryPanel() {
                   aria-pressed={preset === p.id}
                   onClick={() => setPreset(p.id)}
                   className={`px-3 py-1.5 rounded-full border font-medium ${
-                    preset === p.id ? 'bg-brand border-brand text-black' : 'border-line text-ink-muted hover:text-ink hover:border-line-strong'
+                    preset === p.id ? 'bg-accent border-accent text-on-accent' : 'border-line text-ink-muted hover:text-ink hover:border-line-strong'
                   }`}
                 >
                   {p.id === 'custom' && <CalendarRange size={12} className="inline -mt-0.5 mr-1" />}
@@ -178,7 +178,7 @@ export default function HistoryPanel() {
           </div>
 
           {preset === 'custom' && (
-            <div data-testid="custom-range" className="inline-flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border-2 border-brand bg-brand/10">
+            <div data-testid="custom-range" className="inline-flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border-2 border-accent bg-accent/10">
               <label className="flex items-center gap-1.5 text-ink-soft">
                 Desde
                 <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className={select} />

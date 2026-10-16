@@ -120,7 +120,7 @@ export default function DesktopStartPhase() {
           <button
             onClick={handleStart}
             disabled={opening}
-            className="w-full py-3 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full py-3 rounded-xl font-semibold text-sm bg-accent hover:bg-accent-strong text-on-accent transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
           >
             <Play size={16} /> Iniciar
           </button>

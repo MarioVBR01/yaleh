@@ -39,7 +39,7 @@ export default function WebAccountBar() {
         {avatar ? (
           <img src={avatar} alt="" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" />
         ) : (
-          <span className="w-7 h-7 rounded-full bg-accent-strong text-ink text-[11px] font-semibold flex items-center justify-center">
+          <span className="w-7 h-7 rounded-full bg-accent text-on-accent text-[11px] font-semibold flex items-center justify-center">
             {initials ?? '?'}
           </span>
         )}

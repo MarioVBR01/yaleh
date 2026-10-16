@@ -102,7 +102,8 @@ function useConnectionMode() {
 
 /**
  * Escritorio: configuración (ORION #7). Tamaño del texto (escala la raíz: la interfaz usa rem)
- * reducir animaciones (clase en <html> + MotionConfig), alto contraste y tipografía para dislexia (ORION #19).
+ * reducir animaciones (clase en <html> + MotionConfig), alto contraste y tipografía para dislexia (ORION #19)
+ * y modo claro/oscuro (data-theme en <html>, ORION #29).
  */
 function useDesktopSettings() {
   const { state, dispatch } = useApp();
@@ -120,6 +121,8 @@ function useDesktopSettings() {
     root.classList.toggle('reduce-motion', Boolean(settings?.reduceMotion));
     root.classList.toggle('high-contrast', Boolean(settings?.highContrast));
     root.classList.toggle('dyslexia-font', Boolean(settings?.dyslexiaFont));
+    // Modo claro/oscuro (ORION #29). Mientras carga la configuración, oscuro (ver main.tsx).
+    if (settings) root.dataset.theme = settings.darkMode ? 'dark' : 'light';
   }, [settings]);
 }
 

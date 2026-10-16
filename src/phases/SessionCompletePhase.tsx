@@ -123,7 +123,7 @@ export default function SessionCompletePhase() {
         {/* Contenedor principal */}
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
           {/* Título */}
-          <h1 className="text-3xl font-bold text-white text-center mb-2">
+          <h1 className="text-3xl font-bold text-ink text-center mb-2">
             ¡Sesión Completada!
           </h1>
 

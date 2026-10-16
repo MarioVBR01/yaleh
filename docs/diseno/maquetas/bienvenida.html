@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>YALEH · Bienvenida</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&family=Lexend:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="yaleh.css">
+<style>
+  .welcome { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; position: relative; padding-bottom: 40px; }
+  .welcome [data-logo] svg { width: 168px; height: 168px; }
+  .welcome h1 { font-family: var(--f-display); font-size: 64px; font-weight: 800; letter-spacing: -0.025em; margin: 0; line-height: 1; text-align: center; }
+  .welcome h1 span { color: var(--accent); }
+  .welcome .sub { margin: 12px 0 0; font-size: 19px; color: var(--ink-soft); font-weight: 300; text-align: center; }
+  .start { height: 64px; min-width: 320px; font-size: 18px; border-radius: 18px; font-weight: 600; gap: 12px; }
+  .start svg { width: 20px; height: 20px; fill: currentColor; }
+  .gear { position: absolute; top: 24px; right: 24px; width: 48px; height: 48px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); display: grid; place-items: center; }
+  .gear svg { width: 22px; height: 22px; }
+  .hello { position: absolute; top: 34px; left: 32px; font-size: 14px; color: var(--ink-muted); }
+  .hello b { color: var(--ink); font-weight: 500; }
+  .offline-note { max-width: 520px; }
+</style>
+</head>
+<body>
+<header class="deck">
+  <div class="grow">
+    <h1>Bienvenida del escritorio</h1>
+    <p>Sin recuadro y sin la caja para abrir el .yaleh. Arriba, con conexión; abajo, la misma pantalla sin conexión.</p>
+  </div>
+  <nav aria-label="Vistas">
+    <a href="guia-de-estilo.html">Guía de estilo</a>
+    <a href="bienvenida.html" aria-current="page">Bienvenida</a>
+    <a href="web.html">Web</a>
+    <a href="espacio-de-trabajo.html">Espacio de trabajo</a>
+    <a href="historial.html">Historial</a>
+  </nav>
+  <div class="theme-switch" role="group" aria-label="Tema">
+    <button class="theme-btn" data-set="dark" type="button">Oscuro</button>
+    <button class="theme-btn" data-set="light" type="button">Claro</button>
+  </div>
+</header>
+
+<p class="frame-label"><b>Bienvenida · con conexión</b>No hace falta ningún mensaje: con internet todo funciona.</p>
+<div class="stage">
+<div class="screen">
+  <span class="glow"></span>
+  <p class="hello">Hola, <b>Mario</b></p>
+  <button class="gear" type="button" aria-label="Configuración" title="Configuración"><i data-i="settings"></i></button>
+  <div class="welcome">
+    <span data-logo></span>
+    <div>
+      <h1>Bienvenido a YALEH<span>.</span></h1>
+      <p class="sub">Tu entorno de estudio sin distracciones.</p>
+    </div>
+    <button class="btn btn-primary start" type="button"><i data-i="play"></i>Iniciar</button>
+  </div>
+  <p class="screen-foot">YALEH v1.0 · TECBA 2026 · Proyecto de grado</p>
+</div>
+</div>
+
+<p class="frame-label"><b>Bienvenida · sin conexión</b>Solo aparece cuando no hay internet, para avisar que se usa el módulo offline.</p>
+<div class="stage">
+<div class="screen">
+  <span class="glow"></span>
+  <p class="hello">Hola, <b>Mario</b></p>
+  <button class="gear" type="button" aria-label="Configuración" title="Configuración"><i data-i="settings"></i></button>
+  <div class="welcome">
+    <span data-logo></span>
+    <div>
+      <h1>Bienvenido a YALEH<span>.</span></h1>
+      <p class="sub">Tu entorno de estudio sin distracciones.</p>
+    </div>
+    <button class="btn btn-primary start" type="button"><i data-i="play"></i>Iniciar</button>
+    <div class="offline-note" role="status">
+      <i data-i="wifiOff"></i>
+      <span><b>Estás sin conexión.</b> Vas a estudiar con el asistente sin conexión: chat, resumen, tarjetas y cuestionario con tus documentos.</span>
+    </div>
+  </div>
+  <p class="screen-foot">YALEH v1.0 · TECBA 2026 · Proyecto de grado</p>
+</div>
+</div>
+
+<section class="notes" aria-label="Notas de diseño">
+  <div class="note"><span class="tag">Pedido de Mario</span><h3>Qué se sacó</h3><ul><li>El recuadro que envolvía todo.</li><li>El botón y el texto para abrir el .yaleh: el archivo se abre con doble clic gracias a la asociación de archivos.</li><li>El mensaje “Con conexión”.</li><li>La sección del asistente sin conexión: se va a descargar desde la landing page, junto con el ejecutable.</li></ul></div>
+  <div class="note"><span class="tag">Qué queda</span><h3>Bienvenida limpia</h3><ul><li>Logo grande, título y subtítulo.</li><li>Iniciar como único botón naranja.</li><li>Configuración como engranaje arriba a la derecha.</li><li>El saludo usa el nombre de Configuración; si no hay nombre, no se muestra.</li></ul></div>
+  <div class="note"><span class="tag">Sin conexión</span><h3>Aviso solo cuando hace falta</h3><p>Si el asistente sin conexión no está instalado, el texto cambia a: “Estás sin conexión. Vas a poder estudiar con tus documentos; el asistente sin conexión se descarga desde la página de YALEH.”</p></div>
+</section>
+<script src="yaleh.js"></script>
+</body>
+</html>

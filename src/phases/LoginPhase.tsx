@@ -9,7 +9,8 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, Shield } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
 import { isFirebaseConfigured } from '../firebase/app';
 import { describeAuthError, signInWithGoogle } from '../firebase/auth';
@@ -41,16 +42,14 @@ export default function LoginPhase() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 mb-4 shadow-2xl shadow-blue-500/30">
-            <Shield size={40} className="text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-1">YALEH</h1>
+          <Logo size={80} className="mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-ink mb-1">YALEH</h1>
           <p className="text-blue-300 text-sm font-medium">Entorno de estudio</p>
           <p className="text-slate-400 text-xs mt-1">TECBA 2026</p>
         </div>
 
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-white font-semibold text-lg mb-1">Iniciar Sesión</h2>
+          <h2 className="text-ink font-semibold text-lg mb-1">Iniciar Sesión</h2>
           <p className="text-slate-400 text-sm mb-6">
             Accede con tu cuenta de Google para cargar tus materiales y trabajar con el asistente.
           </p>

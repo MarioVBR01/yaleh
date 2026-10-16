@@ -22,10 +22,10 @@ describe('Aviso de pestañas (ORION #21 y #34)', () => {
     const banner = screen.getByText(TAB_LIMIT_MESSAGE).closest('[role="alert"]') as HTMLElement;
     expect(TAB_LIMIT_MESSAGE).toBe('Tenés 8 pestañas abiertas. Es el máximo de la sesión. Cerrá una para abrir otra.');
     // Fondo invertido: el color del texto (claro en modo oscuro) como fondo; ícono naranja.
-    expect(banner.className).toContain('bg-ink');
-    expect(banner.className).toContain('text-canvas');
+    expect(banner.className).toContain('bg-inverse');
+    expect(banner.className).toContain('text-on-inverse');
     expect(banner.className).not.toMatch(/absolute|fixed/);
-    expect(banner.querySelector('svg')!.getAttribute('class')).toContain('text-brand');
+    expect(banner.querySelector('svg')!.getAttribute('class')).toContain('text-accent');
     // Va antes del contenedor de las pestañas (en el flujo): la pestaña externa se achica debajo.
     const tabsArea = banner.parentElement!.parentElement!.lastElementChild as HTMLElement;
     expect(tabsArea.className).toContain('relative');

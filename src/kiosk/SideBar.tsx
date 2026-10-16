@@ -17,6 +17,7 @@ import { TOOL_LINKS, WORKSPACE_LINKS, type ToolLink } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import { useModeFlags } from '../lib/mode';
 import { signOut } from '../firebase/auth';
+import Logo from '../components/Logo';
 import { useOpenExternalTab } from './useExternalTabs';
 
 /** Estilo de cada app de Google Workspace; la lista viene de shared/config.ts. */
@@ -53,20 +54,20 @@ function NavItem({
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group relative ${
         active
           ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-          : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          : 'text-slate-400 hover:text-ink hover:bg-slate-800'
       }`}
       whileHover={{ x: 2 }}
       whileTap={{ scale: 0.98 }}
       title={collapsed ? label : undefined}
     >
-      <span className={`flex-shrink-0 ${active ? 'text-blue-400' : 'text-slate-400 group-hover:text-white'}`}>
+      <span className={`flex-shrink-0 ${active ? 'text-blue-400' : 'text-slate-400 group-hover:text-ink'}`}>
         {icon}
       </span>
       {!collapsed && (
         <>
           <span className="flex-1 text-left truncate">{label}</span>
           {badge !== undefined && badge > 0 && (
-            <span className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+            <span className="bg-blue-500 text-on-accent text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
               {badge}
             </span>
           )}
@@ -79,7 +80,7 @@ function NavItem({
       )}
       {/* Tooltip para modo colapsado */}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
+        <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-ink whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
           {label}
         </div>
       )}
@@ -146,12 +147,10 @@ export default function SideBar({ collapsed }: SideBarProps) {
     >
       {/* Logo superior */}
       <div className={`p-3 border-b border-slate-800 flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-xs font-bold">YA</span>
-        </div>
+        <Logo size={32} />
         {!collapsed && (
           <div>
-            <p className="text-white text-xs font-bold leading-tight">YALEH</p>
+            <p className="text-ink text-xs font-bold leading-tight">YALEH</p>
             <p className="text-slate-500 text-[10px]">Entorno de estudio</p>
           </div>
         )}
@@ -241,7 +240,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
                     className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-all hover:bg-slate-800 ${WORKSPACE_STYLES[app.id] ?? 'text-slate-300'}`}
                   >
                     <span>{app.icon}</span>
-                    <span className="text-slate-300 hover:text-white">{app.name}</span>
+                    <span className="text-slate-300 hover:text-ink">{app.name}</span>
                   </button>
                 ))}
               </motion.div>

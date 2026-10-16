@@ -95,7 +95,7 @@ export default function ConfirmSessionPhase() {
               `La sesión de ${formatMinutes(minutes)} empieza y la computadora queda bloqueada.`,
             ].map((step, i) => (
               <li key={step} className="flex items-start gap-3 text-sm text-ink-soft">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-brand text-black text-xs font-bold flex-shrink-0">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-accent text-on-accent text-xs font-bold flex-shrink-0">
                   {i + 1}
                 </span>
                 <span className="pt-0.5">{step}</span>
@@ -120,7 +120,7 @@ export default function ConfirmSessionPhase() {
     );
   }
 
-  const changeLink = 'text-brand hover:underline text-xs font-semibold whitespace-nowrap disabled:opacity-50';
+  const changeLink = 'text-accent-soft hover:underline text-xs font-semibold whitespace-nowrap disabled:opacity-50';
 
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
@@ -141,7 +141,7 @@ export default function ConfirmSessionPhase() {
           {/* Resumen: Archivos (cantidad y nombres) y Duración, cada uno con "Cambiar" */}
           <section aria-label="Archivos" className="p-4 rounded-xl bg-surface-raised">
             <div className="flex items-start gap-3">
-              <FileText size={18} className="text-brand flex-shrink-0 mt-0.5" />
+              <FileText size={18} className="text-accent-soft flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-ink-muted text-xs font-medium uppercase tracking-wider">Archivos</p>
                 <p className="text-ink text-sm font-semibold">
@@ -170,7 +170,7 @@ export default function ConfirmSessionPhase() {
 
           <section aria-label="Duración" className="p-4 rounded-xl bg-surface-raised">
             <div className="flex items-center gap-3">
-              <Clock size={18} className="text-brand flex-shrink-0" />
+              <Clock size={18} className="text-accent-soft flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-ink-muted text-xs font-medium uppercase tracking-wider">Duración</p>
                 <p className="text-ink text-sm font-semibold">{formatMinutes(minutes)}</p>
@@ -187,8 +187,8 @@ export default function ConfirmSessionPhase() {
           </section>
 
           {/* Aviso con candado */}
-          <section className="flex items-start gap-3 p-3 rounded-xl border border-brand/40 bg-brand/10">
-            <Lock size={18} className="text-brand flex-shrink-0 mt-0.5" />
+          <section className="flex items-start gap-3 p-3 rounded-xl border border-accent/40 bg-accent/10">
+            <Lock size={18} className="text-accent-soft flex-shrink-0 mt-0.5" />
             <p className="text-ink-soft text-sm">
               <strong className="text-ink">
                 No podrás salir hasta que termine el tiempo. Solo apagando o reiniciando el equipo.
@@ -207,7 +207,7 @@ export default function ConfirmSessionPhase() {
             onClick={() => void (api ? handleStart() : handleDownload())}
             disabled={busy}
             className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${
-              api ? 'bg-accent-strong hover:bg-accent text-ink' : 'bg-brand hover:brightness-110 text-black'
+              api ? 'bg-accent hover:bg-accent-strong text-on-accent' : 'bg-accent hover:bg-accent-strong text-on-accent'
             }`}
           >
             {api ? (

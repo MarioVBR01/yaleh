@@ -62,7 +62,7 @@ export default function DropzonePhase() {
             <Shield size={16} className="text-blue-400" />
             <div className="w-8 h-px bg-blue-500/50" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Material de Estudio</h1>
+          <h1 className="text-2xl font-bold text-ink mb-2">Material de Estudio</h1>
           <p className="text-slate-400 text-sm">
             Carga los documentos que usarás en tu sesión de concentración. Este paso es <strong className="text-blue-400">opcional</strong>.
           </p>
@@ -91,7 +91,7 @@ export default function DropzonePhase() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-4">
               {ready ? <Upload size={28} className="text-blue-400" /> : <Loader2 size={28} className="text-blue-400 animate-spin" />}
             </div>
-            <p className="text-white font-medium mb-1">
+            <p className="text-ink font-medium mb-1">
               {!ready ? 'Preparando tu espacio de trabajo…' : isDragging ? 'Suelta los archivos aquí' : 'Arrastra archivos aquí'}
             </p>
             <p className="text-slate-500 text-sm mb-4">o haz clic para seleccionar</p>
@@ -142,7 +142,7 @@ export default function DropzonePhase() {
                   <div key={file.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/60 border border-slate-700/50 group">
                     <FileText size={14} className="text-blue-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{file.name}</p>
+                      <p className="text-sm text-ink truncate">{file.name}</p>
                       <p className={`text-xs ${file.status === 'error' ? 'text-red-400' : 'text-slate-500'}`}>
                         {file.status === 'extracting'
                           ? 'Extrayendo texto…'
@@ -174,7 +174,7 @@ export default function DropzonePhase() {
             <motion.button
               onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
               disabled={extracting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-on-accent font-medium transition-colors disabled:opacity-50"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >

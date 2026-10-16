@@ -74,7 +74,7 @@ export default function NotesBox() {
         <button
           onClick={() => void handleSave()}
           disabled={saving || !draft.trim() || !store}
-          className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs bg-accent-strong hover:bg-accent text-ink disabled:opacity-50"
+          className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs bg-accent hover:bg-accent-strong text-on-accent disabled:opacity-50"
         >
           {saving && <Loader2 size={12} className="animate-spin" />} Guardar nota
         </button>

@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>YALEH · Historial de sesiones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&family=Lexend:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="yaleh.css">
+<style>
+  .filters { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; }
+  .filters .line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 14px; background: var(--surface-2); gap: 2px; }
+  .seg button { height: 34px; padding: 0 14px; border-radius: 10px; border: 0; background: none; color: var(--ink-soft); font-size: 13px; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .range { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; border-radius: 14px; border: 1.5px solid var(--accent); background: var(--accent-tint); }
+  .range .input { height: 34px; background: var(--surface); border-color: transparent; }
+  .range .to { color: var(--ink-soft); font-size: 13px; }
+  .range .clear { width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--ink-soft); display: grid; place-items: center; }
+  .chipf { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); background: var(--surface); }
+  .chipf svg { width: 15px; height: 15px; }
+  .chipf.on { border-color: var(--ink); color: var(--ink); }
+  .summary { display: flex; gap: 28px; align-items: baseline; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  .summary b { font-family: var(--f-display); font-size: 22px; color: var(--ink); font-weight: 700; margin-right: 6px; }
+  .summary .grow { flex: 1; }
+
+  .tbl-wrap { flex: 1; min-height: 0; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; table-layout: fixed; }
+  td { overflow: hidden; text-overflow: ellipsis; }
+  th { text-align: left; font-weight: 500; color: var(--ink-muted); font-size: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface); }
+  td { padding: 0 14px; height: 50px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: var(--surface-2); }
+  td.r, th.r { text-align: right; }
+  
+  .date b { font-weight: 500; display: block; line-height: 1.2; }
+  .date small { color: var(--ink-muted); font-size: 12px; }
+  .zero { color: var(--ink-muted); }
+  .warnn { color: var(--danger); font-weight: 600; }
+  .mode { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+  .mode i, .mode::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 2px solid currentColor; }
+  .mode.on::before { background: currentColor; }
+  .bar { display: inline-block; width: 64px; height: 6px; border-radius: 3px; background: var(--surface-2); vertical-align: middle; margin-left: 8px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .foot { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  .foot .grow { flex: 1; }
+  .tabs.full .tab { flex-basis: 128px; }
+  .tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 9px; background: var(--accent); color: var(--on-accent); font-family: var(--f-mono); font-weight: 700; font-size: 13px; }
+</style>
+</head>
+<body>
+<header class="deck">
+  <div class="grow">
+    <h1>Historial de sesiones · filtro nuevo</h1>
+    <p>Estado mostrado: rango personalizado del 28/09 al 04/10 y 8 pestañas abiertas (aviso de máximo visible).</p>
+  </div>
+  <nav aria-label="Vistas">
+    <a href="guia-de-estilo.html">Guía de estilo</a>
+    <a href="bienvenida.html">Bienvenida</a>
+    <a href="web.html">Web</a>
+    <a href="espacio-de-trabajo.html">Espacio de trabajo</a>
+    <a href="historial.html" aria-current="page">Historial</a>
+  </nav>
+  <div class="theme-switch" role="group" aria-label="Tema">
+    <button class="theme-btn" data-set="dark" type="button">Oscuro</button>
+    <button class="theme-btn" data-set="light" type="button">Claro</button>
+  </div>
+</header>
+
+<div class="stage">
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span data-logo></span><div><b>YALEH</b><small>Entorno de estudio</small></div></div>
+    <nav class="nav">
+      <button class="nav-item" type="button"><i data-i="home"></i><span class="grow">Espacio de trabajo</span></button>
+      <button class="nav-item" type="button"><i data-i="chart"></i><span class="grow">Estadísticas</span></button>
+      <button class="nav-item" type="button"><i data-i="clock"></i><span class="grow">Pomodoro</span></button>
+      <button class="nav-item" type="button"><i data-i="wrench"></i><span class="grow">Herramientas</span><i data-i="chevR"></i></button>
+      <button class="nav-item" aria-current="page" type="button"><i data-i="history"></i><span class="grow">Historial de sesiones</span></button>
+      <button class="nav-item" type="button"><i data-i="settings"></i><span class="grow">Configuración</span></button>
+    </nav>
+    <div class="side-foot">
+      <b><i data-i="shield"></i>Sesión protegida</b>
+      Solo se abren los sitios de estudio permitidos. Si se corta internet, el asistente sin conexión sigue funcionando.
+    </div>
+  </aside>
+
+  <section class="main">
+    <div class="page">
+      <div class="page-head">
+        <div class="grow">
+          <h1 class="page-title">Historial de sesiones</h1>
+          <p class="page-sub num">19 sesiones guardadas en este equipo</p>
+        </div>
+        <button class="btn btn-ghost" type="button"><i data-i="refresh"></i>Actualizar</button>
+        <button class="btn" type="button"><i data-i="download"></i>Exportar PDF</button>
+      </div>
+
+      <div class="card filters">
+        <div class="line">
+          <div class="seg" role="group" aria-label="Período">
+            <button type="button" aria-pressed="false">Todo</button>
+            <button type="button" aria-pressed="false">Hoy</button>
+            <button type="button" aria-pressed="false">7 días</button>
+            <button type="button" aria-pressed="false">Este mes</button>
+            <button type="button" aria-pressed="true">Elegir fechas</button>
+          </div>
+          <div class="range">
+            <i data-i="calendar" style="color:var(--accent-strong)"></i>
+            <span class="input num">28/09/2026</span>
+            <span class="to">al</span>
+            <span class="input num">04/10/2026</span>
+            <button class="clear" type="button" aria-label="Quitar fechas"><i data-i="x"></i></button>
+          </div>
+          <span style="flex:1"></span>
+          <span class="chipf"><i data-i="filter"></i>Estado: todas<i data-i="chevD"></i></span>
+          <span class="chipf"><i data-i="globe"></i>Modo: todos<i data-i="chevD"></i></span>
+        </div>
+        <div class="summary">
+          <span class="num"><b>8</b>sesiones</span>
+          <span class="num"><b>28 min</b>estudiados</span>
+          <span class="num"><b>100 %</b>completadas</span>
+          <span class="grow"></span>
+          <span>Se filtra al elegir, sin botón Buscar.</span>
+        </div>
+      </div>
+
+      <div class="card tbl-wrap" style="display:flex;flex-direction:column">
+        <div style="flex:1;min-height:0;overflow:hidden">
+        <table>
+          <thead>
+            <tr><th style="width:130px">Fecha</th><th style="width:170px">Tiempo estudiado</th><th style="width:150px">Modo</th><th style="width:150px">Estado</th><th>Archivos</th><th class="r" style="width:126px">Pérdidas de foco</th><th class="r" style="width:110px">Cortes de red</th><th class="r" style="width:118px">Interrupciones</th></tr>
+          </thead>
+          <tbody class="num">
+            <tr><td class="date"><b>4 oct 2026</b><small>3:38 a. m.</small></td><td>2 de 2 min<span class="bar"><span style="width:100%"></span></span></td><td><span class="mode on">Con conexión</span></td><td><span class="pill pill-ok">Completada</span></td><td class="files">PROYECTO DE GRADO- PERFIL-CP1.pdf</td><td class="r">1</td><td class="r zero">0</td><td class="r zero">0</td></tr>
+            <tr><td class="date"><b>29 sept 2026</b><small>9:44 p. m.</small></td><td>2 de 2 min<span class="bar"><span style="width:100%"></span></span></td><td><span class="mode on">Con conexión</span></td><td><span class="pill pill-ok">Completada</span></td><td class="files">UT4 Marco Teórico.pdf</td><td class="r">1</td><td class="r zero">0</td><td class="r zero">0</td></tr>
+            <tr><td class="date"><b>29 sept 2026</b><small>9:19 p. m.</small></td><td>5 de 5 min<span class="bar"><span style="width:100%"></span></span></td><td><span class="mode on">Con conexión</span></td><td><span class="pill pill-ok">Completada</span></td><td class="files">Practica_Aula_Actividad_2_MikroTik (1).pdf, ET…</td><td class="r">2</td><td class="r zero">0</td><td class="r zero">0</td></tr>
+            <tr><td class="date"><b>29 sept 2026</b><small>6:46 p. m.</small></td><td>5 de 5 min<span class="bar"><span style="width:100%"></span></span></td><td><span class="mode">Sin conexión</span></td><td><span class="pill pill-ok">Completada</span></td><td class="files">UT4 Marco Teórico.pdf</td><td class="r">2</td><td class="r zero">0</td><td class="r zero">0</td></tr>
+            <tr><td class="date"><b>29 sept 2026</b><small>6:43 p. m.</small></td><td>2 de 2 min<span class="bar"><span style="width:100%"></span></span></td><td><span class="mode">Sin conexión</span></td><td><span class="pill pill-ok">Completada</span></td><td class="files">codigo_civil_bolivia.pdf</td><td class="r warnn">6</td><td class="r zero">0</td><td class="r zero">0</td></tr>
+            <tr><td class="date"><b>29 sept 2026</b><small>5:22 p. m.</small></td><td>5 de 5 min<span class="bar"><span style="width:100%"></span></span></td><td><span class="mode on">Con conexión</span></td><td><span class="pill pill-ok">Completada</span></td><td class="files zero">Sin archivos</td><td class="r zero">0</td><td class="r zero">0</td><td class="r zero">0</td></tr>
+            <tr><td class="date"><b>29 sept 2026</b><small>1:37 a. m.</small></td><td>2 de 2 min<span class="bar"><span style="width:100%"></span></span></td><td><span class="mode">Sin conexión</span></td><td><span class="pill pill-ok">Completada</span></td><td class="files zero">Sin archivos</td><td class="r">1</td><td class="r zero">0</td><td class="r zero">0</td></tr>
+            <tr><td class="date"><b>28 sept 2026</b><small>9:28 p. m.</small></td><td>5 de 5 min<span class="bar"><span style="width:100%"></span></span></td><td><span class="mode">Sin conexión</span></td><td><span class="pill pill-ok">Completada</span></td><td class="files zero">Sin archivos</td><td class="r warnn">17</td><td class="r zero">0</td><td class="r zero">0</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="foot"><span class="grow num">Mostrando 8 de 8 en este rango</span>Filas por página<span class="chipf num">10<i data-i="chevD"></i></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast-inverse" role="status">
+    <span class="ico"><i data-i="alert"></i></span>
+    <div><b>Tenés 8 pestañas abiertas</b><p>Es el máximo de la sesión. Cerrá una para abrir otra.</p></div>
+  </div>
+
+  <footer class="dock">
+    <div class="dock-progress"><span style="width:62%"></span></div>
+    <div class="timer">
+      <svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="var(--line)" stroke-width="4"/><circle cx="18" cy="18" r="15" fill="none" stroke="var(--accent)" stroke-width="4" stroke-dasharray="94.2" stroke-dashoffset="35.8" stroke-linecap="round"/></svg>
+      <div><small>Quedan</small><span class="t num">00:24:46</span></div>
+    </div>
+    <span class="dock-sep"></span>
+    <div class="tabs full" role="tablist">
+      <div class="tab" role="tab" aria-selected="false"><i data-i="home"></i><span>Espacio de trabajo</span></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="file"></i><span>UT4 Marco Teórico.pdf</span></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="globe"></i><span>Documentos de Google</span></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="book"></i><span>Wikipedia · NAT</span></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="globe"></i><span>YouTube</span></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="chart"></i><span>Estadísticas</span></div>
+      <div class="tab" role="tab" aria-selected="false"><i data-i="clock"></i><span>Pomodoro</span></div>
+      <div class="tab" role="tab" aria-selected="true"><i data-i="history"></i><span>Historial</span><i data-i="x" class="x"></i></div>
+    </div>
+    <span class="tab-count" title="Pestañas abiertas">8/8</span>
+    <button class="btn btn-ghost" type="button" disabled style="opacity:.45"><i data-i="plus"></i>Nueva pestaña</button>
+  </footer>
+</div>
+</div>
+
+<section class="notes" aria-label="Notas de diseño">
+  <div class="note"><span class="tag">Tarjeta 4ª ronda</span><h3>Filtro de fechas</h3><ul><li>Atajos de un clic: Todo, Hoy, 7 días, Este mes.</li><li>“Elegir fechas” abre el rango, resaltado en naranja mientras está activo; la X lo quita.</li><li>Filtra apenas elegís, sin botón Buscar.</li><li>El resumen debajo dice cuántas sesiones y minutos entran en el filtro.</li></ul></div>
+  <div class="note"><span class="tag">Tabla</span><h3>Más fácil de leer</h3><ul><li>Fecha y hora en dos líneas.</li><li>“Duración” y “Tiempo estudiado” se juntan en “2 de 2 min” con una barrita.</li><li>Las pérdidas de foco altas se marcan en rojo; los ceros se apagan.</li><li>“Sin archivos” en lugar de una raya.</li></ul></div>
+  <div class="note"><span class="tag">Pendiente de la 3ª ronda</span><h3>Aviso de 8 pestañas</h3><p>Usa fondo claro en modo oscuro (y oscuro en modo claro) para que siempre resalte. Además el contador 8/8 queda en naranja y “Nueva pestaña” se apaga.</p></div>
+</section>
+<script src="yaleh.js"></script>
+</body>
+</html>

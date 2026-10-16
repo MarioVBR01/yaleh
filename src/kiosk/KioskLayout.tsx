@@ -124,7 +124,7 @@ export default function KioskLayout() {
             <SideBar collapsed={sidebarCollapsed} />
             <button
               onClick={() => setSidebarCollapsed(prev => !prev)}
-              className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-700 border border-slate-600 hover:bg-slate-600 text-slate-300 hover:text-white text-xs flex items-center justify-center z-30 transition-all shadow-lg"
+              className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-700 border border-slate-600 hover:bg-slate-600 text-slate-300 hover:text-ink text-xs flex items-center justify-center z-30 transition-all shadow-lg"
               title={sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'}
             >
               {sidebarCollapsed ? '›' : '‹'}
@@ -145,13 +145,13 @@ export default function KioskLayout() {
             <div className="flex-shrink-0 px-3 pt-3">
               <div
                 role="alert"
-                className="px-4 py-3 rounded-xl bg-ink text-canvas shadow-lg text-sm font-medium flex items-center gap-3"
+                className="px-4 py-3 rounded-xl bg-inverse text-on-inverse shadow-lg text-sm font-medium flex items-center gap-3"
               >
-                <AlertTriangle size={18} className="text-brand flex-shrink-0" />
+                <AlertTriangle size={18} className="text-accent flex-shrink-0" />
                 <span className="flex-1">{state.notice}</span>
                 <button
                   onClick={() => dispatch({ type: 'SET_NOTICE', payload: null })}
-                  className="px-3 py-1.5 rounded-lg bg-canvas text-ink text-xs font-semibold hover:opacity-90 flex-shrink-0"
+                  className="px-3 py-1.5 rounded-lg bg-accent text-on-accent text-xs font-semibold hover:opacity-90 flex-shrink-0"
                 >
                   Entendido
                 </button>
@@ -215,7 +215,7 @@ export default function KioskLayout() {
                 exit={{ scale: 0.9, y: 20 }}
                 onClick={e => e.stopPropagation()}
               >
-                <h2 className="text-white font-bold text-lg mb-1">Nueva Pestaña</h2>
+                <h2 className="text-ink font-bold text-lg mb-1">Nueva Pestaña</h2>
                 {onlineTools && (
                   <>
                 <p className="text-slate-400 text-sm mb-5">Herramientas autorizadas</p>
@@ -249,7 +249,7 @@ export default function KioskLayout() {
 
                 <button
                   onClick={() => setShowNewTabDialog(false)}
-                  className="mt-4 w-full py-2.5 rounded-xl text-slate-500 hover:text-white text-sm transition-colors"
+                  className="mt-4 w-full py-2.5 rounded-xl text-slate-500 hover:text-ink text-sm transition-colors"
                 >
                   Cancelar
                 </button>

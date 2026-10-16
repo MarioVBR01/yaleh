@@ -76,7 +76,7 @@ function Switch({ checked, onChange, disabled, label }: { checked: boolean; onCh
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative w-10 h-5 rounded-full border transition-colors disabled:opacity-50 ${
-        checked ? 'bg-accent-strong border-accent' : 'bg-surface-raised border-line'
+        checked ? 'bg-accent border-accent' : 'bg-surface-raised border-line'
       }`}
     >
       <span className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-ink transition-all ${checked ? 'left-5' : 'left-0.5'}`} />
@@ -218,8 +218,8 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
         </Section>
 
         <Section icon={<Moon size={16} />} title="Modo nocturno">
-          <Row label="Modo oscuro" hint="Elegir entre el modo claro y el oscuro. Se activa en la fase de diseño.">
-            <Switch label="Modo oscuro" checked={settings.darkMode} disabled onChange={() => {}} />
+          <Row label="Modo oscuro" hint="Negro cálido para concentrarte; apagado, el modo claro. Se puede cambiar durante la sesión.">
+            <Switch label="Modo oscuro" checked={settings.darkMode} onChange={v => void update({ darkMode: v })} />
           </Row>
         </Section>
 

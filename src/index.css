@@ -1,36 +1,126 @@
 @import "tailwindcss";
 
-/* ── Tokens de color de YALEH ───────────────────────────────────────────────
+/* ── Tokens de color de YALEH (ORION #29) ───────────────────────────────────
  * Única fuente de los colores de la interfaz. Generan utilidades de Tailwind
  * (bg-canvas, text-ink, border-line, bg-accent, ...).
- * Por ahora conservan la paleta del MVP (slate + azul). El tema definitivo
- * (amarillo dorado y negro, brief sección 14) se aplica cambiando solo estos
- * valores. Los componentes migran a los tokens cuando se modifican en su fase.
+ * Valores de docs/diseno/maquetas/yaleh.css: negro cálido y naranja del logo (#F7941D).
+ * - Modo claro: bloque :root (valores de @theme).
+ * - Modo oscuro: [data-theme="dark"] en <html> (Configuración → Modo nocturno, escritorio).
+ *   Sin data-theme (la web), sigue al sistema (prefers-color-scheme).
  */
 @theme {
-  --color-canvas: #020617;          /* fondo de la app        (slate-950) */
-  --color-surface: #0f172a;         /* paneles y barras       (slate-900) */
-  --color-surface-raised: #1e293b;  /* tarjetas, inputs       (slate-800) */
-  --color-line: #334155;            /* bordes                 (slate-700) */
-  --color-line-strong: #475569;     /* bordes en hover        (slate-600) */
-  --color-ink: #ffffff;             /* texto principal */
-  --color-ink-soft: #cbd5e1;        /* texto secundario       (slate-300) */
-  --color-ink-muted: #94a3b8;       /* texto de apoyo         (slate-400) */
-  --color-ink-subtle: #64748b;      /* texto terciario        (slate-500) */
-  --color-accent: #3b82f6;          /* acento principal       (blue-500) */
-  --color-accent-strong: #2563eb;   /* acento en botones      (blue-600) */
-  --color-accent-soft: #93c5fd;     /* acento sobre oscuro    (blue-300) */
-  --color-success: #10b981;         /* (emerald-500) */
-  --color-warning: #f59e0b;         /* (amber-500) */
-  --color-danger: #ef4444;          /* (red-500) */
-  --color-brand: #f7941d;           /* naranja del logo (ORION #32; el resto de la paleta, ORION #29) */
+  --color-canvas: #f6f3ef;          /* fondo de la app */
+  --color-surface: #ffffff;         /* paneles y barras */
+  --color-surface-raised: #f1ece5;  /* tarjetas, inputs, pestaña activa (superficie 2) */
+  --color-line: #e3dbd1;            /* bordes */
+  --color-line-strong: #cfc4b7;     /* bordes en hover */
+  --color-ink: #1a1510;             /* texto principal */
+  --color-ink-soft: #5b5248;        /* texto secundario */
+  --color-ink-muted: #8c8276;       /* texto de apoyo */
+  --color-ink-subtle: #8c8276;      /* texto terciario (= de apoyo) */
+  --color-accent: #f7941d;          /* naranja YALEH: botones principales */
+  --color-accent-strong: #e8850f;   /* naranja en hover de los botones */
+  --color-accent-soft: #c2650a;     /* naranja para textos e íconos */
+  --color-on-accent: #1a1206;       /* texto sobre naranja */
+  --color-success: #1c8f5a;
+  --color-warning: #c2650a;
+  --color-danger: #cc3a40;
+  --color-info: #2f6fc4;
+  --color-inverse: #1a1510;         /* avisos con fondo invertido */
+  --color-on-inverse: #fff6eb;
+  --color-logo-disc: #111010;       /* círculo del logo */
+  --color-logo-ring: transparent;   /* borde fino del círculo (solo en modo oscuro) */
+
+  --font-sans: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
 }
 
-/* ── Fuentes del sistema (sin CDN) ───────────────────────────────────────── */
+/* Modo oscuro (bloque [data-theme="dark"] de yaleh.css). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-canvas: #100f0e;
+    --color-surface: #191715;
+    --color-surface-raised: #221f1c;
+    --color-line: #322d28;
+    --color-line-strong: #4a433c;
+    --color-ink: #f5f0ea;
+    --color-ink-soft: #bdb3a8;
+    --color-ink-muted: #877d72;
+    --color-ink-subtle: #877d72;
+    --color-accent-strong: #ffab45;
+    --color-accent-soft: #ffab45;
+    --color-success: #3dcb86;
+    --color-warning: #ffab45;
+    --color-danger: #ff6b6f;
+    --color-info: #6aa8ff;
+    --color-inverse: #fff4e6;
+    --color-on-inverse: #1a1510;
+    --color-logo-disc: #050505;
+    --color-logo-ring: #3a342e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --color-canvas: #100f0e;
+  --color-surface: #191715;
+  --color-surface-raised: #221f1c;
+  --color-line: #322d28;
+  --color-line-strong: #4a433c;
+  --color-ink: #f5f0ea;
+  --color-ink-soft: #bdb3a8;
+  --color-ink-muted: #877d72;
+  --color-ink-subtle: #877d72;
+  --color-accent-strong: #ffab45;
+  --color-accent-soft: #ffab45;
+  --color-success: #3dcb86;
+  --color-warning: #ffab45;
+  --color-danger: #ff6b6f;
+  --color-info: #6aa8ff;
+  --color-inverse: #fff4e6;
+  --color-on-inverse: #1a1510;
+  --color-logo-disc: #050505;
+  --color-logo-ring: #3a342e;
+  color-scheme: dark;
+}
+
+/*
+ * Componentes que todavía usan los grises (slate) y el azul de Tailwind del MVP: se apuntan a los
+ * tokens, así siguen el modo claro/oscuro y el alto contraste sin tocar cada clase.
+ * Los grises van por función (950 = fondo … 300 = texto secundario); el azul pasa a naranja.
+ */
+:root {
+  --color-slate-950: var(--color-canvas);
+  --color-slate-900: var(--color-surface);
+  --color-slate-800: var(--color-surface-raised);
+  --color-slate-700: var(--color-line);
+  --color-slate-600: var(--color-line-strong);
+  --color-slate-500: var(--color-ink-muted);
+  --color-slate-400: var(--color-ink-muted);
+  --color-slate-300: var(--color-ink-soft);
+  --color-slate-200: var(--color-ink-soft);
+  --color-slate-100: var(--color-ink);
+  --color-slate-50: var(--color-ink);
+  --color-blue-700: var(--color-accent-strong);
+  --color-blue-600: var(--color-accent);
+  --color-blue-500: var(--color-accent);
+  --color-blue-400: var(--color-accent-soft);
+  --color-blue-300: var(--color-accent-soft);
+}
+
+/* ── Letras (ORION #29): incluidas en la app con @fontsource (sin internet) ── */
+html, body {
+  font-family: var(--font-sans);
+}
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
 * {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
-    'Helvetica Neue', Arial, sans-serif;
   box-sizing: border-box;
+}
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
 }
 
 /* ── Reset de scroll y overflow global ──────────────────────────────────── */
@@ -75,9 +165,9 @@ html, body, #root {
 
 /* ── Animación de carga del temporizador ────────────────────────────────── */
 @keyframes pulse-ring {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(247, 148, 29, 0.4); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(247, 148, 29, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(247, 148, 29, 0); }
 }
 
 /* ── Transición suave para cambios de tema ──────────────────────────────── */
@@ -135,29 +225,34 @@ html, body, #root {
   scroll-behavior: auto !important;
 }
 
-/* Configuración → "Alto contraste" (ORION #19): textos y bordes más claros, fondos más oscuros.
- * Cambia los tokens y los grises de Tailwind que usan los componentes sin migrar. */
+/* Configuración → "Alto contraste" (ORION #19): más contraste dentro del modo elegido.
+ * Cambia los tokens; los grises y el azul de Tailwind los siguen (ver arriba). */
 :root.high-contrast {
+  --color-canvas: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f1ece5;
+  --color-line: #5b5248;
+  --color-line-strong: #1a1510;
+  --color-ink: #000000;
+  --color-ink-soft: #1a1510;
+  --color-ink-muted: #3d362f;
+  --color-ink-subtle: #3d362f;
+  --color-accent-soft: #8f4a06;
+}
+:root.high-contrast[data-theme="dark"] {
   --color-canvas: #000000;
   --color-surface: #050505;
   --color-surface-raised: #141414;
   --color-line: #a3a3a3;
   --color-line-strong: #e5e5e5;
+  --color-ink: #ffffff;
   --color-ink-soft: #ffffff;
-  --color-ink-muted: #f1f5f9;
-  --color-ink-subtle: #e2e8f0;
-  --color-accent-soft: #bfdbfe;
-  --color-slate-300: #ffffff;
-  --color-slate-400: #f1f5f9;
-  --color-slate-500: #e2e8f0;
-  --color-slate-600: #cbd5e1;
-  --color-slate-700: #a3a3a3;
-  --color-slate-800: #141414;
-  --color-slate-900: #050505;
-  --color-slate-950: #000000;
+  --color-ink-muted: #f1ece5;
+  --color-ink-subtle: #e3dbd1;
+  --color-accent-soft: #ffc27a;
 }
 
 /* Configuración → "Tipografía para dislexia" (ORION #19): OpenDyslexic, incluida en la app (sin internet). */
 .dyslexia-font *:not(.font-mono):not(.font-mono *) {
-  font-family: 'OpenDyslexic', -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'OpenDyslexic', 'Segoe UI', sans-serif;
 }

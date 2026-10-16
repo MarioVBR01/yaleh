@@ -63,7 +63,7 @@ function FileCard({ file, onDelete }: { file: UploadedFile; onDelete: () => void
       </div>
 
       {/* Nombre del archivo */}
-      <p className="text-white text-sm font-medium truncate mb-1" title={file.name}>
+      <p className="text-ink text-sm font-medium truncate mb-1" title={file.name}>
         {file.name}
       </p>
       <p className="text-slate-500 text-xs">{formatBytes(file.size)}</p>
@@ -74,7 +74,7 @@ function FileCard({ file, onDelete }: { file: UploadedFile; onDelete: () => void
       {/* Acciones al hover */}
       <div className="absolute inset-x-3 bottom-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs transition-colors"
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-on-accent text-xs transition-colors"
           title="Vista previa"
         >
           <Eye size={12} /> Ver
@@ -120,7 +120,7 @@ export default function DownloadsPanel() {
       <div className="p-5 border-b border-slate-800">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-lg font-bold text-white">📁 Mis Archivos</h1>
+            <h1 className="text-lg font-bold text-ink">📁 Mis Archivos</h1>
             <p className="text-slate-400 text-sm">
               {state.uploadedFiles.length} archivo(s) · {formatBytes(totalSize)}
             </p>
@@ -128,7 +128,7 @@ export default function DownloadsPanel() {
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-blue-500/15 text-blue-400' : 'text-slate-500 hover:text-white'}`}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-blue-500/15 text-blue-400' : 'text-slate-500 hover:text-ink'}`}
               title="Vista cuadrícula"
             >
               <FolderOpen size={16} />
@@ -171,7 +171,7 @@ export default function DownloadsPanel() {
               </div>
               <motion.button
                 onClick={handleAddMore}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-on-accent text-sm font-medium transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >

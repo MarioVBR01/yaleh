@@ -61,13 +61,15 @@ export const TEXT_SCALES: Record<TextScale, { label: string; percent: number }> 
 
 /**
  * Lo que se puede cambiar durante una sesión (no afloja el kiosko: no toca el tiempo, los sitios
- * permitidos ni el acceso al sistema). ORION #19 suma accesibilidad, alarmas y el aviso de fin.
+ * permitidos ni el acceso al sistema). ORION #19 suma accesibilidad, alarmas y el aviso de fin;
+ * ORION #29, el modo claro/oscuro.
  */
 export const KIOSK_SAFE_SETTINGS: readonly (keyof AppSettings)[] = [
   'textScale',
   'reduceMotion',
   'highContrast',
   'dyslexiaFont',
+  'darkMode',
   'alarmVolume',
   'alarmSound',
   'endWarningMinutes',

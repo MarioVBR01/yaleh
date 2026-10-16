@@ -54,7 +54,7 @@ describe('Web: Confirmar y Descargado (ORION #39)', () => {
   it('descargar muestra "Tu sesión está lista" con el archivo, los tres pasos y los botones', async () => {
     renderConfirm();
     const download = screen.getByText('Descargar archivo de sesión').closest('button')!;
-    expect(download.className).toContain('bg-brand');
+    expect(download.className).toContain('bg-accent');
     fireEvent.click(download);
     expect(await screen.findByText('Tu sesión está lista')).toBeTruthy();
     expect(screen.getByTestId('session-file-name').textContent).toBe('YALEH sesión 2026-10-16 10-00.yaleh');

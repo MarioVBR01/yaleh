@@ -90,7 +90,7 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
       {/* Barra de progreso del temporizador (naranja, ORION #32) */}
       <div className="h-0.5 bg-slate-800 relative overflow-hidden">
         <motion.div
-          className="h-full bg-brand"
+          className="h-full bg-accent"
           style={{ width: `${timePercent}%` }}
           transition={{ duration: 1, ease: 'linear' }}
         />
@@ -144,7 +144,7 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
         </div>
 
         {atTabLimit && (
-          <span data-testid="tab-counter" className="px-2 py-1 rounded-lg bg-brand/15 border border-brand/40 text-brand text-xs font-bold font-mono flex-shrink-0" title="Máximo de pestañas de la sesión">
+          <span data-testid="tab-counter" className="px-2 py-1 rounded-lg bg-accent/15 border border-accent/40 text-accent-soft text-xs font-bold font-mono flex-shrink-0" title="Máximo de pestañas de la sesión">
             {state.tabs.length}/{LIMITS.maxTabs}
           </span>
         )}
@@ -154,7 +154,7 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
           onClick={onNewTab}
           disabled={atTabLimit}
           title={atTabLimit ? 'Cerrá una pestaña para abrir otra' : undefined}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white text-xs font-medium transition-all flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-800 disabled:hover:text-slate-400"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-ink text-xs font-medium transition-all flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-800 disabled:hover:text-slate-400"
           whileHover={atTabLimit ? undefined : { scale: 1.05 }}
           whileTap={atTabLimit ? undefined : { scale: 0.95 }}
         >
@@ -186,13 +186,13 @@ function SessionClock({ remaining, percent, low }: { remaining: number; percent:
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - Math.max(0, Math.min(100, percent)) / 100)}
-          className={low ? 'stroke-brand' : 'stroke-slate-300'}
+          className={low ? 'stroke-accent' : 'stroke-slate-300'}
           style={{ transition: 'stroke-dashoffset 1s linear' }}
         />
       </svg>
       <div className="leading-none">
-        <div className={`text-[10px] uppercase tracking-wide font-semibold ${low ? 'text-brand' : 'text-slate-400'}`}>Quedan</div>
-        <div className={`font-mono text-[20px] font-bold tabular-nums ${low ? 'text-brand' : 'text-slate-100'}`}>{formatTime(remaining)}</div>
+        <div className={`text-[10px] uppercase tracking-wide font-semibold ${low ? 'text-accent-soft' : 'text-slate-400'}`}>Quedan</div>
+        <div className={`font-mono text-[20px] font-bold tabular-nums ${low ? 'text-accent-soft' : 'text-slate-100'}`}>{formatTime(remaining)}</div>
       </div>
     </div>
   );

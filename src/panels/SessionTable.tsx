@@ -75,7 +75,7 @@ export default function SessionTable({ entries }: { entries: SessionHistoryEntry
               <td className="py-2 pr-3 whitespace-nowrap">
                 <div>{formatStudiedOf(s)}</div>
                 <div className="mt-1 h-1 w-24 rounded-full bg-line overflow-hidden" aria-hidden="true">
-                  <div className="h-full rounded-full bg-brand" style={{ width: `${ratio * 100}%` }} />
+                  <div className="h-full rounded-full bg-accent" style={{ width: `${ratio * 100}%` }} />
                 </div>
               </td>
               <td className="py-2 pr-3">{s.mode === 'online' ? 'Con conexión' : 'Sin conexión'}</td>
