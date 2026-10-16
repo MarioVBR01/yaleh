@@ -1,8 +1,8 @@
 /**
- * ORION #10: extender desde la barra inferior durante los últimos 5 minutos, sin salir del kiosko.
+ * ORION #10 y #32: extender desde la barra inferior durante los últimos 5 minutos, a un clic, sin salir del kiosko.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '@shared/settings';
 import { AppProvider, useApp } from '../context/AppContext';
@@ -31,28 +31,48 @@ function renderBar(timeRemaining: number, allowExtend = true) {
   );
 }
 
-describe('Extender tiempo en la barra inferior (ORION #10)', () => {
+const group = () => screen.queryByRole('group', { name: 'Extender' });
+
+describe('Extender tiempo en la barra inferior (ORION #10 y #32)', () => {
   it('no aparece antes de los últimos 5 minutos', () => {
     createElectronMock().install();
     renderBar(301);
-    expect(screen.queryByText('Extender tiempo')).toBeNull();
+    expect(group()).toBeNull();
+    expect(screen.getByTestId('session-clock').dataset.low).toBe('false');
   });
 
   it('en los últimos 5 minutos suma los minutos y el kiosko sigue', async () => {
     const mock = createElectronMock({ snapshot: { status: 'active', durationSeconds: 1500, mode: 'offline', sessionId: 's1' } });
     mock.install();
     renderBar(240);
-    fireEvent.click(screen.getByText('Extender tiempo'));
-    fireEvent.click(screen.getByText('+15 min'));
+    // El reloj se pone naranja y el grupo muestra los minutos sin abrir otro menú.
+    expect(screen.getByTestId('session-clock').dataset.low).toBe('true');
+    expect(screen.getByText('Quedan')).toBeTruthy();
+    fireEvent.click(within(group()!).getByText('+15'));
     expect(mock.api.extendSession).toHaveBeenCalledWith(900);
     // El mock devuelve el tiempo restante = la extensión; la app real suma al que quedaba.
     expect((await screen.findByText('kiosk|2400|900')).textContent).toBe('kiosk|2400|900');
-    expect(screen.queryByLabelText('Extender tiempo')).toBeNull();
   });
 
   it('no aparece si la configuración no permite extender', () => {
     createElectronMock().install();
     renderBar(120, false);
-    expect(screen.queryByText('Extender tiempo')).toBeNull();
+    expect(group()).toBeNull();
+  });
+
+  it('“…” permite escribir otros minutos con los límites de siempre', async () => {
+    const mock = createElectronMock({ snapshot: { status: 'active', durationSeconds: 1500, mode: 'offline', sessionId: 's1' } });
+    mock.install();
+    renderBar(200);
+    fireEvent.click(screen.getByLabelText('Otros minutos'));
+    const input = screen.getByLabelText('Minutos para extender');
+    fireEvent.change(input, { target: { value: '500' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(within(group()!).getByRole('alert').textContent).toBe('1–180 min');
+    expect(mock.api.extendSession).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: '7' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mock.api.extendSession).toHaveBeenCalledWith(420);
+    expect((await screen.findByText('kiosk|1920|420')).textContent).toBe('kiosk|1920|420');
   });
 });

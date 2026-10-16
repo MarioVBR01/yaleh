@@ -1,8 +1,9 @@
 /**
  * @file BottomBar.tsx
  * @description Barra Inferior del entorno Kiosko de YALEH.
- * Contiene: Temporizador regresivo de sesión (HH:MM:SS, solo lo muestra;
- * la cuenta la lleva KioskLayout) con "Extender tiempo" en los últimos 5 minutos (ORION #10),
+ * Contiene: Temporizador regresivo de sesión ("Quedan" + HH:MM:SS con anillo de progreso, solo lo
+ * muestra; la cuenta la lleva KioskLayout) con el grupo naranja "Extender" en los últimos 5 minutos
+ * (ORION #10 y #32: +15, +25, +50 a un clic y "…" para otros minutos),
  * el recuadro del Pomodoro (ORION #4), la batería en portátiles (ORION #40) y
  * Sistema de gestión de pestañas responsivas con botón "Nueva Pestaña".
  * Las pestañas reducen su ancho proporcionalmente al acumularse,
@@ -11,10 +12,10 @@
 
 import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Clock, Home, TimerReset } from 'lucide-react';
+import { Plus, X, Home } from 'lucide-react';
 import { EXTEND_ACTIVE_WINDOW_SECONDS } from '@shared/config';
 import { getElectronAPI } from '../lib/electron';
-import ExtendControls from './ExtendControls';
+import QuickExtend from './QuickExtend';
 import { useApp } from '../context/AppContext';
 import type { Tab } from '../store/appStore';
 import PomodoroMini from '../pomodoro/PomodoroMini';
@@ -45,7 +46,6 @@ interface BottomBarProps {
 export default function BottomBar({ onNewTab }: BottomBarProps) {
   const { state, dispatch } = useApp();
   const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const [extendOpen, setExtendOpen] = useState(false);
   const [extendError, setExtendError] = useState<string | null>(null);
   const api = getElectronAPI();
   // Extender antes de que termine (ORION #10): últimos 5 minutos, si la configuración lo permite.
@@ -65,7 +65,6 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
         type: 'RESUME_SESSION',
         payload: { durationSeconds: snapshot.durationSeconds, remainingSeconds: snapshot.remainingSeconds, mode: snapshot.mode },
       });
-      setExtendOpen(false);
     } catch (err) {
       console.error('No se pudo extender la sesión:', err);
       setExtendError('No se pudo extender.');
@@ -95,58 +94,29 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
 
   return (
     <div className="flex-shrink-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 relative z-40">
-      {/* Barra de progreso del temporizador */}
+      {/* Barra de progreso del temporizador (naranja, ORION #32) */}
       <div className="h-0.5 bg-slate-800 relative overflow-hidden">
         <motion.div
-          className={`h-full transition-colors ${
-            isLowTime ? 'bg-red-500' : timePercent > 50 ? 'bg-blue-500' : 'bg-amber-500'
-          }`}
+          className="h-full bg-brand"
           style={{ width: `${timePercent}%` }}
           transition={{ duration: 1, ease: 'linear' }}
         />
       </div>
 
-      {/* Contenido principal de la barra */}
-      <div className="h-10 flex items-center gap-2 px-3">
+      {/* Contenido principal de la barra (64 px, ORION #32) */}
+      <div className="h-16 flex items-center gap-2.5 px-3">
 
         {/* Temporizador regresivo (no aparece en el espacio de trabajo de la web sin sesión) */}
-        {state.sessionDuration > 0 && (
-        <div
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold flex-shrink-0 ${
-            isLowTime
-              ? 'bg-red-500/15 border-red-500/30 text-red-400'
-              : 'bg-slate-800/60 border-slate-700 text-slate-300'
-          }`}
-        >
-          <motion.div
-            animate={isLowTime ? { scale: [1, 1.2, 1] } : {}}
-            transition={{ duration: 1, repeat: Infinity }}
-          >
-            <Clock size={12} />
-          </motion.div>
-          <span>{formatTime(state.timeRemaining)}</span>
-        </div>
+        {state.sessionDuration > 0 && <SessionClock remaining={state.timeRemaining} percent={timePercent} low={isLowTime} />}
+
+        {canExtendNow && (
+          <>
+            <QuickExtend onExtend={extendNow} />
+            {extendError && <span role="alert" className="text-[11px] text-danger flex-shrink-0">{extendError}</span>}
+          </>
         )}
 
-        {canExtendNow &&
-          (extendOpen ? (
-            <div className="flex items-center gap-1.5 flex-shrink-0" aria-label="Extender tiempo">
-              <ExtendControls compact onExtend={extendNow} />
-              <button onClick={() => setExtendOpen(false)} className="p-1 text-ink-muted hover:text-ink" title="Cancelar">
-                <X size={12} />
-              </button>
-              {extendError && <span role="alert" className="text-[11px] text-danger">{extendError}</span>}
-            </div>
-          ) : (
-            <button
-              onClick={() => setExtendOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-accent/40 bg-accent/10 text-accent-soft text-xs font-medium flex-shrink-0 hover:text-ink"
-            >
-              <TimerReset size={12} /> Extender tiempo
-            </button>
-          ))}
-
-        {showEndWarning && !extendOpen && (
+        {showEndWarning && (
           <span role="alert" className="px-2 py-1 rounded-lg border border-warning/40 bg-warning/10 text-warning text-xs font-medium flex-shrink-0">
             Quedan {Math.ceil(state.timeRemaining / 60)} min de sesión
           </span>
@@ -190,6 +160,38 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
           <Plus size={13} />
           <span className="hidden sm:block">Nueva Pestaña</span>
         </motion.button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Reloj de la sesión (ORION #32): "Quedan" y el tiempo en monoespaciada de 20 px, con un anillo
+ * de progreso. En los últimos minutos se pone naranja.
+ */
+function SessionClock({ remaining, percent, low }: { remaining: number; percent: number; low: boolean }) {
+  const radius = 15;
+  const circumference = 2 * Math.PI * radius;
+  return (
+    <div data-testid="session-clock" data-low={low} className="flex items-center gap-2 flex-shrink-0">
+      <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true" className="-rotate-90">
+        <circle cx="18" cy="18" r={radius} fill="none" strokeWidth="3" className="stroke-slate-700" />
+        <circle
+          cx="18"
+          cy="18"
+          r={radius}
+          fill="none"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - Math.max(0, Math.min(100, percent)) / 100)}
+          className={low ? 'stroke-brand' : 'stroke-slate-300'}
+          style={{ transition: 'stroke-dashoffset 1s linear' }}
+        />
+      </svg>
+      <div className="leading-none">
+        <div className={`text-[10px] uppercase tracking-wide font-semibold ${low ? 'text-brand' : 'text-slate-400'}`}>Quedan</div>
+        <div className={`font-mono text-[20px] font-bold tabular-nums ${low ? 'text-brand' : 'text-slate-100'}`}>{formatTime(remaining)}</div>
       </div>
     </div>
   );

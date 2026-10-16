@@ -23,6 +23,7 @@
   --color-success: #10b981;         /* (emerald-500) */
   --color-warning: #f59e0b;         /* (amber-500) */
   --color-danger: #ef4444;          /* (red-500) */
+  --color-brand: #f7941d;           /* naranja del logo (ORION #32; el resto de la paleta, ORION #29) */
 }
 
 /* ── Fuentes del sistema (sin CDN) ───────────────────────────────────────── */
