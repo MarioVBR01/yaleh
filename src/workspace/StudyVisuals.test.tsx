@@ -90,7 +90,7 @@ describe('Estudio con conexión', () => {
     createElectronMock({ connection: 'online' }).install();
     generateStudyItem.mockResolvedValue({ kind: 'mindmap', data: { central: 'Reptiles', branches: [{ label: 'Tipos', children: [] }, { label: 'Hábitat', children: [] }] } });
     render(<AppProvider initial={online}><StudioColumn /></AppProvider>);
-    for (const label of ['Mapa mental', 'Tabla de datos', 'Infografía', 'Presentación']) {
+    for (const label of ['Mapa mental', 'Tabla', 'Infografía', 'Presentación']) {
       expect((screen.getByText(label).closest('button') as HTMLButtonElement).disabled).toBe(false);
     }
     fireEvent.click(screen.getByText('Mapa mental'));

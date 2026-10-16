@@ -94,7 +94,7 @@ describe('chat y estudio sin conexión', () => {
   it('sin modelo: "Disponible próximamente" con la indicación para descargarlo', () => {
     renderWith(offlineState({ state: 'not-installed' }), <ChatColumn />);
     expect(screen.getByText('Disponible próximamente')).toBeTruthy();
-    expect(screen.getByText(/Descargar asistente sin conexión/)).toBeTruthy();
+    expect(screen.getByText(/Configuración → IA sin conexión/)).toBeTruthy();
   });
 
   it('con el modelo: responde el "Asistente sin conexión" y la respuesta aparece', async () => {
@@ -113,15 +113,15 @@ describe('chat y estudio sin conexión', () => {
     expect(screen.queryByText(/puede tardar hasta un minuto/)).toBeNull();
   });
 
-  it('estudio sin conexión: todo habilitado menos la presentación (ORION #17)', () => {
+  it('estudio sin conexión: solo las herramientas del asistente sin conexión, sin la presentación (ORION #17 y #35)', () => {
     renderWith(
       { ...offlineState({ state: 'installed' }), uploadedFiles: [{ id: 'f1', name: 'a.txt', size: 1, type: 'text/plain', status: 'ready' } as never] },
       <StudioColumn />
     );
-    for (const label of ['Resumen', 'Cuestionario', 'Tarjetas de estudio', 'Informe', 'Mapa mental', 'Tabla de datos', 'Infografía']) {
+    for (const label of ['Resumen', 'Tarjetas', 'Cuestionario', 'Informe', 'Mapa mental', 'Tabla', 'Infografía']) {
       expect((screen.getByText(label).closest('button') as HTMLButtonElement).disabled).toBe(false);
     }
-    expect((screen.getByText('Presentación').closest('button') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText('Presentación')).toBeNull();
     expect(screen.getByText('El asistente sin conexión es más lento; puede tardar hasta un minuto.')).toBeTruthy();
   });
 

@@ -3,9 +3,9 @@ import type { NoAssistantReason } from '../ai/provider';
 
 const DETAILS: Record<NoAssistantReason, string> = {
   'needs-download':
-    'Sin conexión, el asistente funciona solo si descargaste el asistente sin conexión. Hazlo desde la pantalla de bienvenida de YALEH, con internet y antes de empezar la sesión ("Descargar asistente sin conexión"). Mientras tanto puedes seguir con tus fuentes, las notas, los editores y el Pomodoro.',
+    'Sin conexión, el asistente funciona solo si descargaste el asistente sin conexión. Se descarga desde la página de YALEH (por ahora, en Configuración → IA sin conexión, con internet y antes de empezar la sesión). Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
   unsupported:
-    'Este equipo no cumple los requisitos del asistente sin conexión (al menos 8 GB de RAM y espacio en disco). Con conexión puedes usar el asistente en línea. Mientras tanto puedes seguir con tus fuentes, las notas, los editores y el Pomodoro.',
+    'Este equipo no cumple los requisitos del asistente sin conexión (al menos 8 GB de RAM y espacio en disco). Con conexión puedes usar el asistente en línea. Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
 };
 
 /** Aviso cuando no hay asistente de IA (sin conexión y sin el modelo local; revisión 1.8). */

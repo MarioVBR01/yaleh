@@ -59,29 +59,29 @@ export default function NotesBox() {
   };
 
   return (
-    <div className="rounded-xl border border-line bg-surface-raised p-3">
-      <h3 className="flex items-center gap-2 text-ink text-xs font-semibold mb-2">
-        <StickyNote size={14} className="text-accent" /> Notas
+    <div className="border-t border-line p-3.5 flex flex-col gap-2.5" data-testid="notes-box">
+      <h3 className="flex items-center gap-2 text-ink text-sm font-medium font-sans">
+        <StickyNote size={16} className="text-accent-soft" /> Notas
       </h3>
       <textarea
         value={draft}
         onChange={e => setDraft(e.target.value)}
         placeholder="Escribe una nota…"
         rows={3}
-        className="w-full bg-canvas border border-line focus:border-accent rounded-lg px-2 py-1.5 text-xs text-ink placeholder:text-ink-subtle focus:outline-none resize-none"
+        className="w-full min-h-[70px] bg-canvas border border-line focus:border-accent rounded-[10px] px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-muted focus:outline-none resize-none"
       />
-      <div className="flex justify-end mt-1.5">
+      <div className="flex justify-end">
         <button
           onClick={() => void handleSave()}
           disabled={saving || !draft.trim() || !store}
-          className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs bg-accent hover:bg-accent-strong text-on-accent disabled:opacity-50"
+          className="flex items-center gap-1 h-8 px-3 rounded-[10px] text-[13px] border border-line bg-surface text-ink hover:border-ink-muted disabled:opacity-50"
         >
           {saving && <Loader2 size={12} className="animate-spin" />} Guardar nota
         </button>
       </div>
       {error && <p className="text-danger text-[11px] mt-1">{error}</p>}
       {notes.length > 0 && (
-        <ul className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">
+        <ul className="space-y-1.5 max-h-40 overflow-y-auto">
           {notes.map(note => (
             <li key={note.id} className="group flex gap-2 p-2 rounded-lg bg-canvas text-xs text-ink-soft">
               <p className="flex-1 whitespace-pre-wrap break-words">{note.text}</p>

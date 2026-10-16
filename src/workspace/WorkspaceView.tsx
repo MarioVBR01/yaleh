@@ -44,14 +44,14 @@ export default function WorkspaceView() {
         ))}
       </nav>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_minmax(0,2fr)_minmax(260px,1.2fr)] gap-3 p-3">
-        <section aria-label="Fuentes" className={`${visibility('sources')} flex-col min-h-0 bg-surface border border-line rounded-2xl p-3`}>
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(280px,340px)] gap-4 px-3 lg:px-6 pt-4 pb-5">
+        <section aria-label="Fuentes" className={`${visibility('sources')} flex-col min-h-0 bg-surface border border-line rounded-2xl overflow-hidden`}>
           <SourcesColumn />
         </section>
-        <section aria-label="Chat" className={`${visibility('chat')} flex-col min-h-0 bg-surface border border-line rounded-2xl p-3`}>
+        <section aria-label="Chat" className={`${visibility('chat')} flex-col min-h-0 bg-surface border border-line rounded-2xl overflow-hidden`}>
           <ChatColumn />
         </section>
-        <section aria-label="Estudio" className={`${visibility('studio')} flex-col min-h-0 bg-surface border border-line rounded-2xl p-3`}>
+        <section aria-label="Estudio" className={`${visibility('studio')} flex-col min-h-0 bg-surface border border-line rounded-2xl overflow-hidden`}>
           <StudioColumn />
         </section>
       </div>
