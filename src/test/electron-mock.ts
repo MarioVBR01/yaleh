@@ -159,12 +159,14 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
         settingsSnapshot = { ...settingsSnapshot, profileName: name };
         return settingsSnapshot;
       }),
-      chooseExportDir: vi.fn(async () => {
-        outside();
-        settingsSnapshot = { ...settingsSnapshot, settings: { ...settingsSnapshot.settings, exportDir: 'D:\\Estudio' }, exportDirResolved: 'D:\\Estudio' };
+      setExportDir: vi.fn(async (folder: string) => {
+        settingsSnapshot = { ...settingsSnapshot, settings: { ...settingsSnapshot.settings, exportDir: folder }, exportDirResolved: folder };
         return settingsSnapshot;
       }),
-      resetExportDir: vi.fn(async () => settingsSnapshot),
+      resetExportDir: vi.fn(async () => {
+        settingsSnapshot = { ...settingsSnapshot, settings: { ...settingsSnapshot.settings, exportDir: null }, exportDirResolved: 'C:\\Users\\x\\Documents\\YALEH' };
+        return settingsSnapshot;
+      }),
     },
     exportSessionHistoryPdf: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Historial de sesiones 2026-10-13 10-00-00.pdf' })),
     exportOffice: vi.fn(async () => ({ ok: true as const, path: 'C:\\Users\\x\\Documents\\YALEH\\Presentación.pptx' })),

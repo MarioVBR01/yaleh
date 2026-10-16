@@ -35,7 +35,7 @@ export const IPC_INVOKE = {
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsSetProfileName: 'settings:set-profile-name',
-  settingsChooseExportDir: 'settings:choose-export-dir',
+  settingsSetExportDir: 'settings:set-export-dir',
   settingsResetExportDir: 'settings:reset-export-dir',
   localAiStatus: 'local-ai:status',
   localAiDownload: 'local-ai:download',
@@ -333,8 +333,8 @@ export interface SettingsAPI {
   get: () => Promise<SettingsSnapshot>;
   update: (patch: SettingsPatch) => Promise<SettingsSnapshot>;
   setProfileName: (name: string | null) => Promise<SettingsSnapshot>;
-  /** Diálogo del sistema para elegir la carpeta de exportaciones (solo fuera de la sesión). */
-  chooseExportDir: () => Promise<SettingsSnapshot>;
+  /** Carpeta de exportaciones elegida con el selector propio (ORION #25); el proceso principal la valida. */
+  setExportDir: (folder: string) => Promise<SettingsSnapshot>;
   resetExportDir: () => Promise<SettingsSnapshot>;
 }
 

@@ -86,6 +86,32 @@ describe('SettingsView', () => {
     expect(await screen.findByText(/Se borraron 0 sesiones/)).toBeTruthy();
   });
 
+  it('cancelar el borrado no borra nada (ORION #25)', async () => {
+    const mock = renderSettings(false, { history: [] });
+    fireEvent.click(within(await screen.findByRole('region', { name: 'Datos' })).getByText('Borrar'));
+    fireEvent.click(screen.getByText('Cancelar'));
+    expect(mock.api.clearSessionHistory).not.toHaveBeenCalled();
+    expect(within(section('Datos')).getByText('Borrar')).toBeTruthy();
+  });
+
+  it('la carpeta de exportaciones se elige con el selector propio y se muestra (ORION #25)', async () => {
+    const mock = renderSettings(true);
+    fireEvent.click(within(await screen.findByRole('region', { name: 'Datos' })).getByText('Cambiar'));
+    // Selector propio, nunca la ventana de Windows; también durante la sesión.
+    const folder = 'C:\\Users\\x\\Documents\\YALEH';
+    await waitFor(() => expect(screen.getByTestId('current-folder').textContent).toContain('YALEH'));
+    fireEvent.click(screen.getByText('Usar esta carpeta'));
+    await waitFor(() => expect(mock.api.settings.setExportDir).toHaveBeenCalledWith(folder));
+    expect((await within(section('Datos')).findByRole('status')).textContent).toBe(`Las exportaciones se guardarán en ${folder}`);
+  });
+
+  it('exportar el historial muestra dónde se guardó, junto al botón (ORION #25)', async () => {
+    const mock = renderSettings(false);
+    fireEvent.click(within(await screen.findByRole('region', { name: 'Datos' })).getByText('Exportar PDF'));
+    await waitFor(() => expect(mock.api.exportSessionHistoryPdf).toHaveBeenCalled());
+    expect((await within(section('Datos')).findByRole('status')).textContent).toMatch(/^Guardado en .*Historial de sesiones .*\.pdf$/);
+  });
+
   it('dentro de la sesión, lo que afecta a la sesión está deshabilitado; el tamaño del texto se puede cambiar', async () => {
     const mock = renderSettings(true);
     const extend = (await screen.findByRole('switch', { name: 'Permitir extender la sesión' })) as HTMLButtonElement;

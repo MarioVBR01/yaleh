@@ -336,20 +336,16 @@ function registerIpcHandlers(): void {
     setProfileName(db, normalizeProfileName(name));
     return settingsSnapshot();
   });
-  handle(IPC_INVOKE.settingsChooseExportDir, async () => {
-    outsideSession('La carpeta de exportaciones');
-    if (!mainWindow) return settingsSnapshot();
-    const choice = await dialog.showOpenDialog(mainWindow, {
-      title: 'Carpeta para las exportaciones de YALEH',
-      defaultPath: exportDirectory(),
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    const dir = choice.filePaths[0];
-    if (!choice.canceled && dir && path.isAbsolute(dir) && fs.existsSync(dir)) saveSettings(db, { exportDir: dir });
+  // Carpeta de exportaciones (ORION #25): con el selector propio, también durante la sesión
+  // (es inofensivo); se valida que esté dentro de las ubicaciones permitidas.
+  handle(IPC_INVOKE.settingsSetExportDir, (_event, folder) => {
+    if (typeof folder !== 'string' || !isInsideRoots(folder, folderRoots()) || !fs.statSync(folder, { throwIfNoEntry: false })?.isDirectory()) {
+      throw new Error('Esa carpeta no está disponible.');
+    }
+    saveSettings(db, { exportDir: path.resolve(folder) });
     return settingsSnapshot();
   });
   handle(IPC_INVOKE.settingsResetExportDir, () => {
-    outsideSession('La carpeta de exportaciones');
     saveSettings(db, { exportDir: null });
     return settingsSnapshot();
   });

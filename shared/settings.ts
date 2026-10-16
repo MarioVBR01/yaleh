@@ -90,7 +90,7 @@ export type SettingsPatch = Partial<AppSettings>;
 
 /**
  * Valida un cambio. Lanza un Error con un mensaje para la interfaz si algo no es válido.
- * `exportDir` no se acepta desde la interfaz: se elige con el diálogo del proceso principal.
+ * `exportDir` no se acepta aquí: se elige con el selector de carpetas propio (`settings:set-export-dir`, validado en el proceso principal).
  */
 export function validateSettingsPatch(value: unknown): SettingsPatch {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Configuración no válida.');

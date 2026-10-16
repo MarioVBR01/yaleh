@@ -57,7 +57,7 @@ const api: ElectronAPI = {
     get: () => ipcRenderer.invoke(IPC_INVOKE.settingsGet),
     update: patch => ipcRenderer.invoke(IPC_INVOKE.settingsUpdate, patch),
     setProfileName: name => ipcRenderer.invoke(IPC_INVOKE.settingsSetProfileName, name),
-    chooseExportDir: () => ipcRenderer.invoke(IPC_INVOKE.settingsChooseExportDir),
+    setExportDir: folder => ipcRenderer.invoke(IPC_INVOKE.settingsSetExportDir, folder),
     resetExportDir: () => ipcRenderer.invoke(IPC_INVOKE.settingsResetExportDir),
   },
   localAi: {

@@ -23,6 +23,7 @@ import { useApp } from '../context/AppContext';
 import { getElectronAPI } from '../lib/electron';
 import LocalAiCard, { ipcErrorMessage } from '../phases/LocalAiCard';
 import { playAlarm } from '../lib/alarm';
+import FolderPicker from '../panels/FolderPicker';
 import { usePomodoroOptional } from '../pomodoro/PomodoroContext';
 
 const LOCKED_NOTE = 'Se cambia desde la pantalla de inicio, fuera de la sesión.';
@@ -48,6 +49,21 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
       </div>
       <div className="flex-shrink-0 flex items-center gap-2">{children}</div>
     </div>
+  );
+}
+
+interface DataMessageState {
+  kind: 'folder' | 'export' | 'clear';
+  ok: boolean;
+  text: string;
+}
+
+function DataMessage({ message, kind }: { message: DataMessageState | null; kind: DataMessageState['kind'] }) {
+  if (!message || message.kind !== kind) return null;
+  return (
+    <p role={message.ok ? 'status' : 'alert'} className={`text-[11px] break-all ${message.ok ? 'text-success' : 'text-danger'}`}>
+      {message.text}
+    </p>
   );
 }
 
@@ -82,6 +98,10 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
   const [minutesDraft, setMinutesDraft] = useState('');
   const [warningDraft, setWarningDraft] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
+  // Sección Datos (ORION #25): el resultado se muestra al lado del botón, no arriba de la página.
+  const [choosingFolder, setChoosingFolder] = useState(false);
+  const [dataBusy, setDataBusy] = useState(false);
+  const [dataMessage, setDataMessage] = useState<DataMessageState | null>(null);
 
   useEffect(() => {
     if (!api) return;
@@ -114,6 +134,18 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
     }
   };
   const update = (patch: SettingsPatch) => run(() => api.settings.update(patch));
+
+  const dataAction = async (kind: DataMessageState['kind'], action: () => Promise<string>) => {
+    setDataMessage(null);
+    setDataBusy(true);
+    try {
+      setDataMessage({ kind, ok: true, text: await action() });
+    } catch (error) {
+      setDataMessage({ kind, ok: false, text: ipcErrorMessage(error) });
+    } finally {
+      setDataBusy(false);
+    }
+  };
 
   const saveMinutes = () => {
     const trimmed = minutesDraft.trim();
@@ -217,39 +249,53 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
 
         <Section icon={<Database size={16} />} title="Datos">
           <Row label="Carpeta de exportaciones" hint={snapshot.exportDirResolved}>
-            <button className={button} disabled={inSession} onClick={() => void run(() => api.settings.chooseExportDir())}>
+            <button className={button} onClick={() => setChoosingFolder(true)}>
               Cambiar
             </button>
             {settings.exportDir && (
-              <button className={button} disabled={inSession} onClick={() => void run(() => api.settings.resetExportDir(), 'La carpeta volvió a Documentos\\YALEH.')}>
+              <button
+                className={button}
+                onClick={() =>
+                  void dataAction('folder', async () => {
+                    dispatch({ type: 'SET_SETTINGS', payload: await api.settings.resetExportDir() });
+                    return 'La carpeta volvió a Documentos\\YALEH.';
+                  })
+                }
+              >
                 Restablecer
               </button>
             )}
           </Row>
+          <DataMessage message={dataMessage} kind="folder" />
           <Row label="Exportar historial" hint="PDF con todas las sesiones, en la carpeta de exportaciones.">
             <button
               className={button}
+              disabled={dataBusy}
               onClick={() =>
-                void (async () => {
-                  setMessage(null);
+                void dataAction('export', async () => {
                   const result = await api.exportSessionHistoryPdf();
-                  setMessage(result.ok ? { ok: true, text: `Guardado en ${result.path}` } : { ok: false, text: result.message });
-                })()
+                  if (!result.ok) throw new Error(result.message);
+                  return `Guardado en ${result.path}`;
+                })
               }
             >
-              Exportar PDF
+              {dataBusy ? 'Exportando…' : 'Exportar PDF'}
             </button>
           </Row>
-          <Row label="Borrar historial y estadísticas" hint="Borra las sesiones guardadas en este equipo. No se puede deshacer.">
+          <DataMessage message={dataMessage} kind="export" />
+          <Row
+            label="Borrar historial y estadísticas"
+            hint={inSession ? 'Disponible fuera de la sesión, desde la pantalla de inicio.' : 'Borra las sesiones guardadas en este equipo. No se puede deshacer.'}
+          >
             {confirmClear ? (
               <>
                 <button
                   className={`${button} border-danger text-danger`}
                   onClick={() => {
                     setConfirmClear(false);
-                    void run(async () => {
+                    void dataAction('clear', async () => {
                       const deleted = await api.clearSessionHistory();
-                      setMessage({ ok: true, text: `Se borraron ${deleted} sesiones del historial.` });
+                      return `Se borraron ${deleted} sesiones. El historial y las estadísticas quedaron vacíos.`;
                     });
                   }}
                 >
@@ -260,13 +306,28 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
                 </button>
               </>
             ) : (
-              <button className={button} disabled={inSession} onClick={() => setConfirmClear(true)}>
+              <button className={`${button} disabled:cursor-not-allowed`} disabled={inSession} onClick={() => setConfirmClear(true)} title={inSession ? 'Disponible fuera de la sesión' : undefined}>
                 Borrar
               </button>
             )}
           </Row>
-          {inSession && <p className="text-ink-subtle text-[11px]">La carpeta y el borrado {LOCKED_NOTE.charAt(0).toLowerCase() + LOCKED_NOTE.slice(1)}</p>}
+          {confirmClear && <p className="text-[11px] text-danger">¿Seguro? Se borran todas las sesiones de este equipo.</p>}
+          <DataMessage message={dataMessage} kind="clear" />
         </Section>
+        {choosingFolder && (
+          <FolderPicker
+            title="Carpeta de exportaciones"
+            confirmLabel="Usar esta carpeta"
+            onCancel={() => setChoosingFolder(false)}
+            onSelect={folder => {
+              setChoosingFolder(false);
+              void dataAction('folder', async () => {
+                dispatch({ type: 'SET_SETTINGS', payload: await api.settings.setExportDir(folder) });
+                return `Las exportaciones se guardarán en ${folder}`;
+              });
+            }}
+          />
+        )}
 
         <Section icon={<Type size={16} />} title="Apariencia y accesibilidad">
           <Row label="Tamaño del texto">
