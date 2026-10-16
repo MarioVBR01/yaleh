@@ -130,7 +130,9 @@ describe('SettingsView', () => {
 describe('opciones del kiosko (ORION #19)', () => {
   it('dentro de la sesión se cambian el aviso (minutos libres), el volumen, el sonido y el nombre', async () => {
     const mock = renderSettings(true);
-    const warning = await screen.findByLabelText('Minutos del aviso antes de que termine');
+    const warning = (await screen.findByLabelText('Minutos del aviso antes de que termine')) as HTMLInputElement;
+    // Esperar a que el campo tenga el valor guardado (si no, el relleno inicial puede pisar lo escrito).
+    await waitFor(() => expect(warning.value).toBe(String(DEFAULT_SETTINGS.endWarningMinutes)));
     fireEvent.change(warning, { target: { value: '7' } });
     fireEvent.blur(warning);
     expect(mock.api.settings.update).toHaveBeenCalledWith({ endWarningMinutes: 7 });
@@ -150,7 +152,9 @@ describe('opciones del kiosko (ORION #19)', () => {
 
   it('el aviso fuera de rango muestra el motivo y no se guarda', async () => {
     const mock = renderSettings(true);
-    const warning = await screen.findByLabelText('Minutos del aviso antes de que termine');
+    const warning = (await screen.findByLabelText('Minutos del aviso antes de que termine')) as HTMLInputElement;
+    // Esperar a que el campo tenga el valor guardado (si no, el relleno inicial puede pisar lo escrito).
+    await waitFor(() => expect(warning.value).toBe(String(DEFAULT_SETTINGS.endWarningMinutes)));
     fireEvent.change(warning, { target: { value: '90' } });
     fireEvent.blur(warning);
     expect((await screen.findByRole('alert')).textContent).toMatch(/entre 1 y 60/);
