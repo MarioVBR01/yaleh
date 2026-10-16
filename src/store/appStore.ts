@@ -5,12 +5,12 @@
  * archivos cargados y tiempo de sesión.
  */
 
-import { LIMITS } from '@shared/config';
+import { LIMITS, TAB_LIMIT_MESSAGE } from '@shared/config';
 import type { ConnectionMode, LocalAiStatus, SessionMode } from '@shared/ipc-types';
 import type { SettingsSnapshot } from '@shared/settings';
 
 /** Mensaje al llegar al límite de pestañas (brief, sección 10). */
-export const TAB_LIMIT_MESSAGE = `Llegaste al máximo de ${LIMITS.maxTabs} pestañas. Cierra una para abrir otra.`;
+export { TAB_LIMIT_MESSAGE };
 
 export type AppPhase =
   | 'login'

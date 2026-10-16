@@ -13,7 +13,7 @@
 import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Home } from 'lucide-react';
-import { EXTEND_ACTIVE_WINDOW_SECONDS } from '@shared/config';
+import { EXTEND_ACTIVE_WINDOW_SECONDS, LIMITS } from '@shared/config';
 import QuickExtend from './QuickExtend';
 import { useExtendSession } from './useExtendSession';
 import { useApp } from '../context/AppContext';
@@ -82,6 +82,8 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
   };
 
   const tabMaxWidth = getTabMaxWidth(state.tabs.length);
+  // Límite de pestañas (ORION #34): contador naranja y "Nueva pestaña" deshabilitado.
+  const atTabLimit = state.tabs.length >= LIMITS.maxTabs;
 
   return (
     <div className="flex-shrink-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 relative z-40">
@@ -141,12 +143,20 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
           </AnimatePresence>
         </div>
 
+        {atTabLimit && (
+          <span data-testid="tab-counter" className="px-2 py-1 rounded-lg bg-brand/15 border border-brand/40 text-brand text-xs font-bold font-mono flex-shrink-0" title="Máximo de pestañas de la sesión">
+            {state.tabs.length}/{LIMITS.maxTabs}
+          </span>
+        )}
+
         {/* Botón Nueva Pestaña */}
         <motion.button
           onClick={onNewTab}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white text-xs font-medium transition-all flex-shrink-0"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          disabled={atTabLimit}
+          title={atTabLimit ? 'Cerrá una pestaña para abrir otra' : undefined}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white text-xs font-medium transition-all flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-800 disabled:hover:text-slate-400"
+          whileHover={atTabLimit ? undefined : { scale: 1.05 }}
+          whileTap={atTabLimit ? undefined : { scale: 0.95 }}
         >
           <Plus size={13} />
           <span className="hidden sm:block">Nueva Pestaña</span>

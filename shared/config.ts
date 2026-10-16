@@ -92,6 +92,9 @@ export const LIMITS = {
   sessionFileTtlHours: 24,
 } as const;
 
+/** Aviso al llegar al límite de pestañas (brief, sección 10; texto de ORION #34). */
+export const TAB_LIMIT_MESSAGE = `Tenés ${LIMITS.maxTabs} pestañas abiertas. Es el máximo de la sesión. Cerrá una para abrir otra.`;
+
 // ─── Conexión ────────────────────────────────────────────────────────────────
 
 /**

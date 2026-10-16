@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
 import { TOOL_LINKS } from '@shared/config';
 import SideBar from './SideBar';
 import BottomBar from './BottomBar';
@@ -136,19 +137,25 @@ export default function KioskLayout() {
            * Avisos arriba del área de trabajo. Ocupan su propio lugar (no flotan): así la pestaña
            * externa (WebContentsView, que se dibuja encima de la interfaz) se achica y no los tapa.
            */}
-          {/* Avisos de la interfaz, por ejemplo el límite de pestañas (ORION #21: fondo sólido). */}
+          {/*
+           * Avisos de la interfaz, por ejemplo el límite de pestañas (ORION #21 y #34): tarjeta con
+           * fondo invertido (clara en modo oscuro, oscura en modo claro) e ícono naranja.
+           */}
           {state.notice && (
-            <div
-              role="alert"
-              className="flex-shrink-0 px-4 py-2.5 bg-danger text-ink text-sm font-medium flex items-center justify-center gap-3"
-            >
-              <span>{state.notice}</span>
-              <button
-                onClick={() => dispatch({ type: 'SET_NOTICE', payload: null })}
-                className="px-3 py-1 rounded-lg bg-ink text-canvas text-xs font-semibold hover:opacity-90"
+            <div className="flex-shrink-0 px-3 pt-3">
+              <div
+                role="alert"
+                className="px-4 py-3 rounded-xl bg-ink text-canvas shadow-lg text-sm font-medium flex items-center gap-3"
               >
-                Entendido
-              </button>
+                <AlertTriangle size={18} className="text-brand flex-shrink-0" />
+                <span className="flex-1">{state.notice}</span>
+                <button
+                  onClick={() => dispatch({ type: 'SET_NOTICE', payload: null })}
+                  className="px-3 py-1.5 rounded-lg bg-canvas text-ink text-xs font-semibold hover:opacity-90 flex-shrink-0"
+                >
+                  Entendido
+                </button>
+              </div>
             </div>
           )}
           {/* Conexión perdida en una sesión online: el kiosko sigue bloqueado y el tiempo corre. */}

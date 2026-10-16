@@ -11,7 +11,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { WebContentsView, type BrowserWindow, type Rectangle, type Session } from 'electron';
-import { LIMITS } from '../../shared/config';
+import { LIMITS, TAB_LIMIT_MESSAGE } from '../../shared/config';
 import type { OpenTabResult } from '../../shared/ipc-types';
 import { extractYouTubeId } from '../../shared/youtube';
 import { resolveTabUrl } from './resolve';
@@ -37,7 +37,7 @@ export class TabManager {
     const target = resolveTabUrl(rawUrl, this.deps.playerPage);
     if (!target) return { ok: false, message: 'Ese sitio no está permitido en YALEH.' };
     if (this.views.size >= LIMITS.maxTabs) {
-      return { ok: false, message: `Llegaste al máximo de ${LIMITS.maxTabs} pestañas. Cierra una para abrir otra.` };
+      return { ok: false, message: TAB_LIMIT_MESSAGE };
     }
     const win = this.deps.window();
     if (!win || win.isDestroyed()) return { ok: false, message: 'La ventana no está disponible.' };
