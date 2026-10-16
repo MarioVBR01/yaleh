@@ -4,6 +4,8 @@
  * Brief, sección 5.3: Espacio de trabajo, Estadísticas, Pomodoro, Herramientas
  * (solo con conexión), Historial de sesiones y Configuración (ORION #7).
  * La sección de Ofimática se eliminó (ORION #12). Se oculta con el botón lateral.
+ * Diseño (ORION #31, docs/diseno/maquetas/espacio-de-trabajo.html): logo de 44 px, opción activa en
+ * naranja suave con una línea a la izquierda y pie "Sesión protegida".
  * Soporta menús desplegables internos (App Drawers).
  */
 
@@ -11,7 +13,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, History, Clock, Wrench,
-  BarChart2, ChevronRight, ChevronDown, Settings
+  BarChart2, ChevronRight, ChevronDown, Settings, ShieldCheck
 } from 'lucide-react';
 import { TOOL_LINKS, WORKSPACE_LINKS, type ToolLink } from '@shared/config';
 import { useApp } from '../context/AppContext';
@@ -22,9 +24,9 @@ import { useOpenExternalTab } from './useExternalTabs';
 
 /** Estilo de cada app de Google Workspace; la lista viene de shared/config.ts. */
 const WORKSPACE_STYLES: Record<string, string> = {
-  docs: 'text-blue-400',
-  sheets: 'text-emerald-400',
-  slides: 'text-orange-400',
+  docs: 'text-info',
+  sheets: 'text-success',
+  slides: 'text-accent-soft',
 };
 
 interface SideBarProps {
@@ -51,28 +53,29 @@ function NavItem({
   return (
     <motion.button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group relative ${
+      aria-current={active ? 'page' : undefined}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${collapsed ? 'justify-center' : ''} ${
         active
-          ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-          : 'text-slate-400 hover:text-ink hover:bg-slate-800'
+          ? 'bg-accent/15 text-ink font-medium shadow-[inset_3px_0_0_var(--color-accent)]'
+          : 'text-ink-soft hover:text-ink hover:bg-surface-raised'
       }`}
       whileHover={{ x: 2 }}
       whileTap={{ scale: 0.98 }}
       title={collapsed ? label : undefined}
     >
-      <span className={`flex-shrink-0 ${active ? 'text-blue-400' : 'text-slate-400 group-hover:text-ink'}`}>
+      <span className={`flex-shrink-0 ${active ? 'text-accent' : 'text-ink-muted group-hover:text-ink'}`}>
         {icon}
       </span>
       {!collapsed && (
         <>
           <span className="flex-1 text-left truncate">{label}</span>
           {badge !== undefined && badge > 0 && (
-            <span className="bg-blue-500 text-on-accent text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+            <span className="bg-accent text-on-accent text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
               {badge}
             </span>
           )}
           {hasChildren && (
-            <span className="flex-shrink-0 text-slate-600">
+            <span className="flex-shrink-0 text-ink-muted">
               {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </span>
           )}
@@ -80,7 +83,7 @@ function NavItem({
       )}
       {/* Tooltip para modo colapsado */}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-ink whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
+        <div className="absolute left-full ml-2 px-2 py-1 bg-inverse text-on-inverse rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
           {label}
         </div>
       )}
@@ -141,24 +144,24 @@ export default function SideBar({ collapsed }: SideBarProps) {
 
   return (
     <div
-      className={`h-full bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50 flex flex-col transition-all duration-300 flex-shrink-0 ${
-        collapsed ? 'w-14' : 'w-56'
+      className={`h-full bg-surface border-r border-line flex flex-col transition-all duration-300 flex-shrink-0 ${
+        collapsed ? 'w-16' : 'w-[248px]'
       }`}
     >
       {/* Logo superior */}
-      <div className={`p-3 border-b border-slate-800 flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
-        <Logo size={32} />
+      <div className={`px-4 pt-[18px] pb-3 flex items-center gap-3 ${collapsed ? 'justify-center px-2' : ''}`}>
+        <Logo size={collapsed ? 36 : 44} />
         {!collapsed && (
-          <div>
-            <p className="text-ink text-xs font-bold leading-tight">YALEH</p>
-            <p className="text-slate-500 text-[10px]">Entorno de estudio</p>
+          <div className="min-w-0">
+            <p className="font-display text-ink text-[22px] font-extrabold tracking-[0.04em] leading-none">YALEH</p>
+            <p className="text-ink-muted text-xs mt-1">Entorno de estudio</p>
           </div>
         )}
       </div>
 
       {/* Usuario de Google (nombre y foto) */}
       {state.session.isAuthenticated && (
-        <div className={`px-3 py-2 border-b border-slate-800 flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
+        <div className={`px-3 py-2 border-b border-line flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
           {state.session.avatar ? (
             <img
               src={state.session.avatar}
@@ -185,7 +188,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
       )}
 
       {/* Navegación principal */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
+      <nav className="flex-1 overflow-y-auto px-3.5 py-3 space-y-1 scrollbar-thin">
 
         {/* Espacio de trabajo */}
         <NavItem
@@ -231,16 +234,16 @@ export default function SideBar({ collapsed }: SideBarProps) {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="ml-3 mt-1 space-y-1 overflow-hidden border-l border-slate-700/50 pl-3"
+                className="ml-3 mt-1 space-y-1 overflow-hidden border-l border-line pl-3"
               >
                 {[...WORKSPACE_LINKS, ...TOOL_LINKS].map(app => (
                   <button
                     key={app.id}
                     onClick={() => handleToolOpen(app)}
-                    className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-all hover:bg-slate-800 ${WORKSPACE_STYLES[app.id] ?? 'text-slate-300'}`}
+                    className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-all hover:bg-surface-raised ${WORKSPACE_STYLES[app.id] ?? 'text-ink-soft'}`}
                   >
                     <span>{app.icon}</span>
-                    <span className="text-slate-300 hover:text-ink">{app.name}</span>
+                    <span className="text-ink-soft hover:text-ink">{app.name}</span>
                   </button>
                 ))}
               </motion.div>
@@ -270,15 +273,20 @@ export default function SideBar({ collapsed }: SideBarProps) {
         )}
       </nav>
 
-      {/* Footer de la sidebar */}
-      {!collapsed && isDesktop && (
-        <div className="p-3 border-t border-slate-800">
-          <div className="flex items-center gap-2 text-xs text-slate-600">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Modo Kiosko Activo</span>
+      {/* Pie: la sesión está protegida (ORION #31). Colapsada, solo el escudo. */}
+      {isDesktop &&
+        (collapsed ? (
+          <div className="p-3 flex justify-center" title="Sesión protegida">
+            <ShieldCheck size={18} className="text-accent" aria-label="Sesión protegida" />
           </div>
-        </div>
-      )}
+        ) : (
+          <div data-testid="sidebar-foot" className="m-3.5 mt-2 p-3 rounded-xl bg-surface-raised text-xs text-ink-soft flex flex-col gap-1.5">
+            <b className="flex items-center gap-1.5 text-ink font-medium">
+              <ShieldCheck size={16} className="text-accent" /> Sesión protegida
+            </b>
+            Solo se abren los sitios de estudio permitidos. Si se corta internet, el asistente sin conexión sigue funcionando.
+          </div>
+        ))}
     </div>
   );
 }
