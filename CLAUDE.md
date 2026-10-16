@@ -115,7 +115,7 @@ src/                        Interfaz React (web y escritorio). Alias: @/ → src
   panels/HistoryPanel.tsx, StatsPanel.tsx  Historial y estadísticas desde SQLite (recharts)
   youtube/main.ts           Página del reproductor (youtube.html, entrada propia de Vite)
   test/electron-mock.ts     window.electronAPI simulada para las pruebas de la interfaz
-  phases/ kiosk/ panels/    Pantallas, layout del kiosko y paneles (phases/LocalAiCard.tsx: descarga del modelo en la bienvenida)
+  phases/ kiosk/ panels/    Pantallas, layout del kiosko y paneles (phases/LocalAiCard.tsx: descarga del modelo, en Configuración)
   index.css                 Tokens de color (@theme) y estilos globales
 scripts/                    build-electron.mjs, smoke-electron.mjs, db-inspect.mjs, test.mjs, bench-local-ai.mjs
 docs/                       Brief, informe del MVP y BUGS.md (registro de errores con plantilla)
@@ -127,7 +127,7 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 
 - **Web** (independiente; `npm run dev` o Hosting): login con Google → dropzone → tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones (revisión 1.6). La web nunca bloquea nada ni abre el escritorio.
 - **Formato** (`shared/session-file.ts`): JSON con `format` "yaleh-session", `version` 1, `sessionId` (nuevo en cada descarga), `createdAt`, `expiresAt` (24 h), `createdBy`, `durationSeconds`, `sources` [{id, name, type, size, text}] y `checksum` SHA-256 de `canonicalPayload()` (orden de campos fijo; solo integridad). Máximo 50 MB (`LIMITS`).
-- **Escritorio:** bienvenida con "Iniciar" (flujo local) y "Abrir archivo de sesión (.yaleh)". El archivo también se abre arrastrándolo a la bienvenida, por los argumentos de arranque o por `second-instance`. `openSessionFile` (proceso principal) valida, rechaza si hay sesión en curso o si el `sessionId` ya está en SQLite (uso único), guarda las fuentes en SQLite y llama a `controller.start`: **bloquea y empieza el tiempo de inmediato**. Los rechazos se registran como `session-file-rejected`.
+- **Escritorio:** bienvenida con "Iniciar" (flujo local; diseño ORION #30, sin recuadro, engranaje de Configuración y aviso solo sin conexión). El archivo se abre por los argumentos de arranque o por `second-instance` (doble clic cuando la fase 11 asocie la extensión). "Abrir archivo de sesión (.yaleh)" y el arrastre solo existen en desarrollo (`import.meta.env.DEV`). `openSessionFile` (proceso principal) valida, rechaza si hay sesión en curso o si el `sessionId` ya está en SQLite (uso único), guarda las fuentes en SQLite y llama a `controller.start`: **bloquea y empieza el tiempo de inmediato**. Los rechazos se registran como `session-file-rejected`.
 - **Modo:** lo decide el proceso principal según la conexión al empezar (archivo o flujo local). En el escritorio los datos van siempre a SQLite.
 - **Pendiente (fase 11):** asociar `.yaleh` con la app en el instalador (doble clic).
 
@@ -148,7 +148,7 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 
 - **Modelo:** Qwen3.5-4B, GGUF Q4_K_M (2,74 GB), Apache 2.0, solo texto (sin `mmproj`). URL con revisión fija y SHA-256 en `LOCAL_AI` (`shared/config.ts`). Se guarda en `userData/models` (desarrollo: `%APPDATA%\yaleh\models`). **No va en el instalador.**
 - **Motor:** node-llama-cpp 3.22 (binarios precompilados para Windows; **primer módulo nativo del proyecto**) en un `utilityProcess` (`dist-electron/ai-worker.mjs`, ESM, `node-llama-cpp` externo en esbuild). Se crea con el primer pedido y se cierra al terminar la sesión (libera ~4 GB). `QwenChatWrapper({ variation: '3.5', thoughts: 'discourage' })`: sin "pensamiento". GPU automática (`LOCAL_AI.gpu = 'auto'`: Vulkan en la Iris Xe, CPU si no hay); tras una caída del proceso, solo CPU.
-- **Descarga:** solo desde la bienvenida, con conexión y fuera de la sesión (`LocalAiService` lo vuelve a comprobar); al empezar una sesión se pausa (`lock` del controlador). `.part` + Range para reanudar; SHA-256 al terminar; si no coincide, se borra. Al arrancar se considera instalado si el archivo final tiene el tamaño exacto (no se vuelve a calcular el hash).
+- **Descarga:** desde Configuración → IA sin conexión (ORION #30; la descarga desde la página de YALEH queda para la etapa final), con conexión y fuera de la sesión (`LocalAiService` lo vuelve a comprobar); al empezar una sesión se pausa (`lock` del controlador). `.part` + Range para reanudar; SHA-256 al terminar; si no coincide, se borra. Al arrancar se considera instalado si el archivo final tiene el tamaño exacto (no se vuelve a calcular el hash).
 - **Requisitos:** RAM ≥ 7,5 GiB (equipos de "8 GB") y espacio libre ≥ lo que falta descargar + 512 MB. Si no, estado `unsupported` con el motivo y sin botón.
 - **Recuperación:** migración 3: `source_passages` (fragmentos de 1 000 caracteres de cada fuente) + `source_passages_fts` (FTS5, `unicode61 remove_diacritics 2`, con triggers). `WorkspaceRepository` los mantiene; `indexMissingPassages()` indexa al arrancar las fuentes anteriores. Chat: consulta con prefijos de las palabras de la pregunta, ranking bm25; resumen y tarjetas: fragmentos repartidos. Presupuesto: `LOCAL_AI.sourceBudgetChars`.
 - **Proveedor común** (`src/ai/provider.ts`): `selectAssistant` → web o sesión online con conexión: Gemini; si no, local si está instalado; si no, ninguno (`needs-download` / `unsupported`). Local: chat y todo Estudio menos la presentación (ORION #17; JSON con gramática de llama.cpp, el informe en markdown). Presentación y Wikipedia: solo en línea (botón deshabilitado). Gemini además hace mapa mental, tabla, infografía y presentación .pptx (ORION #18, `src/workspace/StudyVisuals.tsx`).
@@ -176,7 +176,7 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 ## Modos online / offline (fase 3)
 
 - **Detección (proceso principal, `connectivity.ts`):** online si `net.isOnline()` y la web de YALEH responde una petición HEAD en menos de 5 s (cualquier código HTTP cuenta). Se repite cada 30 s, al volver de la suspensión (`powerMonitor`) y cuando la interfaz ve eventos `online`/`offline` (solo piden una nueva comprobación; decide el proceso principal). Parámetros en `CONNECTIVITY` (`shared/config.ts`).
-- **Escritorio sin login:** arranca en la bienvenida (`desktop-start`), que indica si hay conexión.
+- **Escritorio sin login:** arranca en la bienvenida (`desktop-start`), que avisa solo si no hay conexión (ORION #30).
 - **Modo de la sesión** (`sessionMode`, guardado en `sessions.mode`): online si hay conexión al empezar, offline si no. Lo decide el proceso principal.
 - **Qué se muestra (`useModeFlags`):** en la web, todo. En el escritorio, las herramientas online y la IA solo en una sesión online con conexión. Si se corta la red en una sesión online: aviso "Sin conexión: puedes seguir con los módulos locales"; el kiosko y el tiempo no cambian; el proceso principal registra `connection-lost` / `connection-restored`.
 
@@ -235,7 +235,7 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 - Firebase: proyecto `Yaleh`, ID `yaleh-fbe1c`, plan Spark.
 - Unión web → escritorio: archivo de sesión `.yaleh` (24 h, uso único, máximo 50 MB).
 - IA: `gemini-3.5-flash-lite` (respaldo `gemini-3.8-flash`) vía Firebase AI Logic (API de desarrollador). Búsqueda: API de Wikipedia en español detrás de `SearchProvider`. App Check obligatorio para AI Logic: Fraud Defense (`ReCaptchaEnterpriseProvider`) en la web y token de depuración en el escritorio.
-- IA sin conexión: Qwen3.5-4B Q4_K_M (Apache 2.0) con node-llama-cpp en un `utilityProcess`; descarga aparte (2,74 GB) desde la bienvenida; FTS5 para los fragmentos (migración 3). Requisito: 8 GB de RAM.
+- IA sin conexión: Qwen3.5-4B Q4_K_M (Apache 2.0) con node-llama-cpp en un `utilityProcess`; descarga aparte (2,74 GB) desde Configuración; FTS5 para los fragmentos (migración 3). Requisito: 8 GB de RAM.
 - SQLite: `node:sqlite` en el proceso principal (Electron 42, Node 24).
 
 ## Pendientes conocidos

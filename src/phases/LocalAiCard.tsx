@@ -1,6 +1,7 @@
 /**
  * @file LocalAiCard.tsx
- * @description Asistente sin conexión en la bienvenida del escritorio (revisión 1.8):
+ * @description Asistente sin conexión en Configuración → IA sin conexión (revisión 1.8; salió de la
+ * bienvenida en ORION #30, la descarga desde la página de YALEH queda para la etapa final):
  * requisitos del equipo, descarga con progreso (reanudable, verificada con SHA-256) y licencia.
  * Solo se descarga con conexión y fuera de la sesión; el proceso principal lo vuelve a comprobar.
  */

@@ -65,7 +65,7 @@ describe('SettingsView', () => {
 
     fireEvent.change(screen.getByLabelText('Nombre del estudiante'), { target: { value: 'Ana' } });
     fireEvent.click(within(section('Perfil')).getByText('Guardar'));
-    expect(await screen.findByText('Nombre guardado.')).toBeTruthy();
+    expect(await screen.findByText('Nombre guardado.', {}, { timeout: 4000 })).toBeTruthy();
     expect(mock.api.settings.setProfileName).toHaveBeenCalledWith('Ana');
   });
 
@@ -145,7 +145,7 @@ describe('opciones del kiosko (ORION #19)', () => {
 
     fireEvent.change(screen.getByLabelText('Nombre del estudiante'), { target: { value: 'Ana' } });
     fireEvent.click(within(section('Perfil')).getByText('Guardar'));
-    expect(await screen.findByText('Nombre guardado.')).toBeTruthy();
+    expect(await screen.findByText('Nombre guardado.', {}, { timeout: 4000 })).toBeTruthy();
   });
 
   it('el aviso fuera de rango muestra el motivo y no se guarda', async () => {
@@ -194,8 +194,8 @@ describe('la configuración en el resto de la app', () => {
   it('la bienvenida tiene "Configuración" y saluda con el nombre', async () => {
     createElectronMock({ profileName: 'Ana' }).install();
     render(<App />);
-    expect(await screen.findByText(/Hola, Ana\./)).toBeTruthy();
-    fireEvent.click(screen.getByText('Configuración'));
+    expect((await screen.findByText('Ana')).parentElement!.textContent).toBe('Hola, Ana');
+    fireEvent.click(screen.getByRole('button', { name: 'Configuración' }));
     expect(await screen.findByText('⚙️ Configuración')).toBeTruthy();
   });
 

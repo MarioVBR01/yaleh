@@ -4,13 +4,14 @@
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS } from '@shared/settings';
 import type { ConnectionMode, OpenSessionFileResult } from '@shared/ipc-types';
 import App from '../App';
 import { AppProvider, useApp } from '../context/AppContext';
 import ChatColumn from '../workspace/ChatColumn';
 import { initialState, type AppState } from '../store/appStore';
-import { createElectronMock, uninstallElectronMock } from '../test/electron-mock';
+import { createElectronMock, makeLocalAiStatus, uninstallElectronMock } from '../test/electron-mock';
 import DesktopStartPhase from './DesktopStartPhase';
 
 function StateProbe() {
@@ -47,14 +48,70 @@ afterEach(() => {
 });
 
 describe('Bienvenida del escritorio', () => {
-  it.each<ConnectionMode>(['online', 'offline'])('muestra la bienvenida y los dos botones (%s)', connection => {
+  it.each<ConnectionMode>(['online', 'offline'])('muestra la bienvenida sin recuadro, con el logo e Iniciar (%s)', connection => {
     createElectronMock({ connection }).install();
     renderWelcome(connection);
 
-    expect(screen.getByText('Bienvenido a YALEH')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Bienvenido a YALEH.' })).toBeTruthy();
+    expect(screen.getByTestId('yaleh-logo')).toBeTruthy();
     expect(screen.getByText('Iniciar')).toBeTruthy();
-    expect(screen.getByText('Abrir archivo de sesión (.yaleh)')).toBeTruthy();
     expect(screen.queryByText(/Inicia tu sesión desde la web/)).toBeNull();
+    // ORION #30: sin "Con conexión" ni la sección del asistente sin conexión.
+    expect(screen.queryByText(/Con conexión/)).toBeNull();
+    expect(screen.queryByText(/Descargar asistente|Eliminar asistente/)).toBeNull();
+    // Configuración es un engranaje con su texto al pasar el mouse.
+    expect(screen.getByRole('button', { name: 'Configuración' })).toBeTruthy();
+  });
+
+  it('sin conexión avisa con qué se va a estudiar, según el asistente', () => {
+    createElectronMock({ connection: 'offline', localAi: { state: 'installed' } }).install();
+    const { unmount } = render(
+      <AppProvider initial={{ ...initialState, phase: 'desktop-start', connection: 'offline', localAi: makeLocalAiStatus({ state: 'installed' }) }}>
+        <DesktopStartPhase />
+      </AppProvider>
+    );
+    expect(screen.getByTestId('offline-note').textContent).toMatch(/^Estás sin conexión. Vas a estudiar con el asistente sin conexión/);
+    unmount();
+    renderWelcome('offline');
+    expect(screen.getByTestId('offline-note').textContent).toMatch(/no está instalado: se descarga desde la página de YALEH/);
+  });
+
+  it('con conexión no hay ningún aviso', () => {
+    createElectronMock({ connection: 'online' }).install();
+    renderWelcome('online');
+    expect(screen.queryByTestId('offline-note')).toBeNull();
+  });
+
+  it('en producción no aparecen "Abrir archivo de sesión" ni el arrastre (solo en desarrollo)', () => {
+    vi.stubEnv('DEV', false);
+    try {
+      createElectronMock().install();
+      renderWelcome('online');
+      expect(screen.queryByText('Abrir archivo de sesión (.yaleh)')).toBeNull();
+      expect(screen.queryByTestId('dev-session-file')).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('en desarrollo se puede abrir el .yaleh desde la bienvenida', () => {
+    createElectronMock().install();
+    renderWelcome('online');
+    expect(screen.getByText('Abrir archivo de sesión (.yaleh)')).toBeTruthy();
+  });
+
+  it('saluda con el nombre arriba a la izquierda; sin nombre no muestra nada', () => {
+    createElectronMock().install();
+    const settings = { settings: { ...DEFAULT_SETTINGS }, profileName: 'Ana', exportDirResolved: '', sessionActive: false };
+    const { unmount } = render(
+      <AppProvider initial={{ ...initialState, phase: 'desktop-start', connection: 'online', settings }}>
+        <DesktopStartPhase />
+      </AppProvider>
+    );
+    expect(screen.getByText('Ana').parentElement!.textContent).toBe('Hola, Ana');
+    unmount();
+    renderWelcome('online');
+    expect(screen.queryByText(/^Hola,/)).toBeNull();
   });
 
   it('"Iniciar" lleva al flujo local con un espacio de trabajo nuevo', () => {
@@ -108,7 +165,7 @@ describe('App en el escritorio', () => {
     createElectronMock({ connection: 'offline' }).install();
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText('Bienvenido a YALEH')).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Bienvenido a YALEH.' })).toBeTruthy());
     expect(screen.queryByText('Continuar con Google')).toBeNull();
   });
 
@@ -116,7 +173,7 @@ describe('App en el escritorio', () => {
     const mock = createElectronMock({ connection: 'online' });
     mock.install();
     render(<App />);
-    await waitFor(() => expect(screen.getByText('Bienvenido a YALEH')).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Bienvenido a YALEH.' })).toBeTruthy());
 
     mock.emitSessionFileResult(OPENED);
 
