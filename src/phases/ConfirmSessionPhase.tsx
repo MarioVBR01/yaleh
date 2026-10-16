@@ -6,17 +6,19 @@
  *
  * - Web: descarga el archivo de sesión .yaleh (brief, revisión 1.5) y explica
  *   cómo abrirlo en la app de escritorio. La web nunca bloquea nada.
+ *   ORION #39: resumen con Archivos y Duración (cada uno con "Cambiar"), botón naranja y pantalla
+ *   "Tu sesión está lista" con tres pasos (Descargas → doble clic → la sesión empieza).
  * - Escritorio: inicia la sesión local; el proceso principal bloquea el equipo.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Clock, Download, FileText, Lock } from 'lucide-react';
+import { CheckCircle2, Clock, Download, FileText, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getWorkspaceStore } from '../data/workspace';
 import { getElectronAPI } from '../lib/electron';
 import { buildSessionFileBlob, downloadBlob } from '../lib/session-file';
-import { formatBytes, formatMinutes } from '../utils/format';
+import { formatMinutes } from '../utils/format';
 
 export default function ConfirmSessionPhase() {
   const { state, dispatch, logActivity } = useApp();
@@ -78,37 +80,47 @@ export default function ConfirmSessionPhase() {
   if (downloaded) {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-8 text-center">
-          <Download size={30} className="text-accent mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-ink mb-2">Archivo de sesión descargado</h1>
-          <p className="text-ink-soft text-sm mb-2">
-            <strong className="text-ink">Abre el archivo con la aplicación de escritorio YALEH.</strong>
-          </p>
-          <ol className="text-ink-muted text-sm text-left list-decimal pl-5 space-y-1 mb-4">
-            <li>Abre YALEH en tu computadora.</li>
-            <li>
-              Pulsa <em>Abrir archivo de sesión (.yaleh)</em> y elige{' '}
-              <span className="text-ink-soft break-all">{downloaded}</span>, o arrastra el archivo a la ventana de YALEH.
-            </li>
-            <li>La sesión de {formatMinutes(minutes)} empieza de inmediato y el equipo queda bloqueado.</li>
+        <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-8">
+          <div className="text-center">
+            <CheckCircle2 size={44} className="text-success mx-auto mb-4" aria-hidden="true" />
+            <h1 className="text-2xl font-bold text-ink mb-2">Tu sesión está lista</h1>
+            <p data-testid="session-file-name" className="font-mono text-sm text-ink-soft break-all mb-6">
+              {downloaded}
+            </p>
+          </div>
+          <ol className="space-y-3 mb-5">
+            {[
+              'Buscalo en tu carpeta Descargas.',
+              'Abrilo con doble clic.',
+              `La sesión de ${formatMinutes(minutes)} empieza y la computadora queda bloqueada.`,
+            ].map((step, i) => (
+              <li key={step} className="flex items-start gap-3 text-sm text-ink-soft">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-brand text-black text-xs font-bold flex-shrink-0">
+                  {i + 1}
+                </span>
+                <span className="pt-0.5">{step}</span>
+              </li>
+            ))}
           </ol>
-          <p className="text-ink-subtle text-xs mb-6">El archivo vale 24 horas y se puede usar una sola vez.</p>
+          <p className="text-ink-subtle text-xs text-center mb-6">El archivo vale 24 horas y se puede usar una sola vez.</p>
           <div className="flex flex-col gap-2">
             <button
               onClick={() => void handleDownload()}
               disabled={busy}
               className="w-full py-3 rounded-xl text-sm border border-line text-ink-soft hover:text-ink hover:border-line-strong disabled:opacity-60"
             >
-              Descargar otro archivo
+              Descargar otra vez
             </button>
             <button onClick={prepareNewSession} className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink transition-colors">
-              Preparar una nueva sesión
+              Preparar otra sesión
             </button>
           </div>
         </div>
       </div>
     );
   }
+
+  const changeLink = 'text-brand hover:underline text-xs font-semibold whitespace-nowrap disabled:opacity-50';
 
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
@@ -119,64 +131,64 @@ export default function ConfirmSessionPhase() {
         transition={{ duration: 0.4 }}
       >
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent-strong mb-4">
-            <Lock size={30} className="text-ink" />
-          </div>
           <h1 className="text-2xl font-bold text-ink mb-1">Confirma tu sesión</h1>
           <p className="text-ink-muted text-sm">
             {api ? 'Revisa todo antes de bloquear el equipo.' : 'Revisa todo antes de descargar tu archivo de sesión.'}
           </p>
         </div>
 
-        <div className="bg-surface border border-line rounded-2xl p-6 space-y-5">
-          {/* Archivos cargados */}
-          <section>
-            <h2 className="text-ink-muted text-xs font-medium uppercase tracking-wider mb-2">
-              Archivos cargados ({files.length})
-            </h2>
-            {files.length > 0 ? (
-              <ul className="max-h-40 overflow-y-auto space-y-1.5">
-                {files.map(file => (
-                  <li key={file.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-raised text-sm">
-                    <FileText size={14} className="text-accent flex-shrink-0" />
-                    <span className="text-ink-soft truncate flex-1">{file.name}</span>
-                    <span className="text-ink-subtle text-xs">{formatBytes(file.size)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-ink-subtle text-sm px-3 py-2 rounded-lg bg-surface-raised">No cargaste archivos.</p>
-            )}
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-ink-soft text-sm">¿Cargaste todos los archivos que necesitas?</p>
+        <div className="bg-surface border border-line rounded-2xl p-6 space-y-4">
+          {/* Resumen: Archivos (cantidad y nombres) y Duración, cada uno con "Cambiar" */}
+          <section aria-label="Archivos" className="p-4 rounded-xl bg-surface-raised">
+            <div className="flex items-start gap-3">
+              <FileText size={18} className="text-brand flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-ink-muted text-xs font-medium uppercase tracking-wider">Archivos</p>
+                <p className="text-ink text-sm font-semibold">
+                  {files.length === 0 ? 'Sin archivos' : files.length === 1 ? '1 archivo' : `${files.length} archivos`}
+                </p>
+                {files.length > 0 && (
+                  <ul className="mt-1 max-h-32 overflow-y-auto text-ink-soft text-xs space-y-0.5">
+                    {files.map(file => (
+                      <li key={file.id} className="truncate" title={file.name}>
+                        {file.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <button
                 onClick={() => dispatch({ type: 'SET_PHASE', payload: 'dropzone' })}
                 disabled={busy}
-                className="text-accent-soft hover:text-ink text-xs font-medium whitespace-nowrap disabled:opacity-50"
+                aria-label="Cambiar archivos"
+                className={changeLink}
               >
-                Volver a cargar archivos
+                Cambiar
               </button>
             </div>
           </section>
 
-          {/* Duración */}
-          <section className="flex items-center justify-between gap-3 p-3 rounded-xl bg-surface-raised">
-            <div className="flex items-center gap-2">
-              <Clock size={16} className="text-accent" />
-              <span className="text-ink text-sm font-medium">Duración: {formatMinutes(minutes)}</span>
+          <section aria-label="Duración" className="p-4 rounded-xl bg-surface-raised">
+            <div className="flex items-center gap-3">
+              <Clock size={18} className="text-brand flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-ink-muted text-xs font-medium uppercase tracking-wider">Duración</p>
+                <p className="text-ink text-sm font-semibold">{formatMinutes(minutes)}</p>
+              </div>
+              <button
+                onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
+                disabled={busy}
+                aria-label="Cambiar duración"
+                className={changeLink}
+              >
+                Cambiar
+              </button>
             </div>
-            <button
-              onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
-              disabled={busy}
-              className="text-accent-soft hover:text-ink text-xs font-medium disabled:opacity-50"
-            >
-              Cambiar duración
-            </button>
           </section>
 
-          {/* Aviso */}
-          <section className="flex items-start gap-3 p-3 rounded-xl border border-warning/40 bg-warning/10">
-            <AlertTriangle size={18} className="text-warning flex-shrink-0 mt-0.5" />
+          {/* Aviso con candado */}
+          <section className="flex items-start gap-3 p-3 rounded-xl border border-brand/40 bg-brand/10">
+            <Lock size={18} className="text-brand flex-shrink-0 mt-0.5" />
             <p className="text-ink-soft text-sm">
               <strong className="text-ink">
                 No podrás salir hasta que termine el tiempo. Solo apagando o reiniciando el equipo.
@@ -194,7 +206,9 @@ export default function ConfirmSessionPhase() {
           <button
             onClick={() => void (api ? handleStart() : handleDownload())}
             disabled={busy}
-            className="w-full py-4 rounded-xl font-semibold text-sm bg-accent-strong hover:bg-accent text-ink transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${
+              api ? 'bg-accent-strong hover:bg-accent text-ink' : 'bg-brand hover:brightness-110 text-black'
+            }`}
           >
             {api ? (
               busy ? 'Iniciando sesión…' : `Entiendo, iniciar sesión de ${formatMinutes(minutes)}`

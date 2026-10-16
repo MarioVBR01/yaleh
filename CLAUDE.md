@@ -93,7 +93,7 @@ shared/                     Usado por el proceso principal y la interfaz (sin No
   session-file.ts           Formato .yaleh: creación (web), checksum y validación (escritorio)
   youtube.ts                extractYouTubeId() y URL del reproductor propio
 src/                        Interfaz React (web y escritorio). Alias: @/ → src, @shared/ → shared
-  App.tsx                   Fases. Web: login → dropzone → timer-select → confirm-session (descarga .yaleh; luego "Descargar otro archivo" o "Preparar una nueva sesión").
+  App.tsx                   Fases. Web: login → dropzone → timer-select → confirm-session (descarga .yaleh; luego "Tu sesión está lista" con tres pasos, "Descargar otra vez" o "Preparar otra sesión", ORION #39).
                             Escritorio: desktop-start (bienvenida) → dropzone → timer-select → confirm-session → kiosk → session-complete,
                             o desktop-start → .yaleh → kiosk. Nunca login. + resume-offer con una sesión interrumpida
   lib/session-file.ts       Web: generar y descargar el .yaleh. Escritorio: aplicar al estado un .yaleh abierto
