@@ -20,6 +20,7 @@ import HistoryPanel from '../panels/HistoryPanel';
 import PomodoroPanel from '../panels/PomodoroPanel';
 import SettingsView from '../settings/SettingsView';
 import TimeWarningToast from './TimeWarningToast';
+import { BatteryWarningToast } from './battery';
 import { PomodoroProvider } from '../pomodoro/PomodoroContext';
 import DownloadsPanel from '../panels/DownloadsPanel';
 import StatsPanel from '../panels/StatsPanel';
@@ -158,6 +159,8 @@ export default function KioskLayout() {
           )}
           {/* Aviso de tiempo restante (ORION #13). */}
           <TimeWarningToast />
+          {/* Batería baja en portátiles (ORION #40). */}
+          <BatteryWarningToast />
           <div className="flex-1 min-h-0 overflow-hidden relative">
 
               {/*

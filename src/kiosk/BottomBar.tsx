@@ -3,7 +3,7 @@
  * @description Barra Inferior del entorno Kiosko de YALEH.
  * Contiene: Temporizador regresivo de sesión (HH:MM:SS, solo lo muestra;
  * la cuenta la lleva KioskLayout) con "Extender tiempo" en los últimos 5 minutos (ORION #10),
- * el recuadro del Pomodoro (ORION #4) y
+ * el recuadro del Pomodoro (ORION #4), la batería en portátiles (ORION #40) y
  * Sistema de gestión de pestañas responsivas con botón "Nueva Pestaña".
  * Las pestañas reducen su ancho proporcionalmente al acumularse,
  * emulando el comportamiento nativo de Chrome/Firefox.
@@ -18,6 +18,7 @@ import ExtendControls from './ExtendControls';
 import { useApp } from '../context/AppContext';
 import type { Tab } from '../store/appStore';
 import PomodoroMini from '../pomodoro/PomodoroMini';
+import { BatteryIndicator } from './battery';
 
 /**
  * Formatea segundos totales al formato HH:MM:SS para el temporizador.
@@ -150,6 +151,9 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
             Quedan {Math.ceil(state.timeRemaining / 60)} min de sesión
           </span>
         )}
+
+        {/* Batería: solo en portátiles (ORION #40) */}
+        <BatteryIndicator />
 
         {/* Pomodoro: visible en toda la sesión cuando ya se usó (ORION #4) */}
         <PomodoroMini />
