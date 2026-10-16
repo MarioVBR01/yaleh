@@ -110,6 +110,21 @@ html, body, #root {
 
 
 
+/* Aviso de tiempo restante (ORION #33): entrada con rebote, campana que se sacude y barra de 10 s. */
+@keyframes warning-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes bell-shake {
+  0%, 50%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-16deg); }
+  20%, 40% { transform: rotate(16deg); }
+}
+@keyframes warning-drain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
 /* Configuración → "Reducir animaciones" (ORION #7): sin transiciones ni animaciones de CSS. */
 .reduce-motion *,
 .reduce-motion *::before,

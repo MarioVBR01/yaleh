@@ -14,8 +14,8 @@ import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Home } from 'lucide-react';
 import { EXTEND_ACTIVE_WINDOW_SECONDS } from '@shared/config';
-import { getElectronAPI } from '../lib/electron';
 import QuickExtend from './QuickExtend';
+import { useExtendSession } from './useExtendSession';
 import { useApp } from '../context/AppContext';
 import type { Tab } from '../store/appStore';
 import PomodoroMini from '../pomodoro/PomodoroMini';
@@ -47,24 +47,15 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
   const { state, dispatch } = useApp();
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [extendError, setExtendError] = useState<string | null>(null);
-  const api = getElectronAPI();
+  const { allowed: extendAllowed, extend } = useExtendSession();
   // Extender antes de que termine (ORION #10): últimos 5 minutos, si la configuración lo permite.
   const canExtendNow =
-    Boolean(api) &&
-    state.settings?.settings.allowExtend !== false &&
-    state.sessionDuration > 0 &&
-    state.timeRemaining > 0 &&
-    state.timeRemaining <= EXTEND_ACTIVE_WINDOW_SECONDS;
+    extendAllowed && state.sessionDuration > 0 && state.timeRemaining > 0 && state.timeRemaining <= EXTEND_ACTIVE_WINDOW_SECONDS;
 
   const extendNow = async (minutes: number) => {
-    if (!api) return;
     setExtendError(null);
     try {
-      const snapshot = await api.extendSession(minutes * 60);
-      dispatch({
-        type: 'RESUME_SESSION',
-        payload: { durationSeconds: snapshot.durationSeconds, remainingSeconds: snapshot.remainingSeconds, mode: snapshot.mode },
-      });
+      await extend(minutes);
     } catch (err) {
       console.error('No se pudo extender la sesión:', err);
       setExtendError('No se pudo extender.');
