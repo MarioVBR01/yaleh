@@ -10,7 +10,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { WebContentsView, type BrowserWindow, type Rectangle } from 'electron';
+import { WebContentsView, type BrowserWindow, type Rectangle, type Session } from 'electron';
 import { LIMITS } from '../../shared/config';
 import type { OpenTabResult } from '../../shared/ipc-types';
 import { extractYouTubeId } from '../../shared/youtube';
@@ -20,6 +20,8 @@ export interface TabManagerDeps {
   window: () => BrowserWindow | null;
   send: (channel: string, payload: unknown) => void;
   playerPage: string;
+  /** Sesión de red de las pestañas (partición en memoria, ORION #26). */
+  session: Session;
   devTools: boolean;
   events: { updated: string; openRequest: string };
 }
@@ -49,6 +51,8 @@ export class TabManager {
         webSecurity: true,
         devTools: this.deps.devTools,
         spellcheck: false,
+        // Todas comparten la misma cuenta de Google durante la sesión (ORION #26).
+        session: this.deps.session,
       },
     });
     const wc = view.webContents;

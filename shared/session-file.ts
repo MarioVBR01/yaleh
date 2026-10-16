@@ -81,7 +81,8 @@ export async function createSessionFile(
     sessionId: input.sessionId,
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + LIMITS.sessionFileTtlHours * 3_600_000).toISOString(),
-    createdBy: input.createdBy,
+    // Solo nombre y correo: nunca contraseñas, cookies ni tokens de Google (ORION #26).
+    createdBy: { name: input.createdBy.name, email: input.createdBy.email },
     durationSeconds: input.durationSeconds,
     sources: input.sources,
   };

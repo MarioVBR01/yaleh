@@ -59,6 +59,7 @@ import { SessionController } from './session/controller';
 import { findSessionFileInArgv, openSessionFile } from './session-file-service';
 import { runSmokeTest } from './smoke';
 import { TabManager } from './tabs/tab-manager';
+import { isUsableEmail, TABS_PARTITION, withGoogleLoginHint } from './tabs/google-account';
 import { exportOfficeFile } from './office/export';
 import { clearSessionHistory, listSessionHistory } from './db/history';
 import { getProfileName, loadSettings, saveSettings, setProfileName } from './settings-store';
@@ -115,6 +116,11 @@ let controller: SessionController;
 let connectivity: ConnectivityMonitor;
 let tabs: TabManager;
 let localAi: LocalAiService;
+/**
+ * Correo de la cuenta de Google de la web (del .yaleh, ORION #26): se usa solo para completar el
+ * inicio de sesión de Google en las pestañas. Nunca se guardan contraseñas, cookies ni tokens.
+ */
+let googleAccountHint: string | null = null;
 
 /** El equipo está bloqueado (sesión activa). */
 function isLocked(): boolean {
@@ -147,6 +153,8 @@ function createController(): SessionController {
     onEnded: reason => {
       // Al terminar la sesión se cierran las pestañas internas.
       tabs.closeAll();
+      // Y se cierra la cuenta de Google de las herramientas (ORION #26).
+      void clearTabsAccount();
       // Libera la memoria del modelo local (~4 GB).
       localAi.releaseModel();
       send(IPC_EVENT.sessionEnded, { reason });
@@ -175,6 +183,7 @@ async function openSessionFileContent(raw: string): Promise<OpenSessionFileResul
     currentMode: currentSessionMode,
     start: (durationSeconds, mode, sessionId) => controller.start(durationSeconds, mode, sessionId),
   });
+  if (result.ok) googleAccountHint = isUsableEmail(result.createdBy.email) ? result.createdBy.email : null;
   if (!result.ok) {
     store.appendEvent({ type: 'session-file-rejected', at: new Date().toISOString(), detail: result.message });
     console.warn(`[sesión] Archivo .yaleh rechazado: ${result.message}`);
@@ -237,6 +246,8 @@ function registerIpcHandlers(): void {
   // Flujo local ("Iniciar"): el modo lo decide la conexión en este momento.
   handle(IPC_INVOKE.sessionStart, (_event, durationSeconds, sessionId) => {
     const seconds = parseDurationSeconds(durationSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60);
+    // Flujo local: no hay correo de la web.
+    googleAccountHint = null;
     return controller.start(seconds, currentSessionMode(), parseOptionalSessionId(sessionId));
   });
   handle(IPC_INVOKE.sessionGetState, () => controller.getSnapshot());
@@ -439,9 +450,30 @@ async function renderHtmlToPdf(html: string): Promise<Buffer> {
 
 // ─── Seguridad de red y navegación ───────────────────────────────────────────
 
-function installSessionGuards(): void {
-  const ses = session.defaultSession;
+/** Partición en memoria de las pestañas (ORION #26): la cuenta de Google vale solo para la sesión. */
+function tabsSession(): Electron.Session {
+  return session.fromPartition(TABS_PARTITION);
+}
 
+/** Cierra la cuenta de Google de las herramientas: borra cookies, almacenamiento y caché de las pestañas. */
+async function clearTabsAccount(): Promise<void> {
+  try {
+    const ses = tabsSession();
+    await ses.clearStorageData();
+    await ses.clearCache();
+    await ses.clearAuthCache();
+  } catch (error) {
+    console.error('[pestañas] No se pudo cerrar la cuenta de Google:', error);
+  }
+}
+
+function installSessionGuards(): void {
+  guardSession(session.defaultSession, false);
+  guardSession(tabsSession(), true);
+}
+
+/** Lista de sitios y permisos en cada sesión de red; en la de las pestañas, además el correo de la cuenta. */
+function guardSession(ses: Electron.Session, hintGoogleLogin: boolean): void {
   ses.webRequest.onBeforeRequest((details, callback) => {
     const isFrame = details.resourceType === 'mainFrame' || details.resourceType === 'subFrame';
     if (isFrame && !isFrameUrlAllowed(details.url, navigationContext)) {
@@ -449,7 +481,8 @@ function installSessionGuards(): void {
       callback({ cancel: true });
       return;
     }
-    callback({});
+    const hinted = hintGoogleLogin && details.resourceType === 'mainFrame' ? withGoogleLoginHint(details.url, googleAccountHint) : null;
+    callback(hinted ? { redirectURL: hinted } : {});
   });
 
   const allowedPermissions = new Set(['fullscreen', 'clipboard-sanitized-write']);
@@ -602,6 +635,7 @@ function bootstrap(): void {
     window: () => mainWindow,
     send,
     playerPage: YOUTUBE_PLAYER_URL,
+    session: tabsSession(),
     devTools: !isPackaged,
     events: { updated: IPC_EVENT.tabsUpdated, openRequest: IPC_EVENT.tabsOpenRequest },
   });

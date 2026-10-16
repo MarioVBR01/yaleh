@@ -36,6 +36,12 @@ describe('createSessionFile', () => {
     expect(Date.parse(file.expiresAt) - Date.parse(file.createdAt)).toBe(24 * HOUR);
     expect(file.checksum).toMatch(/^[a-f0-9]{64}$/);
   });
+
+  it('de la cuenta de Google solo lleva nombre y correo, sin contraseñas, cookies ni tokens (ORION #26)', async () => {
+    const file = await makeFile({ createdBy: { name: 'Ana', email: 'ana@tecba.edu.bo', token: 'secreto' } as never });
+    expect(Object.keys(file).sort()).toEqual(['checksum', 'createdAt', 'createdBy', 'durationSeconds', 'expiresAt', 'format', 'sessionId', 'sources', 'version']);
+    expect(file.createdBy).toEqual({ name: 'Ana', email: 'ana@tecba.edu.bo' });
+  });
 });
 
 describe('validateSessionFile', () => {
