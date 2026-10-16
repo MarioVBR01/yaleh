@@ -2,7 +2,7 @@
  * Historial y estadísticas (fase 10): datos reales de SQLite por IPC, no simulados.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { SessionHistoryEntry } from '@shared/ipc-types';
 import { createElectronMock, uninstallElectronMock } from '../test/electron-mock';
@@ -30,17 +30,20 @@ describe('HistoryPanel', () => {
     createElectronMock({ history }).install();
     render(<HistoryPanel />);
     expect(await screen.findByText('2 sesiones guardadas en este equipo · mostrando 2')).toBeTruthy();
-    expect(screen.getByText('Interrumpida')).toBeTruthy();
-    expect(screen.getByText('Completada')).toBeTruthy();
-    expect(screen.getByText('1 h 30 min')).toBeTruthy();
-    // Tiempo realmente estudiado (ORION #11): la interrumpida estudió 20 min de 90.
-    expect(screen.getByText('Tiempo estudiado')).toBeTruthy();
-    expect(screen.getByText('20 min')).toBeTruthy();
-    expect(screen.getByText('Con conexión')).toBeTruthy();
-    // Columna Archivos (ORION #20): los primeros y +N; sin archivos, —.
-    expect(screen.getByText('Archivos')).toBeTruthy();
-    expect(screen.getByText('clase1.pdf, clase2.pdf +1').getAttribute('title')).toBe('clase1.pdf\nclase2.pdf\nresumen.docx');
-    expect(screen.getByText('—')).toBeTruthy();
+    const table = document.querySelector('table')!;
+    expect(within(table).getByText('Interrumpida')).toBeTruthy();
+    expect(within(table).getByText('Completada')).toBeTruthy();
+    // Tiempo realmente estudiado de la duración en una columna (ORION #11 y #36): 20 de 90 min.
+    expect(within(table).getByText('Tiempo estudiado')).toBeTruthy();
+    expect(within(table).getByText('20 de 90 min')).toBeTruthy();
+    expect(within(table).getByText('25 de 25 min')).toBeTruthy();
+    expect(within(table).getByText('Con conexión')).toBeTruthy();
+    // Columna Archivos (ORION #20 y #36): los primeros y +N; si no hay, "Sin archivos".
+    expect(within(table).getByText('Archivos')).toBeTruthy();
+    expect(within(table).getByText('clase1.pdf, clase2.pdf +1').getAttribute('title')).toBe('clase1.pdf\nclase2.pdf\nresumen.docx');
+    expect(within(table).getByText('Sin archivos')).toBeTruthy();
+    // Resumen debajo del filtro (ORION #36): 2 sesiones, 45 min, 50 % completadas.
+    expect(screen.getByTestId('history-summary').textContent).toBe('2 sesiones · 45 min estudiados · 50 % completadas');
   });
 
   it('Exportar PDF: lo pide al proceso principal y muestra dónde quedó (ORION #8)', async () => {
@@ -64,7 +67,7 @@ describe('StatsPanel', () => {
   it('muestra minutos de las completadas y el promedio de pérdidas de foco', async () => {
     createElectronMock({ history }).install();
     render(<StatsPanel />);
-    expect((await screen.findAllByText('25 min')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('25 de 25 min')).length).toBeGreaterThan(0);
     expect(screen.getByText('Pérdidas de foco por sesión').previousElementSibling?.textContent).toBe('3');
   });
 

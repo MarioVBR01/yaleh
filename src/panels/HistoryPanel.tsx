@@ -3,32 +3,63 @@
  * @description Historial de sesiones del escritorio (fase 10), leído de SQLite:
  * fecha, duración, modo, estado, pérdidas de foco, cortes de red e interrupciones.
  * "Exportar PDF" (ORION #8): lo genera el proceso principal en la carpeta de exportaciones.
- * Filtros (ORION #23): rango de fechas con "Buscar" y cantidad (10, 20, 30, 50 o todas). Exportar
- * usa lo filtrado. La carpeta se elige con el selector propio de YALEH (ORION #22), nunca con la
- * ventana de Windows.
+ * Filtros (ORION #23 y #36): atajos de un clic (Todo, Hoy, 7 días, Este mes, Elegir fechas), estado,
+ * modo y cantidad; se aplican apenas se eligen (sin "Buscar") y debajo va el resumen de lo filtrado.
+ * Exportar usa lo filtrado. La carpeta se elige con el selector propio de YALEH (ORION #22), nunca
+ * con la ventana de Windows.
  */
 
 import { useState } from 'react';
-import { Clock, FileDown, RefreshCw, Search } from 'lucide-react';
-import { DEFAULT_HISTORY_LIMIT, filterSessions, HISTORY_PAGE_SIZES, type HistoryFilter } from '@shared/history-filter';
+import { CalendarRange, Clock, FileDown, RefreshCw, X } from 'lucide-react';
+import {
+  DEFAULT_HISTORY_LIMIT,
+  filterSessions,
+  HISTORY_PAGE_SIZES,
+  presetRange,
+  summarizeSessions,
+  type DatePreset,
+  type HistoryFilter,
+  type HistoryStatus,
+} from '@shared/history-filter';
+import type { SessionMode } from '@shared/ipc-types';
 import { getElectronAPI } from '@/lib/electron';
 import { useSessionHistory } from '@/lib/useSessionHistory';
 import FolderPicker from './FolderPicker';
 import SessionTable from './SessionTable';
+
+const PRESETS: { id: DatePreset; label: string }[] = [
+  { id: 'all', label: 'Todo' },
+  { id: 'today', label: 'Hoy' },
+  { id: '7d', label: '7 días' },
+  { id: 'month', label: 'Este mes' },
+  { id: 'custom', label: 'Elegir fechas' },
+];
+
+const select = 'bg-canvas border border-line rounded-lg px-2 py-1 text-ink';
 
 export default function HistoryPanel() {
   const { available, entries, loading, error, reload } = useSessionHistory();
   const [exporting, setExporting] = useState(false);
   const [choosingFolder, setChoosingFolder] = useState(false);
   const [exportResult, setExportResult] = useState<{ ok: boolean; text: string } | null>(null);
-  // Fechas que se están escribiendo y las aplicadas con "Buscar"; la cantidad se aplica al elegirla.
-  const [fromDraft, setFromDraft] = useState('');
-  const [toDraft, setToDraft] = useState('');
-  const [range, setRange] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
+  const [preset, setPreset] = useState<DatePreset>('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [status, setStatus] = useState<HistoryStatus | null>(null);
+  const [mode, setMode] = useState<SessionMode | null>(null);
   const [limit, setLimit] = useState<number | null>(DEFAULT_HISTORY_LIMIT);
-  const filter: HistoryFilter = { ...range, limit };
+
+  const range = preset === 'custom' ? { from: customFrom || null, to: customTo || null } : presetRange(preset);
+  const filter: HistoryFilter = { ...range, status, mode, limit };
   const visible = filterSessions(entries, filter);
-  const filteredByDate = Boolean(range.from || range.to);
+  const summary = summarizeSessions(visible);
+  const filtered = Boolean(range.from || range.to || status || mode);
+
+  const clearCustom = () => {
+    setCustomFrom('');
+    setCustomTo('');
+    setPreset('all');
+  };
 
   const exportPdf = async (folder: string) => {
     const api = getElectronAPI();
@@ -49,7 +80,7 @@ export default function HistoryPanel() {
   let empty = 'Todavía no hay sesiones.';
   if (!available) empty = 'El historial se guarda en la aplicación de escritorio.';
   else if (loading) empty = 'Cargando…';
-  else if (entries.length > 0 && filteredByDate) empty = 'No hay sesiones en esas fechas';
+  else if (entries.length > 0 && filtered) empty = 'No hay sesiones con esos filtros';
 
   return (
     <div className="h-full flex flex-col bg-canvas">
@@ -88,59 +119,87 @@ export default function HistoryPanel() {
       </div>
 
       {available && (
-        <div className="px-5 py-3 border-b border-line flex flex-wrap items-end gap-3 text-xs" aria-label="Filtros del historial">
-          <label className="flex flex-col gap-1 text-ink-muted">
-            Desde
-            <input
-              type="date"
-              value={fromDraft}
-              onChange={e => setFromDraft(e.target.value)}
-              className="bg-canvas border border-line rounded-lg px-2 py-1 text-ink"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-ink-muted">
-            Hasta
-            <input
-              type="date"
-              value={toDraft}
-              onChange={e => setToDraft(e.target.value)}
-              className="bg-canvas border border-line rounded-lg px-2 py-1 text-ink"
-            />
-          </label>
-          <button
-            onClick={() => setRange({ from: fromDraft || null, to: toDraft || null })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-accent bg-accent/10 text-ink"
-          >
-            <Search size={12} /> Buscar
-          </button>
-          {filteredByDate && (
-            <button
-              onClick={() => {
-                setFromDraft('');
-                setToDraft('');
-                setRange({ from: null, to: null });
-              }}
-              className="px-2 py-1.5 text-ink-muted hover:text-ink underline"
-            >
-              Quitar fechas
-            </button>
-          )}
-          <label className="flex flex-col gap-1 text-ink-muted ml-auto">
-            Mostrar
-            <select
-              value={limit ?? 'all'}
-              onChange={e => setLimit(e.target.value === 'all' ? null : Number(e.target.value))}
-              className="bg-canvas border border-line rounded-lg px-2 py-1 text-ink"
-              aria-label="Cantidad de sesiones"
-            >
-              {HISTORY_PAGE_SIZES.map(n => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
+        <div className="px-5 py-3 border-b border-line space-y-2.5 text-xs" aria-label="Filtros del historial">
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="group" aria-label="Fechas" className="flex flex-wrap items-center gap-1.5">
+              {PRESETS.map(p => (
+                <button
+                  key={p.id}
+                  aria-pressed={preset === p.id}
+                  onClick={() => setPreset(p.id)}
+                  className={`px-3 py-1.5 rounded-full border font-medium ${
+                    preset === p.id ? 'bg-brand border-brand text-black' : 'border-line text-ink-muted hover:text-ink hover:border-line-strong'
+                  }`}
+                >
+                  {p.id === 'custom' && <CalendarRange size={12} className="inline -mt-0.5 mr-1" />}
+                  {p.label}
+                </button>
               ))}
-              <option value="all">Todos</option>
-            </select>
-          </label>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
+              <select
+                value={status ?? ''}
+                onChange={e => setStatus((e.target.value || null) as HistoryStatus | null)}
+                className={select}
+                aria-label="Estado"
+              >
+                <option value="">Todos los estados</option>
+                <option value="completed">Completada</option>
+                <option value="interrupted">Interrumpida</option>
+                <option value="active">En curso</option>
+              </select>
+              <select
+                value={mode ?? ''}
+                onChange={e => setMode((e.target.value || null) as SessionMode | null)}
+                className={select}
+                aria-label="Modo"
+              >
+                <option value="">Todos los modos</option>
+                <option value="online">Con conexión</option>
+                <option value="offline">Sin conexión</option>
+              </select>
+              <label className="flex items-center gap-1.5 text-ink-muted">
+                Mostrar
+                <select
+                  value={limit ?? 'all'}
+                  onChange={e => setLimit(e.target.value === 'all' ? null : Number(e.target.value))}
+                  className={select}
+                  aria-label="Cantidad de sesiones"
+                >
+                  {HISTORY_PAGE_SIZES.map(n => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                  <option value="all">Todos</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          {preset === 'custom' && (
+            <div data-testid="custom-range" className="inline-flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border-2 border-brand bg-brand/10">
+              <label className="flex items-center gap-1.5 text-ink-soft">
+                Desde
+                <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className={select} />
+              </label>
+              <label className="flex items-center gap-1.5 text-ink-soft">
+                Hasta
+                <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className={select} />
+              </label>
+              <button onClick={clearCustom} className="p-1 rounded text-ink-muted hover:text-ink" title="Quitar fechas" aria-label="Quitar fechas">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {visible.length > 0 && (
+            <p data-testid="history-summary" className="text-ink-muted">
+              <strong className="text-ink">{summary.sessions}</strong> {summary.sessions === 1 ? 'sesión' : 'sesiones'} ·{' '}
+              <strong className="text-ink">{summary.studiedMinutes}</strong> min estudiados ·{' '}
+              <strong className="text-ink">{summary.completedPercent} %</strong> completadas
+            </p>
+          )}
         </div>
       )}
 
