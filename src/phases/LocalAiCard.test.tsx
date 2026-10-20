@@ -101,7 +101,8 @@ describe('chat y estudio sin conexión', () => {
     renderWith(offlineState({ state: 'installed' }), <ChatColumn />, 'La **fotosíntesis** ocurre en los cloroplastos.');
     expect(screen.getByTestId('assistant-badge').textContent).toContain('Asistente sin conexión');
     expect(screen.getByText('El asistente sin conexión es más lento; puede tardar hasta un minuto.')).toBeTruthy();
-    expect(screen.getByText(/búsqueda en Wikipedia solo está disponible con conexión/)).toBeTruthy();
+    // ORION #45: sin la casilla de Wikipedia ni su aviso.
+    expect(screen.queryByText(/Wikipedia/)).toBeNull();
     fireEvent.change(screen.getByPlaceholderText('Escribe tu pregunta…'), { target: { value: '¿Dónde ocurre la fotosíntesis?' } });
     fireEvent.click(screen.getByTitle('Enviar'));
     expect(await screen.findByText('fotosíntesis')).toBeTruthy();

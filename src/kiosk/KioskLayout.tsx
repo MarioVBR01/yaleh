@@ -115,7 +115,15 @@ export default function KioskLayout() {
   return (
     // El Pomodoro vive en el kiosko (ORION #4): sigue corriendo fuera de su vista.
     <PomodoroProvider>
-      <div className="h-screen flex flex-col bg-canvas overflow-hidden select-none">
+      <div
+        className="h-screen flex flex-col bg-canvas overflow-hidden select-none"
+        // Archivos arrastrados al kiosko (ORION #45): no se abren ni se cargan.
+        onDragOver={e => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'none';
+        }}
+        onDrop={e => e.preventDefault()}
+      >
 
         {/* ── ZONA CENTRAL: Sidebar + Workspace ──────────────────────────── */}
         <div className="flex-1 flex min-h-0 overflow-hidden">

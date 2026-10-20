@@ -49,13 +49,23 @@ describe('Fuentes (ORION #35)', () => {
     expect(screen.getByTestId('sources-count').textContent).toBe('2 de 2');
   });
 
-  it('en el kiosko, "Agregar fuente" con borde punteado explica que se agregan antes de la sesión', () => {
+  it('solo los archivos cargados: sin zona para soltar ni botón para agregar (ORION #45)', () => {
     renderIn(online, <SourcesColumn />);
-    const add = screen.getByTestId('add-source-info');
-    expect(add.className).toContain('border-dashed');
-    expect(add.textContent).toContain('Agregar fuente');
-    expect(add.textContent).toContain('Las fuentes se agregan antes de empezar la sesión.');
+    expect(screen.queryByText(/Agregar/)).toBeNull();
     expect(document.querySelector('input[type="file"]')).toBeNull();
+    expect(document.querySelector('.border-dashed')).toBeNull();
+  });
+
+  it('un archivo arrastrado sobre la columna no hace nada (ORION #45)', () => {
+    renderIn(online, <SourcesColumn />);
+    const column = screen.getByTestId('sources-column');
+    const file = new File(['x'], 'otro.pdf', { type: 'application/pdf' });
+    const dataTransfer = { files: [file], items: [], types: ['Files'], dropEffect: 'copy' };
+    const over = fireEvent.dragOver(column, { dataTransfer });
+    expect(over).toBe(false); // preventDefault: el navegador no abre el archivo
+    expect(dataTransfer.dropEffect).toBe('none');
+    expect(fireEvent.drop(column, { dataTransfer })).toBe(false);
+    expect(screen.getAllByTestId('source-item')).toHaveLength(2);
   });
 });
 
@@ -79,6 +89,15 @@ describe('Chat (ORION #35)', () => {
   it('las sugerencias son botones redondeados', () => {
     renderIn(offline, <ChatColumn />);
     expect(screen.getByText('Dame un ejemplo práctico').className).toContain('rounded-full');
+  });
+
+  it.each([
+    ['sin conexión', offline],
+    ['con conexión', online],
+  ])('sin "Buscar también en Wikipedia" ni su aviso, %s (ORION #45)', (_label, state) => {
+    renderIn(state, <ChatColumn />);
+    expect(screen.getByPlaceholderText('Escribe tu pregunta…')).toBeTruthy();
+    expect(screen.queryByText(/Wikipedia/)).toBeNull();
   });
 });
 

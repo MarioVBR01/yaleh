@@ -1,20 +1,20 @@
 /**
  * @file ChatColumn.tsx
  * @description Columna "Chat" (brief, secciones 5.2 y 7): conversación con el asistente
- * sobre las fuentes del estudiante. Con conexión responde Gemini (y puede buscar en Wikipedia);
- * sin conexión, el modelo local si está instalado (revisión 1.8). Sin ninguno: "Disponible próximamente".
+ * sobre las fuentes del estudiante. Con conexión responde Gemini; sin conexión, el modelo local si está
+ * instalado (revisión 1.8). Sin ninguno: "Disponible próximamente".
+ * ORION #45: se quitó "Buscar también en Wikipedia"; el chat responde solo con las fuentes de la sesión.
  * Diseño (ORION #35): pregunta en burbuja oscura a la derecha, respuesta con el ícono del asistente y
  * la cita con el nombre de los archivos usados (sin páginas: eso queda para la versión 2).
  * TODO: guardar el historial del chat en Firestore (hoy vive en memoria).
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { BookOpenText, FileText, Loader2, Send, Sparkles, Square } from 'lucide-react';
+import { FileText, Loader2, Send, Sparkles, Square } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { describeAIError } from '../ai/errors';
 import type { ChatTurn } from '../ai/gemini';
 import type { AssistantProvider } from '../ai/provider';
-import { searchProvider, type SearchResult } from '../ai/search';
 import { useSourceTexts } from '../ai/useSourceTexts';
 import { useAssistant, useModeFlags } from '../lib/mode';
 import AIUnavailable, { AssistantBadge, LocalSlowNotice } from './AIUnavailable';
@@ -22,8 +22,6 @@ import Markdown from './Markdown';
 
 interface Message extends ChatTurn {
   id: number;
-  /** Artículos usados en la respuesta (se muestran como texto, sin enlaces). */
-  sources?: SearchResult[];
   /** Archivos del estudiante en los que se basó la respuesta (solo el nombre). */
   cites?: string[];
   error?: boolean;
@@ -45,12 +43,10 @@ function Chat({ provider }: { provider: AssistantProvider }) {
   const { load, count } = useSourceTexts();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [busy, setBusy] = useState<false | 'searching' | 'thinking'>(false);
-  const [useWikipedia, setUseWikipedia] = useState(false);
+  const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
   const abortRef = useRef<AbortController | null>(null);
-  const canSearch = provider.supports('wikipedia');
 
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ behavior: 'smooth' });
@@ -66,21 +62,12 @@ function Chat({ provider }: { provider: AssistantProvider }) {
     setMessages(prev => [...prev, userMsg]);
 
     try {
-      let results: SearchResult[] = [];
-      if (useWikipedia && canSearch) {
-        setBusy('searching');
-        try {
-          results = await searchProvider.search(question);
-        } catch (err) {
-          console.warn('No se pudo buscar en Wikipedia:', err);
-        }
-      }
-      setBusy('thinking');
+      setBusy(true);
       const cites = state.uploadedFiles.filter(f => f.status === 'ready').map(f => f.name);
-      setMessages(prev => [...prev, { id: answerId, role: 'assistant', text: '', sources: results, cites }]);
+      setMessages(prev => [...prev, { id: answerId, role: 'assistant', text: '', cites }]);
       abortRef.current = new AbortController();
       await provider.chat(
-        { question, history, searchResults: results },
+        { question, history, searchResults: [] },
         { loadSources: load, workspaceId: state.workspaceId },
         partial => setMessages(prev => prev.map(m => (m.id === answerId ? { ...m, text: partial } : m))),
         abortRef.current.signal
@@ -164,30 +151,15 @@ function Chat({ provider }: { provider: AssistantProvider }) {
                     ))}
                   </div>
                 )}
-                {m.sources && m.sources.length > 0 && m.text && (
-                  <div className="mt-2 pt-2 border-t border-line text-[11px] text-ink-subtle">
-                    <p className="font-medium text-ink-muted mb-0.5">Fuentes consultadas:</p>
-                    {m.sources.map(s => (
-                      <p key={s.title}>
-                        {s.title} — {s.sourceLabel}
-                      </p>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           )
-        )}
-        {busy === 'searching' && (
-          <p className="text-ink-subtle text-xs flex items-center gap-2">
-            <Loader2 size={12} className="animate-spin" /> Buscando en Wikipedia…
-          </p>
         )}
         <div ref={endRef} />
       </div>
 
       <form
-        className="mx-4 mb-4 rounded-2xl border border-line bg-canvas pl-4 pr-2.5 py-2.5 flex flex-col gap-2 focus-within:border-accent"
+        className="mx-4 mb-4 rounded-2xl border border-line bg-canvas pl-4 pr-2.5 py-2.5 focus-within:border-accent"
         onSubmit={e => {
           e.preventDefault();
           void send(input);
@@ -200,7 +172,7 @@ function Chat({ provider }: { provider: AssistantProvider }) {
             placeholder="Escribe tu pregunta…"
             className="flex-1 bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
           />
-          {busy === 'thinking' && provider.kind === 'local' ? (
+          {busy && provider.kind === 'local' ? (
             <button
               type="button"
               onClick={() => abortRef.current?.abort()}
@@ -212,7 +184,7 @@ function Chat({ provider }: { provider: AssistantProvider }) {
           ) : (
             <button
               type="submit"
-              disabled={!input.trim() || busy !== false}
+              disabled={!input.trim() || busy}
               className="w-10 h-10 rounded-xl bg-accent hover:bg-accent-strong text-on-accent grid place-items-center disabled:opacity-50"
               title="Enviar"
               aria-label="Enviar"
@@ -221,16 +193,6 @@ function Chat({ provider }: { provider: AssistantProvider }) {
             </button>
           )}
         </div>
-        {canSearch ? (
-          <label className="flex items-center gap-1.5 text-xs text-ink-soft cursor-pointer select-none">
-            <input type="checkbox" checked={useWikipedia} onChange={e => setUseWikipedia(e.target.checked)} className="accent-[var(--color-accent)]" />
-            <BookOpenText size={14} /> Buscar también en Wikipedia
-          </label>
-        ) : (
-          <p className="text-[11px] text-ink-subtle flex items-center gap-1.5">
-            <BookOpenText size={14} /> La búsqueda en Wikipedia solo está disponible con conexión.
-          </p>
-        )}
       </form>
     </div>
   );

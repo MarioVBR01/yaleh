@@ -1,37 +1,32 @@
 /**
  * @file SourcesColumn.tsx
  * @description Columna "Fuentes" (brief, sección 5.2): archivos cargados y su texto extraído.
- * En la web se pueden agregar y quitar fuentes. En el escritorio las fuentes se
- * cargan antes de la sesión (nunca se abre el explorador de archivos en el kiosko).
- * Diseño (ORION #35): cada archivo con ícono naranja, nombre, tamaño y la marca de que se usa;
- * abajo, "Agregar fuente" con borde punteado.
+ * El espacio de trabajo solo existe en el kiosko (revisión 1.6): las fuentes se cargan antes de la
+ * sesión y aquí solo se muestran (ORION #45: sin zona para soltar ni botón para agregar; nunca se abre
+ * el explorador de archivos y un archivo arrastrado sobre la columna no hace nada).
+ * Diseño (ORION #35): cada archivo con ícono naranja, nombre, tamaño y la marca de que se usa.
  */
 
-import { useRef, useState } from 'react';
-import { AlertTriangle, Check, FileText, Loader2, Trash2, Upload, X } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, Check, FileText, Loader2, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { ACCEPT_ATTRIBUTE } from '../data/file-types';
-import { useIngest } from '../data/useIngest';
 import { getWorkspaceStore } from '../data/workspace';
-import { useModeFlags } from '../lib/mode';
 import { formatBytes } from '../utils/format';
+
+/** Ignora archivos arrastrados: el navegador no los abre y la columna no los carga. */
+const ignoreDrop = {
+  onDragOver: (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'none';
+  },
+  onDrop: (e: React.DragEvent) => e.preventDefault(),
+};
 
 export default function SourcesColumn() {
   const { state } = useApp();
-  const { isDesktop } = useModeFlags();
-  const { ingest, remove, ready } = useIngest();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ name: string; text: string } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
-  const canEdit = !isDesktop;
-
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const result = await ingest(files);
-    setErrors(result.errors);
-    if (inputRef.current) inputRef.current.value = '';
-  };
 
   const openPreview = async (id: string, name: string) => {
     const store = getWorkspaceStore(state);
@@ -39,9 +34,9 @@ export default function SourcesColumn() {
     setLoadingPreview(id);
     try {
       setPreview({ name, text: await store.getSourceText(id) });
-    } catch (error) {
-      console.error('No se pudo leer la fuente:', error);
-      setErrors([`No se pudo abrir "${name}".`]);
+    } catch (err) {
+      console.error('No se pudo leer la fuente:', err);
+      setError(`No se pudo abrir "${name}".`);
     } finally {
       setLoadingPreview(null);
     }
@@ -50,7 +45,7 @@ export default function SourcesColumn() {
   const readyCount = state.uploadedFiles.filter(f => f.status === 'ready').length;
 
   return (
-    <div className="h-full flex flex-col min-h-0">
+    <div className="h-full flex flex-col min-h-0" data-testid="sources-column" {...ignoreDrop}>
       <div className="flex items-center gap-2.5 px-[18px] pt-4 pb-3">
         <h2 className="font-display text-[17px] font-bold text-ink flex-1">Fuentes</h2>
         {state.uploadedFiles.length > 0 && (
@@ -60,23 +55,10 @@ export default function SourcesColumn() {
         )}
       </div>
 
-      {canEdit && (
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept={ACCEPT_ATTRIBUTE}
-          className="hidden"
-          onChange={e => void handleFiles(e.target.files)}
-        />
-      )}
-
-      {errors.length > 0 && (
-        <div role="alert" className="mx-3.5 mb-2 p-2 rounded-lg border border-danger/40 bg-danger/10 text-xs text-ink-soft space-y-1">
-          {errors.map(e => (
-            <p key={e}>{e}</p>
-          ))}
-        </div>
+      {error && (
+        <p role="alert" className="mx-3.5 mb-2 p-2 rounded-lg border border-danger/40 bg-danger/10 text-xs text-ink-soft">
+          {error}
+        </p>
       )}
 
       {preview ? (
@@ -97,7 +79,7 @@ export default function SourcesColumn() {
             <div
               key={file.id}
               data-testid="source-item"
-              className={`group flex items-center gap-3 p-3 rounded-xl border bg-canvas ${file.status === 'ready' ? 'border-accent' : file.status === 'error' ? 'border-danger/50' : 'border-line'}`}
+              className={`flex items-center gap-3 p-3 rounded-xl border bg-canvas ${file.status === 'ready' ? 'border-accent' : file.status === 'error' ? 'border-danger/50' : 'border-line'}`}
             >
               <span className="w-9 h-11 rounded-md bg-accent/15 text-accent-soft grid place-items-center flex-shrink-0">
                 {file.status === 'extracting' ? (
@@ -120,15 +102,6 @@ export default function SourcesColumn() {
                 </small>
               </button>
               {loadingPreview === file.id && <Loader2 size={12} className="animate-spin text-ink-subtle" />}
-              {canEdit && (
-                <button
-                  onClick={() => void remove(file.id)}
-                  className="opacity-0 group-hover:opacity-100 text-ink-subtle hover:text-danger"
-                  title="Quitar fuente"
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
               {file.status === 'ready' && (
                 // Todas las fuentes se usan en el chat y en Estudio (elegir cuáles sería otra función).
                 <span
@@ -142,26 +115,6 @@ export default function SourcesColumn() {
               )}
             </div>
           ))}
-
-          {/* "Agregar fuente": en el navegador abre el selector; en el kiosko no se agregan fuentes
-              (nunca se abre una ventana de Windows durante la sesión), así que lo explica. */}
-          {canEdit ? (
-            <button
-              onClick={() => inputRef.current?.click()}
-              disabled={!ready}
-              className="mt-1 border-[1.5px] border-dashed border-line hover:border-accent rounded-xl p-[18px] flex flex-col items-center gap-1.5 text-xs text-ink-muted text-center disabled:opacity-50"
-            >
-              <Upload size={18} />
-              <b className="text-[13px] font-medium text-ink">Agregar fuente</b>
-              PDF, Word o texto.
-            </button>
-          ) : (
-            <div data-testid="add-source-info" className="mt-1 border-[1.5px] border-dashed border-line rounded-xl p-[18px] flex flex-col items-center gap-1.5 text-xs text-ink-muted text-center">
-              <Upload size={18} />
-              <b className="text-[13px] font-medium text-ink">Agregar fuente</b>
-              Las fuentes se agregan antes de empezar la sesión.
-            </div>
-          )}
         </div>
       )}
     </div>
