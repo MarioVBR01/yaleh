@@ -21,6 +21,7 @@ import HistoryPanel from '../panels/HistoryPanel';
 import PomodoroPanel from '../panels/PomodoroPanel';
 import SettingsView from '../settings/SettingsView';
 import TimeWarningToast from './TimeWarningToast';
+import FloatingExtend from './FloatingExtend';
 import { BatteryWarningToast } from './battery';
 import { PomodoroProvider } from '../pomodoro/PomodoroContext';
 import DownloadsPanel from '../panels/DownloadsPanel';
@@ -122,6 +123,8 @@ export default function KioskLayout() {
           {/* Botón de colapso de sidebar */}
           <div className="relative flex-shrink-0">
             <SideBar collapsed={sidebarCollapsed} />
+            {/* Extender en los últimos 5 minutos (ORION #44): flota sobre la barra lateral, que ninguna pestaña tapa. */}
+            <FloatingExtend collapsed={sidebarCollapsed} />
             <button
               onClick={() => setSidebarCollapsed(prev => !prev)}
               className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-700 border border-slate-600 hover:bg-slate-600 text-slate-300 hover:text-ink text-xs flex items-center justify-center z-30 transition-all shadow-lg"

@@ -2,20 +2,18 @@
  * @file BottomBar.tsx
  * @description Barra Inferior del entorno Kiosko de YALEH.
  * Contiene: Temporizador regresivo de sesión ("Quedan" + HH:MM:SS con anillo de progreso, solo lo
- * muestra; la cuenta la lleva KioskLayout) con el grupo naranja "Extender" en los últimos 5 minutos
- * (ORION #10 y #32: +15, +25, +50 a un clic y "…" para otros minutos),
+ * muestra; la cuenta la lleva KioskLayout). Extender en los últimos 5 minutos ya no está aquí: es un
+ * recuadro flotante sobre la barra lateral (FloatingExtend, ORION #44),
  * el recuadro del Pomodoro (ORION #4), la batería en portátiles (ORION #40) y
  * Sistema de gestión de pestañas responsivas con botón "Nueva Pestaña".
  * Las pestañas reducen su ancho proporcionalmente al acumularse,
  * emulando el comportamiento nativo de Chrome/Firefox.
  */
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Home } from 'lucide-react';
-import { EXTEND_ACTIVE_WINDOW_SECONDS, LIMITS } from '@shared/config';
-import QuickExtend from './QuickExtend';
-import { useExtendSession } from './useExtendSession';
+import { LIMITS } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import type { Tab } from '../store/appStore';
 import PomodoroMini from '../pomodoro/PomodoroMini';
@@ -46,22 +44,6 @@ interface BottomBarProps {
 export default function BottomBar({ onNewTab }: BottomBarProps) {
   const { state, dispatch } = useApp();
   const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const [extendError, setExtendError] = useState<string | null>(null);
-  const { allowed: extendAllowed, extend } = useExtendSession();
-  // Extender antes de que termine (ORION #10): últimos 5 minutos, si la configuración lo permite.
-  const canExtendNow =
-    extendAllowed && state.sessionDuration > 0 && state.timeRemaining > 0 && state.timeRemaining <= EXTEND_ACTIVE_WINDOW_SECONDS;
-
-  const extendNow = async (minutes: number) => {
-    setExtendError(null);
-    try {
-      await extend(minutes);
-    } catch (err) {
-      console.error('No se pudo extender la sesión:', err);
-      setExtendError('No se pudo extender.');
-    }
-  };
-
   const timePercent = calcTimePercent(state.timeRemaining, state.sessionDuration);
   const isLowTime = state.timeRemaining < 300; // Menos de 5 minutos
   // Aviso antes de que termine (configuración, ORION #7).
@@ -102,12 +84,6 @@ export default function BottomBar({ onNewTab }: BottomBarProps) {
         {/* Temporizador regresivo (no aparece en el espacio de trabajo de la web sin sesión) */}
         {state.sessionDuration > 0 && <SessionClock remaining={state.timeRemaining} percent={timePercent} low={isLowTime} />}
 
-        {canExtendNow && (
-          <>
-            <QuickExtend onExtend={extendNow} />
-            {extendError && <span role="alert" className="text-[11px] text-danger flex-shrink-0">{extendError}</span>}
-          </>
-        )}
 
         {showEndWarning && (
           <span role="alert" className="px-2 py-1 rounded-lg border border-warning/40 bg-warning/10 text-warning text-xs font-medium flex-shrink-0">

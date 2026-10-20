@@ -1,7 +1,7 @@
 /**
  * @file ExtendControls.tsx
  * @description Extender la sesión (ORION #2 y #10): +15, +25, +50 min o minutos propios.
- * Se usa en la pantalla de sesión completada (en la barra inferior, QuickExtend, ORION #32).
+ * Se usa en la pantalla de sesión completada (en el kiosko, el recuadro flotante FloatingExtend, ORION #44).
  * Quien lo usa llama al proceso principal (que decide y vuelve a bloquear).
  */
 

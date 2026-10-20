@@ -210,6 +210,11 @@ html, body, #root {
   10%, 30% { transform: rotate(-16deg); }
   20%, 40% { transform: rotate(16deg); }
 }
+/* Recuadro flotante para extender (ORION #44): entra desde la izquierda. */
+@keyframes extend-in {
+  from { transform: translateX(-24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
 @keyframes warning-drain {
   from { transform: scaleX(1); }
   to { transform: scaleX(0); }
