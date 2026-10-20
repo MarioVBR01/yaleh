@@ -4,11 +4,14 @@
  * Muestra métricas de la sesión (duración, sitios visitados, archivos cargados)
  * y permite cerrar la aplicación. En el escritorio permite extender la sesión con más
  * minutos (ORION #2): el proceso principal vuelve a bloquear y suma el tiempo.
+ * Diseño (ORION #42): composición de la bienvenida (logo, título con punto naranja, resplandor),
+ * solo tokens del diseño nuevo, en modo claro y oscuro.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Calendar, TimerReset } from 'lucide-react';
+import { Calendar, Check, Clock, FileText, Globe, Lock, TimerReset } from 'lucide-react';
+import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
 import { closeApp, getElectronAPI } from '../lib/electron';
 import ExtendControls from '../kiosk/ExtendControls';
@@ -66,181 +69,88 @@ export default function SessionCompletePhase() {
   };
 
 
-  // Extraer métricas del estado global
+  // Métricas de la sesión
   const studyMinutes = formatMinutes(state.sessionDuration);
   const sitesVisited = state.tabs.filter(t => t.type === 'workspace-url').length;
   const filesImported = state.uploadedFiles.length;
   const sessionDateTime = formatSessionDateTime();
+  const stats = [
+    { label: studyMinutes === 1 ? 'Minuto' : 'Minutos', value: studyMinutes, icon: Clock },
+    { label: sitesVisited === 1 ? 'Sitio visitado' : 'Sitios visitados', value: sitesVisited, icon: Globe },
+    { label: filesImported === 1 ? 'Archivo cargado' : 'Archivos cargados', value: filesImported, icon: FileText },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Blur decorativo de fondo */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-green-500/5 rounded-full blur-3xl" />
-      </div>
+    <div className="relative min-h-full bg-canvas overflow-hidden flex flex-col">
+      {/* Misma composición que la bienvenida (ORION #42): resplandor suave y contenido centrado, sin recuadro. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-[34%] w-[900px] h-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{ background: 'radial-gradient(circle, color-mix(in oklab, var(--color-accent) 15%, transparent) 0%, transparent 60%)' }}
+      />
 
       <motion.div
-        className="w-full max-w-lg relative z-10"
-        initial={{ opacity: 0, y: 30 }}
+        className="relative flex-1 flex flex-col items-center justify-center gap-6 px-4 py-10"
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4 }}
       >
-        {/* Ícono de check verde animado */}
-        <div className="flex justify-center mb-8">
-          <motion.div
-            className="relative w-24 h-24"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{
-              type: 'spring',
-              stiffness: 150,
-              damping: 20,
-              delay: 0.2,
-            }}
+        <div className="relative">
+          <Logo size={112} />
+          <span
+            className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-success text-canvas grid place-items-center border-4 border-canvas"
+            aria-hidden="true"
           >
-            {/* Círculo de fondo pulsante */}
-            <motion.div
-              className="absolute inset-0 rounded-full bg-green-500/20 border-2 border-green-500"
-              animate={{
-                boxShadow: [
-                  '0 0 0 0 rgba(34, 197, 94, 0.4)',
-                  '0 0 0 12px rgba(34, 197, 94, 0)',
-                ],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-              }}
-            />
-            {/* Ícono de check */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <CheckCircle2 size={96} className="text-green-500 drop-shadow-lg" />
-            </div>
-          </motion.div>
+            <Check size={20} strokeWidth={3} />
+          </span>
         </div>
 
-        {/* Contenedor principal */}
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
-          {/* Título */}
-          <h1 className="text-3xl font-bold text-ink text-center mb-2">
-            ¡Sesión Completada!
+        <div className="text-center">
+          <h1 className="font-display text-4xl sm:text-[3.25rem] leading-none font-extrabold tracking-tight text-ink">
+            Sesión completada<span className="text-accent">.</span>
           </h1>
-
-          {/* Subtítulo */}
-          <p className="text-slate-400 text-center mb-8">
-            Has completado tu periodo de estudio blindado con éxito.
-          </p>
-
-          {/* Métricas en tarjetas */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {/* Métrica: Minutos de estudio */}
-            <motion.div
-              className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-center"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="text-2xl font-bold text-blue-400 mb-1">
-                {studyMinutes}
-              </div>
-              <div className="text-xs text-slate-400">Minutos</div>
-            </motion.div>
-
-            {/* Métrica: Sitios visitados */}
-            <motion.div
-              className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 text-center"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-            >
-              <div className="text-2xl font-bold text-purple-400 mb-1">
-                {sitesVisited}
-              </div>
-              <div className="text-xs text-slate-400">Sitios</div>
-            </motion.div>
-
-            {/* Métrica: Archivos importados */}
-            <motion.div
-              className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <div className="text-2xl font-bold text-amber-400 mb-1">
-                {filesImported}
-              </div>
-              <div className="text-xs text-slate-400">Archivos</div>
-            </motion.div>
-          </div>
-
-          {/* Caja verde con fecha/hora y confirmación */}
-          <motion.div
-            className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/30 flex items-start gap-3"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.45 }}
-          >
-            <Calendar size={18} className="text-green-400 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-green-300 text-sm font-medium">
-                Sesión registrada en tu perfil académico · {sessionDateTime}
-              </p>
-            </div>
-          </motion.div>
-
-          {/* Texto informativo */}
-          <motion.div
-            className="mb-8 p-4 rounded-xl bg-slate-800/50 border border-slate-700 text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Tu participación en el entorno de estudio YALEH ha sido registrada.
-              {canExtend && ' Si quieres seguir estudiando, puedes extender la sesión con más minutos.'}
-            </p>
-          </motion.div>
-
-          {/* Extender la sesión (escritorio): mismos materiales, notas y espacio de trabajo */}
-          {canExtend && (
-            <div className="mb-6">
-              <p className="text-ink-soft text-sm font-medium mb-2 flex items-center gap-2">
-                <TimerReset size={16} className="text-accent" /> Extender la sesión
-              </p>
-              <ExtendControls onExtend={handleExtend} />
-              {extendError && (
-                <p role="alert" className="mt-2 text-xs text-danger">
-                  {extendError}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Botón de cerrar */}
-          <motion.button
-            onClick={closeApp}
-            className="w-full py-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-500/20 transition-all"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.55 }}
-          >
-            🔒 Cerrar Aplicación
-          </motion.button>
+          <p className="mt-3 text-[1.0625rem] font-light text-ink-soft">Terminaste tu tiempo de estudio sin distracciones.</p>
         </div>
 
-        {/* Footer informativo */}
-        <motion.div
-          className="mt-6 text-center text-slate-500 text-xs"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+        <div className="w-full max-w-[560px] grid grid-cols-3 gap-3" aria-label="Resumen de la sesión">
+          {stats.map(({ label, value, icon: Icon }) => (
+            <div key={label} data-testid="session-stat" className="rounded-2xl border border-line bg-surface p-4 text-center">
+              <Icon size={18} className="mx-auto mb-2 text-accent-soft" />
+              <div className="font-mono text-[1.75rem] leading-none font-bold text-ink tabular-nums">{value}</div>
+              <div className="mt-1.5 text-xs text-ink-muted">{label}</div>
+            </div>
+          ))}
+        </div>
+
+        <p className="flex items-center gap-2 text-[0.8125rem] text-ink-muted">
+          <Calendar size={15} className="text-accent-soft" /> Guardada en el historial de este equipo · {sessionDateTime}
+        </p>
+
+        {/* Extender la sesión (escritorio): mismos materiales, notas y espacio de trabajo */}
+        {canExtend && (
+          <section className="w-full max-w-[560px] rounded-2xl border border-line bg-surface p-5" aria-label="Extender la sesión">
+            <p className="text-ink text-sm font-medium mb-1 flex items-center gap-2">
+              <TimerReset size={16} className="text-accent-soft" /> ¿Querés seguir estudiando?
+            </p>
+            <p className="text-ink-muted text-xs mb-3">Extendé la sesión con los mismos materiales; la computadora vuelve a quedar bloqueada.</p>
+            <ExtendControls onExtend={handleExtend} />
+            {extendError && (
+              <p role="alert" className="mt-2 text-xs text-danger">
+                {extendError}
+              </p>
+            )}
+          </section>
+        )}
+
+        <button
+          onClick={closeApp}
+          className="h-14 min-w-[320px] px-8 rounded-[18px] text-base font-semibold bg-accent hover:bg-accent-strong text-on-accent flex items-center justify-center gap-2.5 transition-colors"
         >
-          <p>YALEH v0.1</p>
-        </motion.div>
+          <Lock size={18} /> Cerrar aplicación
+        </button>
       </motion.div>
+
+      <p className="relative text-center text-xs text-ink-muted pb-6">YALEH v{api?.version ?? '0.1'} · TECBA 2026 · Proyecto de grado</p>
     </div>
   );
 }

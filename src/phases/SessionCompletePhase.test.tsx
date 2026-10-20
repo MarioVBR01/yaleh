@@ -74,3 +74,27 @@ describe('SessionCompletePhase: extender la sesión', () => {
     expect(screen.queryByText('+15 min')).toBeNull();
   });
 });
+
+describe('SessionCompletePhase: diseño nuevo (ORION #42)', () => {
+  it('logo, título y resumen (minutos, sitios y archivos) con los tokens del diseño', () => {
+    createElectronMock().install();
+    const { container } = renderComplete();
+    expect(screen.getByTestId('yaleh-logo')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Sesión completada.' })).toBeTruthy();
+    expect(screen.getAllByTestId('session-stat').map(s => s.textContent)).toEqual(['25Minutos', '0Sitios visitados', '0Archivos cargados']);
+    expect(screen.getByText(/Guardada en el historial de este equipo/)).toBeTruthy();
+    // Ningún color del diseño anterior (degradés, azul, violeta, ámbar, verde o rojo de Tailwind) ni emojis.
+    expect(container.innerHTML).not.toMatch(/(slate|blue|purple|amber|green|red|emerald)-\d|bg-gradient|text-white|🔒/);
+  });
+
+  it('mantiene extender y cerrar la aplicación', () => {
+    const mock = createElectronMock();
+    mock.install();
+    renderComplete();
+    expect(screen.getByRole('region', { name: 'Extender la sesión' })).toBeTruthy();
+    const close = screen.getByText('Cerrar aplicación').closest('button')!;
+    expect(close.className).toContain('bg-accent');
+    fireEvent.click(close);
+    expect(mock.api.closeApp).toHaveBeenCalled();
+  });
+});
