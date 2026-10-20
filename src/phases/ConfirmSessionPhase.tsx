@@ -13,7 +13,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Clock, Download, FileText, Lock } from 'lucide-react';
+import { Check, Clock, Download, FileText, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getWorkspaceStore } from '../data/workspace';
 import { getElectronAPI } from '../lib/electron';
@@ -79,40 +79,45 @@ export default function ConfirmSessionPhase() {
   };
 
   if (downloaded) {
+    // Pantalla 5 de docs/diseno/maquetas/web.html (ORION #39 y #43).
     return (
-      <div className="min-h-full bg-canvas flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-8">
-          <div className="text-center">
-            <CheckCircle2 size={44} className="text-success mx-auto mb-4" aria-hidden="true" />
-            <h1 className="text-2xl font-bold text-ink mb-2">Tu sesión está lista</h1>
-            <p data-testid="session-file-name" className="font-mono text-sm text-ink-soft break-all mb-6">
-              {downloaded}
-            </p>
-          </div>
-          <ol className="space-y-3 mb-5">
+      <div className="min-h-full bg-canvas flex flex-col items-center px-4 py-10 lg:py-12">
+        <div className="w-full max-w-[640px] bg-surface border border-line rounded-[20px] p-5 sm:p-7 flex flex-col gap-5">
+          <span className="w-[72px] h-[72px] rounded-full bg-success/15 text-success grid place-items-center mx-auto" aria-hidden="true">
+            <Check size={34} strokeWidth={2.4} />
+          </span>
+          <h1 className="font-display text-[2rem] leading-[1.05] font-extrabold tracking-tight text-ink text-center">Tu sesión está lista</h1>
+          <p data-testid="session-file-name" className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-surface-raised font-mono text-[0.84rem] text-ink break-all">
+            <FileText size={18} className="text-accent-soft flex-shrink-0" />
+            {downloaded}
+          </p>
+          <ol className="flex flex-col gap-3">
             {[
-              'Buscalo en tu carpeta Descargas.',
-              'Abrilo con doble clic.',
+              'Buscá el archivo en tu carpeta de Descargas.',
+              'Abrilo con doble clic. Se abre YALEH.',
               `La sesión de ${formatMinutes(minutes)} empieza y la computadora queda bloqueada.`,
             ].map((step, i) => (
-              <li key={step} className="flex items-start gap-3 text-sm text-ink-soft">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-accent text-on-accent text-xs font-bold flex-shrink-0">
+              <li key={step} className="flex items-start gap-3 text-[0.9rem] text-ink">
+                <span className="w-[26px] h-[26px] rounded-full bg-ink text-canvas grid place-items-center text-xs font-semibold flex-shrink-0">
                   {i + 1}
                 </span>
                 <span className="pt-0.5">{step}</span>
               </li>
             ))}
           </ol>
-          <p className="text-ink-subtle text-xs text-center mb-6">El archivo vale 24 horas y se puede usar una sola vez.</p>
-          <div className="flex flex-col gap-2">
+          <p className="text-ink-muted text-[0.78rem] text-center">El archivo vale 24 horas y se puede usar una sola vez.</p>
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => void handleDownload()}
               disabled={busy}
-              className="w-full py-3 rounded-xl text-sm border border-line text-ink-soft hover:text-ink hover:border-line-strong disabled:opacity-60"
+              className="flex-1 h-12 rounded-[14px] text-[0.94rem] font-medium border border-line bg-surface text-ink hover:border-ink-muted disabled:opacity-60"
             >
               Descargar otra vez
             </button>
-            <button onClick={prepareNewSession} className="w-full py-3 rounded-xl text-sm text-ink-muted hover:text-ink transition-colors">
+            <button
+              onClick={prepareNewSession}
+              className="flex-1 h-12 rounded-[14px] text-[0.94rem] font-medium bg-ink text-canvas hover:opacity-90"
+            >
               Preparar otra sesión
             </button>
           </div>
@@ -121,106 +126,88 @@ export default function ConfirmSessionPhase() {
     );
   }
 
-  const changeLink = 'text-accent-soft hover:underline text-xs font-semibold whitespace-nowrap disabled:opacity-50';
+  const changeLink = 'text-accent-soft hover:underline text-[0.8rem] font-medium whitespace-nowrap disabled:opacity-50';
 
+  // Pantalla 4 de docs/diseno/maquetas/web.html (ORION #39 y #43); el escritorio usa la misma vista.
   return (
-    <div className="min-h-full bg-canvas flex items-center justify-center p-4">
-      <motion.div
-        className="w-full max-w-lg"
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-ink mb-1">Confirma tu sesión</h1>
-          <p className="text-ink-muted text-sm">
-            {api ? 'Revisa todo antes de bloquear el equipo.' : 'Revisa todo antes de descargar tu archivo de sesión.'}
-          </p>
-        </div>
-
-        <div className="bg-surface border border-line rounded-2xl p-6 space-y-4">
-          {/* Resumen: Archivos (cantidad y nombres) y Duración, cada uno con "Cambiar" */}
-          <section aria-label="Archivos" className="p-4 rounded-xl bg-surface-raised">
-            <div className="flex items-start gap-3">
-              <FileText size={18} className="text-accent-soft flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-ink-muted text-xs font-medium uppercase tracking-wider">Archivos</p>
-                <p className="text-ink text-sm font-semibold">
-                  {files.length === 0 ? 'Sin archivos' : files.length === 1 ? '1 archivo' : `${files.length} archivos`}
-                </p>
-                {files.length > 0 && (
-                  <ul className="mt-1 max-h-32 overflow-y-auto text-ink-soft text-xs space-y-0.5">
-                    {files.map(file => (
-                      <li key={file.id} className="truncate" title={file.name}>
-                        {file.name}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <button
-                onClick={() => dispatch({ type: 'SET_PHASE', payload: 'dropzone' })}
-                disabled={busy}
-                aria-label="Cambiar archivos"
-                className={changeLink}
-              >
-                Cambiar
-              </button>
-            </div>
-          </section>
-
-          <section aria-label="Duración" className="p-4 rounded-xl bg-surface-raised">
-            <div className="flex items-center gap-3">
-              <Clock size={18} className="text-accent-soft flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-ink-muted text-xs font-medium uppercase tracking-wider">Duración</p>
-                <p className="text-ink text-sm font-semibold">{formatMinutes(minutes)}</p>
-              </div>
-              <button
-                onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })}
-                disabled={busy}
-                aria-label="Cambiar duración"
-                className={changeLink}
-              >
-                Cambiar
-              </button>
-            </div>
-          </section>
-
-          {/* Aviso con candado */}
-          <section className="flex items-start gap-3 p-3 rounded-xl border border-accent/40 bg-accent/10">
-            <Lock size={18} className="text-accent-soft flex-shrink-0 mt-0.5" />
-            <p className="text-ink-soft text-sm">
-              <strong className="text-ink">
-                No podrás salir hasta que termine el tiempo. Solo apagando o reiniciando el equipo.
-              </strong>
-              {!api && ' La sesión empezará en cuanto abras el archivo en la app de escritorio.'}
-            </p>
-          </section>
-
-          {error && (
-            <p role="alert" className="text-danger text-sm text-center">
-              {error}
-            </p>
-          )}
-
-          <button
-            onClick={() => void (api ? handleStart() : handleDownload())}
-            disabled={busy}
-            className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${
-              api ? 'bg-accent hover:bg-accent-strong text-on-accent' : 'bg-accent hover:bg-accent-strong text-on-accent'
-            }`}
-          >
-            {api ? (
-              busy ? 'Iniciando sesión…' : `Entiendo, iniciar sesión de ${formatMinutes(minutes)}`
-            ) : (
-              <>
-                <Download size={16} /> {busy ? 'Preparando archivo…' : 'Descargar archivo de sesión'}
-              </>
-            )}
-          </button>
-        </div>
+    <div className="min-h-full bg-canvas flex flex-col items-center px-4 py-10 lg:py-12 gap-7">
+      <motion.div className="text-center max-w-[640px]" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <h1 className="font-display text-3xl sm:text-[2.5rem] leading-[1.05] font-extrabold tracking-tight text-ink">Revisá tu sesión</h1>
+        <p className="mt-2.5 text-base text-ink-soft">
+          {api ? 'Si todo está bien, empezá la sesión: la computadora queda bloqueada.' : 'Si todo está bien, descargá el archivo y abrilo en la app de escritorio.'}
+        </p>
       </motion.div>
+
+      <div className="w-full max-w-[640px] bg-surface border border-line rounded-[20px] p-5 sm:p-7 flex flex-col gap-5">
+        <div>
+          {/* Resumen: Archivos (cantidad y nombres) y Duración, cada uno con "Cambiar" */}
+          <section aria-label="Archivos" className="flex items-start gap-3.5 pb-4 border-b border-line">
+            <span className="w-10 h-10 rounded-xl bg-surface-raised text-ink-soft grid place-items-center flex-shrink-0">
+              <FileText size={18} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <small className="block text-xs text-ink-muted">Archivos</small>
+              <b className="text-[0.94rem] font-medium text-ink">
+                {files.length === 0 ? 'Sin archivos' : files.length === 1 ? '1 documento' : `${files.length} documentos`}
+              </b>
+              {files.length > 0 && (
+                <ul className="mt-1 max-h-32 overflow-y-auto text-[0.84rem] text-ink-soft">
+                  {files.map(file => (
+                    <li key={file.id} className="truncate" title={file.name}>
+                      {file.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button onClick={() => dispatch({ type: 'SET_PHASE', payload: 'dropzone' })} disabled={busy} aria-label="Cambiar archivos" className={changeLink}>
+              Cambiar
+            </button>
+          </section>
+
+          <section aria-label="Duración" className="flex items-center gap-3.5 pt-4">
+            <span className="w-10 h-10 rounded-xl bg-surface-raised text-ink-soft grid place-items-center flex-shrink-0">
+              <Clock size={18} />
+            </span>
+            <div className="flex-1">
+              <small className="block text-xs text-ink-muted">Duración</small>
+              <b className="text-[0.94rem] font-medium text-ink tabular-nums">{formatMinutes(minutes)}</b>
+            </div>
+            <button onClick={() => dispatch({ type: 'SET_PHASE', payload: 'timer-select' })} disabled={busy} aria-label="Cambiar duración" className={changeLink}>
+              Cambiar
+            </button>
+          </section>
+        </div>
+
+        {/* Aviso con candado */}
+        <div className="flex gap-3 items-start px-4 py-3.5 rounded-[14px] bg-accent/15 text-ink text-[0.84rem]">
+          <Lock size={18} className="text-accent-soft mt-px flex-shrink-0" />
+          <span>
+            <b className="font-medium">No vas a poder salir hasta que termine el tiempo</b>, salvo apagando o reiniciando la computadora.
+            {api ? ' La sesión empieza apenas confirmes.' : ' La sesión empieza apenas abras el archivo.'}
+          </span>
+        </div>
+
+        {error && (
+          <p role="alert" className="text-danger text-sm text-center">
+            {error}
+          </p>
+        )}
+
+        <button
+          onClick={() => void (api ? handleStart() : handleDownload())}
+          disabled={busy}
+          className="h-12 rounded-[14px] text-[0.94rem] font-medium bg-accent hover:bg-accent-strong text-on-accent transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+        >
+          {api ? (
+            busy ? 'Iniciando sesión…' : `Entiendo, iniciar sesión de ${formatMinutes(minutes)}`
+          ) : (
+            <>
+              <Download size={16} /> {busy ? 'Preparando archivo…' : 'Descargar archivo de sesión'}
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

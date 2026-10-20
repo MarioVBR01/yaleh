@@ -36,10 +36,11 @@ describe('Web: Confirmar y Descargado (ORION #39)', () => {
   it('resumen con Archivos (cantidad y nombres) y Duración, cada uno con "Cambiar"', () => {
     renderConfirm();
     const archivos = screen.getByRole('region', { name: 'Archivos' });
-    expect(within(archivos).getByText('2 archivos')).toBeTruthy();
+    expect(within(archivos).getByText('2 documentos')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Revisá tu sesión' })).toBeTruthy();
     expect(within(archivos).getByText('clase1.pdf')).toBeTruthy();
     expect(within(screen.getByRole('region', { name: 'Duración' })).getByText('50 minutos')).toBeTruthy();
-    expect(screen.getByText(/No podrás salir hasta que termine el tiempo/)).toBeTruthy();
+    expect(screen.getByText(/No vas a poder salir hasta que termine el tiempo/)).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText('Cambiar duración'));
     expect(screen.getByTestId('phase').textContent).toBe('timer-select');
@@ -60,12 +61,14 @@ describe('Web: Confirmar y Descargado (ORION #39)', () => {
     expect(screen.getByTestId('session-file-name').textContent).toBe('YALEH sesión 2026-10-16 10-00.yaleh');
     const steps = [...document.querySelectorAll('ol li')].map(li => li.textContent);
     expect(steps).toEqual([
-      '1Buscalo en tu carpeta Descargas.',
-      '2Abrilo con doble clic.',
+      '1Buscá el archivo en tu carpeta de Descargas.',
+      '2Abrilo con doble clic. Se abre YALEH.',
       '3La sesión de 50 minutos empieza y la computadora queda bloqueada.',
     ]);
     expect(screen.getByText('El archivo vale 24 horas y se puede usar una sola vez.')).toBeTruthy();
     expect(screen.getByText('Descargar otra vez')).toBeTruthy();
+    // "Preparar otra sesión" es el botón oscuro de la maqueta.
+    expect(screen.getByText('Preparar otra sesión').className).toContain('bg-ink');
     // La web no ofrece el asistente sin conexión.
     expect(screen.queryByText(/sin conexión|Qwen/i)).toBeNull();
 
