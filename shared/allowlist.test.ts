@@ -55,8 +55,8 @@ describe('displayHost', () => {
 });
 
 describe('herramientas (ORION #14 a #16)', () => {
-  it('quedan solo Google Docs, Sheets, Slides y Classroom', () => {
-    expect([...WORKSPACE_LINKS, ...TOOL_LINKS].map(t => t.name)).toEqual(['Google Docs', 'Google Sheets', 'Google Slides', 'Google Classroom']);
+  it('quedan Google Docs, Sheets, Slides, Drive (ORION #41) y Classroom', () => {
+    expect([...WORKSPACE_LINKS, ...TOOL_LINKS].map(t => t.name)).toEqual(['Google Docs', 'Google Sheets', 'Google Slides', 'Google Drive', 'Google Classroom']);
   });
 
   it('todas las herramientas están en la lista de sitios permitidos', () => {

@@ -27,6 +27,7 @@ const WORKSPACE_STYLES: Record<string, string> = {
   docs: 'text-info',
   sheets: 'text-success',
   slides: 'text-accent-soft',
+  drive: 'text-success',
 };
 
 interface SideBarProps {

@@ -73,6 +73,8 @@ export const WORKSPACE_LINKS: readonly ToolLink[] = [
   { id: 'docs', name: 'Google Docs', url: 'https://docs.google.com', icon: '📝' },
   { id: 'sheets', name: 'Google Sheets', url: 'https://sheets.google.com', icon: '📊' },
   { id: 'slides', name: 'Google Slides', url: 'https://slides.google.com', icon: '🖥️' },
+  // Drive (ORION #41): /drive/my-drive pide la cuenta; la raíz manda a una página comercial sin sesión.
+  { id: 'drive', name: 'Google Drive', url: 'https://drive.google.com/drive/my-drive', icon: '📁' },
 ];
 
 // ─── Límites ─────────────────────────────────────────────────────────────────

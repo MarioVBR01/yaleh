@@ -59,7 +59,7 @@ import { SessionController } from './session/controller';
 import { findSessionFileInArgv, openSessionFile } from './session-file-service';
 import { runSmokeTest } from './smoke';
 import { TabManager } from './tabs/tab-manager';
-import { isUsableEmail, TABS_PARTITION, withGoogleLoginHint } from './tabs/google-account';
+import { googleSignInRedirect, isUsableEmail, TABS_PARTITION } from './tabs/google-account';
 import { exportOfficeFile } from './office/export';
 import { clearSessionHistory, listSessionHistory } from './db/history';
 import { getProfileName, loadSettings, saveSettings, setProfileName } from './settings-store';
@@ -481,7 +481,7 @@ function guardSession(ses: Electron.Session, hintGoogleLogin: boolean): void {
       callback({ cancel: true });
       return;
     }
-    const hinted = hintGoogleLogin && details.resourceType === 'mainFrame' ? withGoogleLoginHint(details.url, googleAccountHint) : null;
+    const hinted = hintGoogleLogin && details.resourceType === 'mainFrame' ? googleSignInRedirect(details.url, googleAccountHint) : null;
     callback(hinted ? { redirectURL: hinted } : {});
   });
 
