@@ -17,6 +17,10 @@ files:
   - "!dist-electron/bench-local-ai.cjs"
   - "!**/*.map"
   - "!.env*"
+  # La landing page y sus descargas son para la web, no para la app de escritorio.
+  - "!dist/landing.html"
+  - "!dist/assets/landing-*"
+  - "!dist/downloads/**"
   # node-llama-cpp: solo los binarios de Windows x64 con CPU y con Vulkan (sin CUDA ni ARM) y sin el
   # código fuente de llama.cpp (gitRelease.bundle, solo sirve para compilarlo).
   - "!node_modules/@node-llama-cpp/win-arm64/**"

@@ -8,7 +8,9 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/*.map"
+      "**/*.map",
+      "landing.html",
+      "downloads/**"
     ],
     "headers": [
       {

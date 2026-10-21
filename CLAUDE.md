@@ -45,6 +45,7 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | `firebase deploy --only hosting --project yaleh-fbe1c` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes). Incluye `youtube.html`, el reproductor que usan las pestañas del escritorio |
 | `firebase deploy --only firestore:rules --project yaleh-fbe1c` | Publica `firestore.rules` |
 | `npm run dist` | Compila todo y genera el instalador NSIS para Windows x64 en `release/YALEH-Setup-<versión>.exe` (electron-builder, configuración en `electron-builder.yml`). Por usuario, sin administrador, accesos directos y asociación de `.yaleh` |
+| `npm run landing:installer` | Copia `release/YALEH-Setup-<versión>.exe` a `dist/downloads/`, donde lo busca el botón de la landing page (después de `npm run dist`, al publicar) |
 | `npm run icon` | Regenera `build/icon.ico` a partir de `docs/diseno/logo/logo-yaleh.svg` (con Electron; 16 a 256 px) |
 | `npm run db:inspect` | Muestra las últimas sesiones y eventos de la base local (solo lectura; funciona con la app abierta). Opciones: `-- --sessions 20 --events 50 --db <ruta>` |
 
@@ -116,6 +117,7 @@ src/                        Interfaz React (web y escritorio). Alias: @/ → src
   panels/ExternalTabPanel.tsx  Hueco donde se dibuja la WebContentsView (informa sus límites)
   panels/HistoryPanel.tsx, StatsPanel.tsx  Historial y estadísticas desde SQLite (recharts)
   youtube/main.ts           Página del reproductor (youtube.html, entrada propia de Vite)
+  landing/                  Landing page (landing.html, entrada propia de Vite): presentación y descargas
   test/electron-mock.ts     window.electronAPI simulada para las pruebas de la interfaz
   phases/ kiosk/ panels/    Pantallas, layout del kiosko y paneles (phases/LocalAiCard.tsx: descarga del modelo, en Configuración)
   index.css                 Tokens de color (@theme) y estilos globales
@@ -125,7 +127,7 @@ electron-builder.yml        Instalador NSIS (fase 11)
 docs/                       Brief, informe del MVP y BUGS.md (registro de errores con plantilla)
 ```
 
-Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.html` y `youtube.html`) sirve para Firebase Hosting y para `file://` en Electron.
+Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.html`, `youtube.html` y `landing.html`) sirve para Firebase Hosting y para `file://` en Electron.
 
 ## Archivo de sesión .yaleh (revisión 1.5)
 
@@ -251,6 +253,12 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 - **Carpeta de datos:** `main.ts` la fija en `%APPDATA%yaleh` (el nombre del producto es "YALEH"); la app instalada y la de desarrollo comparten historial, configuración y modelo.
 - **Tamaño:** instalador de ~120 MB (Electron ~85 MB comprimido + binarios de llama.cpp ~100 MB sin comprimir).
 - **Sin firma de código:** Windows SmartScreen avisa "Windows protegió su PC" la primera vez (Más información → Ejecutar de todas formas). Firmar requiere un certificado pago.
+
+## Landing page
+
+- `landing.html` + `src/landing/LandingPage.tsx`: presenta YALEH (cómo funciona, funciones, asistente sin conexión, requisitos, preguntas frecuentes) y ofrece las descargas. Mismos tokens, letras y logo; sigue el modo claro/oscuro del sistema; se desplaza (clase `landing` en `<html>`, excepción al `overflow: hidden` de la app).
+- **Descargas** (`DOWNLOADS` y `APP_VERSION` en `shared/config.ts`; una prueba exige que `APP_VERSION` sea la de `package.json`): el instalador desde Firebase Hosting en `downloads/YALEH-Setup-<versión>.exe`. Plan Spark: ~360 MB de transferencia por día (2 o 3 descargas). El asistente sin conexión: recomendado desde la app; alternativa, descarga directa desde Hugging Face (`LOCAL_AI.url`) y copiarlo a `%APPDATA%\yaleh\models` con su nombre (la app lo da por instalado si el tamaño coincide).
+- **Todavía no se publica:** `firebase.json` ignora `landing.html` y `downloads/**`. Para publicarla: `npm run dist`, `npm run landing:installer`, quitar esas dos líneas de `ignore` y `firebase deploy --only hosting --project yaleh-fbe1c`. El instalador de escritorio excluye la landing y `dist/downloads`.
 
 ## Pendientes conocidos
 

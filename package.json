@@ -20,7 +20,8 @@
     "db:inspect": "node scripts/db-inspect.mjs",
     "bench:local-ai": "npm run build:electron && node scripts/bench-local-ai.mjs",
     "icon": "electron scripts/make-icon.cjs",
-    "dist": "npm run build && electron-builder --win nsis --x64 --publish never"
+    "dist": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "landing:installer": "node scripts/copy-installer.mjs"
   },
   "dependencies": {
     "node-llama-cpp": "^3.22.1",

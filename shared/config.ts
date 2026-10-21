@@ -193,3 +193,20 @@ export const WIKIPEDIA = {
   /** Wikimedia pide identificar a los clientes con Api-User-Agent. */
   userAgent: 'YALEH/0.1 (proyecto de grado TECBA; https://yaleh-fbe1c.web.app)',
 } as const;
+
+// ─── Landing page: descargas ────────────────────────────────────────────────
+
+/** Versión del escritorio que se descarga (igual a la de package.json; lo comprueba una prueba). */
+export const APP_VERSION = '1.0.0';
+
+/**
+ * Descargas de la landing page (landing.html). El instalador se publica en Firebase Hosting junto a la
+ * página, en downloads/ (`npm run landing:installer` lo copia a dist/downloads después de `npm run dist`).
+ * Plan Spark: ~360 MB de transferencia por día, unas 2 o 3 descargas del instalador.
+ */
+export const DOWNLOADS = {
+  installerFile: `YALEH-Setup-${APP_VERSION}.exe`,
+  installerPath: `downloads/YALEH-Setup-${APP_VERSION}.exe`,
+  installerSizeLabel: '120 MB',
+  webAppUrl: 'https://yaleh-fbe1c.web.app',
+} as const;
