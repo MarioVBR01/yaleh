@@ -58,6 +58,7 @@ import { isFrameUrlAllowed, isMainWindowNavigationAllowed, type NavigationContex
 import { SessionController } from './session/controller';
 import { findSessionFileInArgv, openSessionFile } from './session-file-service';
 import { runSmokeTest } from './smoke';
+import { createSplash, SPLASH_MIN_MS } from './splash';
 import { TabManager } from './tabs/tab-manager';
 import { googleSignInRedirect, isUsableEmail, TABS_PARTITION } from './tabs/google-account';
 import { exportOfficeFile } from './office/export';
@@ -107,6 +108,10 @@ const navigationContext: NavigationContext = {
 };
 
 let mainWindow: BrowserWindow | null = null;
+/** Pantalla de bienvenida (splash.ts): desde que arranca la app hasta que la ventana principal está dibujada. */
+let splashWindow: BrowserWindow | null = null;
+let splashShownAt = 0;
+let mainRevealed = false;
 let rendererReady = false;
 let osSessionEnding = false;
 /** Archivos .yaleh recibidos antes de que la interfaz terminara de cargar. */
@@ -151,6 +156,7 @@ function createController(): SessionController {
     lock: () => {
       // Nunca se descarga el asistente durante el kiosko (revisión 1.8).
       localAi.onSessionStarted();
+      revealMainWindow(true);
       if (mainWindow) lockWindow(mainWindow);
     },
     unlock: () => mainWindow && unlockWindow(mainWindow),
@@ -530,12 +536,34 @@ function guardWebContents(contents: WebContents): void {
 
 // ─── Ventana ─────────────────────────────────────────────────────────────────
 
+/**
+ * Muestra la ventana principal y cierra la pantalla de bienvenida. Normalmente cuando la ventana ya está
+ * dibujada y el splash lleva al menos SPLASH_MIN_MS en pantalla; con `immediate` (una sesión que empieza),
+ * en el acto, para que el splash nunca quede encima del kiosko.
+ */
+function revealMainWindow(immediate = false): void {
+  if (mainRevealed) return;
+  const wait = immediate ? 0 : Math.max(0, splashShownAt + SPLASH_MIN_MS - Date.now());
+  if (wait > 0) {
+    setTimeout(() => revealMainWindow(true), wait);
+    return;
+  }
+  mainRevealed = true;
+  if (mainWindow && !mainWindow.isDestroyed() && !isSmokeTest) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+  if (splashWindow && !splashWindow.isDestroyed()) splashWindow.destroy();
+  splashWindow = null;
+}
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
     height: 720,
-    show: !isSmokeTest,
-    backgroundColor: '#020617',
+    // Se muestra cuando ya está dibujada (revealMainWindow): mientras tanto se ve la pantalla de bienvenida.
+    show: false,
+    backgroundColor: '#100f0e',
     webPreferences: {
       preload: PRELOAD_PATH,
       contextIsolation: true,
@@ -573,6 +601,10 @@ function createWindow(): BrowserWindow {
   win.on('leave-full-screen', () => {
     if (isLocked()) reclaimFocus(win);
   });
+
+  win.once('ready-to-show', () => revealMainWindow());
+  // Por si la página no llega a dibujarse, la ventana se muestra igual a los 15 s.
+  setTimeout(() => revealMainWindow(true), 15_000);
 
   win.webContents.on('did-finish-load', () => {
     rendererReady = true;
@@ -634,6 +666,11 @@ function startConnectivityMonitor(): void {
 }
 
 function bootstrap(): void {
+  // Pantalla de bienvenida, antes de abrir la base y crear la ventana principal (no en la prueba de humo).
+  if (!isSmokeTest) {
+    splashWindow = createSplash(app.getVersion());
+    splashShownAt = Date.now();
+  }
   openStorage();
   controller = createController();
   tabs = new TabManager({
@@ -685,7 +722,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', (_event, argv) => {
-    if (mainWindow) {
+    if (mainWindow && mainRevealed) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
