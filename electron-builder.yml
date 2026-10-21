@@ -1,0 +1,64 @@
+# Instalador de YALEH para Windows x64 (fase 11). Se genera con: npm run dist  →  release/
+appId: bo.edu.tecba.yaleh
+productName: YALEH
+copyright: Copyright © 2026 Mario Víctor Brañez Rodriguez · TECBA
+directories:
+  output: release
+  buildResources: build
+
+# Solo la interfaz compilada (dist/), el proceso principal (dist-electron/) y package.json.
+# Nunca .env, fuentes, documentación ni el modelo Qwen (se descarga aparte, revisión 1.8).
+# React, Firebase y el resto de la interfaz ya van dentro de dist/; en node_modules quedan solo las
+# dependencias de producción del proceso principal (node-llama-cpp y pptxgenjs).
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+  - "!dist-electron/bench-local-ai.cjs"
+  - "!**/*.map"
+  - "!.env*"
+  # node-llama-cpp: solo los binarios de Windows x64 con CPU y con Vulkan (sin CUDA ni ARM) y sin el
+  # código fuente de llama.cpp (gitRelease.bundle, solo sirve para compilarlo).
+  - "!node_modules/@node-llama-cpp/win-arm64/**"
+  - "!node_modules/@node-llama-cpp/win-x64-cuda/**"
+  - "!node_modules/@node-llama-cpp/win-x64-cuda-ext/**"
+  - "!node_modules/node-llama-cpp/llama/gitRelease.bundle"
+
+asar: true
+# Módulo nativo (brief 7.5): node-llama-cpp y sus binarios fuera del asar.
+asarUnpack:
+  - node_modules/node-llama-cpp/**
+  - node_modules/@node-llama-cpp/**
+
+# node-llama-cpp trae binarios precompilados (N-API): no hay nada que recompilar para Electron.
+npmRebuild: false
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  executableName: YALEH
+
+nsis:
+  # Instalación por usuario (%LOCALAPPDATA%\Programs\YALEH), sin permisos de administrador.
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: YALEH
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  # Al desinstalar no se borran los datos (%APPDATA%\yaleh: historial, configuración y el modelo).
+  deleteAppDataOnUninstall: false
+  artifactName: YALEH-Setup-${version}.exe
+
+# Doble clic en un .yaleh abre YALEH con el archivo (main.ts lo toma de argv o de second-instance).
+fileAssociations:
+  - ext: yaleh
+    name: YALEH.Session
+    description: Archivo de sesión de YALEH
+    icon: build/icon.ico
+    role: Editor

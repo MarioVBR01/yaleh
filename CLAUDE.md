@@ -26,7 +26,7 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | 9. Editores de ofimática con exportación | Hecha (eliminados después en ORION #12; queda la exportación a .pptx) |
 | 10. Historial y estadísticas (SQLite; la sincronización pasa a v2) | Hecha |
 | 10b. IA sin conexión (Qwen3.5-4B con node-llama-cpp, FTS5; revisión 1.8) | Hecha |
-| 11. Pruebas y empaquetado | Pendiente |
+| 11. Pruebas y empaquetado | Instalador hecho (`npm run dist`, v1.0.0); falta probarlo en otra computadora |
 
 ## Comandos
 
@@ -44,6 +44,8 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | `npm run smoke:electron` | Compila y abre la app sin ventana visible, con una carpeta de datos temporal: comprueba que la interfaz carga con la CSP, que el preload expone `electronAPI`, que la IPC responde y que SQLite se crea con sus migraciones. No activa el kiosko ni toca la base real |
 | `firebase deploy --only hosting --project yaleh-fbe1c` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes). Incluye `youtube.html`, el reproductor que usan las pestañas del escritorio |
 | `firebase deploy --only firestore:rules --project yaleh-fbe1c` | Publica `firestore.rules` |
+| `npm run dist` | Compila todo y genera el instalador NSIS para Windows x64 en `release/YALEH-Setup-<versión>.exe` (electron-builder, configuración en `electron-builder.yml`). Por usuario, sin administrador, accesos directos y asociación de `.yaleh` |
+| `npm run icon` | Regenera `build/icon.ico` a partir de `docs/diseno/logo/logo-yaleh.svg` (con Electron; 16 a 256 px) |
 | `npm run db:inspect` | Muestra las últimas sesiones y eventos de la base local (solo lectura; funciona con la app abierta). Opciones: `-- --sessions 20 --events 50 --db <ruta>` |
 
 Al cerrar cada fase deben pasar `typecheck`, `build` y `test` (y conviene `smoke:electron`).
@@ -117,7 +119,9 @@ src/                        Interfaz React (web y escritorio). Alias: @/ → src
   test/electron-mock.ts     window.electronAPI simulada para las pruebas de la interfaz
   phases/ kiosk/ panels/    Pantallas, layout del kiosko y paneles (phases/LocalAiCard.tsx: descarga del modelo, en Configuración)
   index.css                 Tokens de color (@theme) y estilos globales
-scripts/                    build-electron.mjs, smoke-electron.mjs, db-inspect.mjs, test.mjs, bench-local-ai.mjs
+scripts/                    build-electron.mjs, smoke-electron.mjs, db-inspect.mjs, test.mjs, bench-local-ai.mjs, make-icon.cjs
+build/                      icon.ico (y icon-256.png) del instalador y de la app
+electron-builder.yml        Instalador NSIS (fase 11)
 docs/                       Brief, informe del MVP y BUGS.md (registro de errores con plantilla)
 ```
 
@@ -127,9 +131,9 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 
 - **Web** (independiente; `npm run dev` o Hosting): login con Google → dropzone → tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones (revisión 1.6). Diseño (ORION #37 a #39): entrar con la composición de la bienvenida; barra superior fija (`WebAccountBar`: logo, pasos Material · Duración · Confirmar · Descargar y la cuenta) en los pasos; el paso 4 usa `state.downloadedFile`. La web nunca bloquea nada ni abre el escritorio.
 - **Formato** (`shared/session-file.ts`): JSON con `format` "yaleh-session", `version` 1, `sessionId` (nuevo en cada descarga), `createdAt`, `expiresAt` (24 h), `createdBy`, `durationSeconds`, `sources` [{id, name, type, size, text}] y `checksum` SHA-256 de `canonicalPayload()` (orden de campos fijo; solo integridad). Máximo 50 MB (`LIMITS`).
-- **Escritorio:** bienvenida con "Iniciar" (flujo local; diseño ORION #30, sin recuadro, engranaje de Configuración y aviso solo sin conexión). El archivo se abre por los argumentos de arranque o por `second-instance` (doble clic cuando la fase 11 asocie la extensión). "Abrir archivo de sesión (.yaleh)" y el arrastre solo existen en desarrollo (`import.meta.env.DEV`). `openSessionFile` (proceso principal) valida, rechaza si hay sesión en curso o si el `sessionId` ya está en SQLite (uso único), guarda las fuentes en SQLite y llama a `controller.start`: **bloquea y empieza el tiempo de inmediato**. Los rechazos se registran como `session-file-rejected`.
+- **Escritorio:** bienvenida con "Iniciar" (flujo local; diseño ORION #30, sin recuadro, engranaje de Configuración y aviso solo sin conexión). El archivo se abre por los argumentos de arranque o por `second-instance` (doble clic: el instalador asocia la extensión, fase 11). "Abrir archivo de sesión (.yaleh)" y el arrastre solo existen en desarrollo (`import.meta.env.DEV`). `openSessionFile` (proceso principal) valida, rechaza si hay sesión en curso o si el `sessionId` ya está en SQLite (uso único), guarda las fuentes en SQLite y llama a `controller.start`: **bloquea y empieza el tiempo de inmediato**. Los rechazos se registran como `session-file-rejected`.
 - **Modo:** lo decide el proceso principal según la conexión al empezar (archivo o flujo local). En el escritorio los datos van siempre a SQLite.
-- **Pendiente (fase 11):** asociar `.yaleh` con la app en el instalador (doble clic).
+- **Doble clic (fase 11):** el instalador asocia `.yaleh` con YALEH (`fileAssociations`); Windows ejecuta `YALEH.exe "archivo.yaleh"` y `main.ts` lo toma de `argv` (app cerrada) o de `second-instance` (app abierta). Probado con la app empaquetada.
 
 ## Firebase (fase 4)
 
@@ -239,12 +243,20 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 - IA sin conexión: Qwen3.5-4B Q4_K_M (Apache 2.0) con node-llama-cpp en un `utilityProcess`; descarga aparte (2,74 GB) desde Configuración; FTS5 para los fragmentos (migración 3). Requisito: 8 GB de RAM.
 - SQLite: `node:sqlite` en el proceso principal (Electron 42, Node 24).
 
+## Instalador (fase 11)
+
+- **electron-builder** (`electron-builder.yml`): NSIS x64, `oneClick: false`, `perMachine: false` (se instala en `%LOCALAPPDATA%ProgramsYALEH` sin administrador), accesos directos en el escritorio y el menú Inicio, `deleteAppDataOnUninstall: false`. Versión: la de `package.json` (1.0.0). Icono: `build/icon.ico`.
+- **Qué entra:** `dist/`, `dist-electron/` (sin `bench-local-ai.cjs` ni mapas) y `package.json`. Nunca `.env` ni el modelo. **Dependencias:** en `dependencies` van solo los paquetes que el proceso principal carga al ejecutarse (`node-llama-cpp`, `pptxgenjs`); todo lo de la interfaz (React, Firebase, pdf.js…) va en `devDependencies` porque Vite lo compila dentro de `dist/`. Si se agrega una dependencia del proceso principal que no se empaqueta con esbuild, va en `dependencies`.
+- **node-llama-cpp:** fuera del asar (`asarUnpack`), solo `@node-llama-cpp/win-x64` (CPU) y `win-x64-vulkan`; sin CUDA, ARM ni `llama/gitRelease.bundle` (código fuente). `npmRebuild: false`. Probado: el ejecutable empaquetado carga los binarios (Vulkan y CPU) y genera texto con el modelo.
+- **Carpeta de datos:** `main.ts` la fija en `%APPDATA%yaleh` (el nombre del producto es "YALEH"); la app instalada y la de desarrollo comparten historial, configuración y modelo.
+- **Tamaño:** instalador de ~120 MB (Electron ~85 MB comprimido + binarios de llama.cpp ~100 MB sin comprimir).
+- **Sin firma de código:** Windows SmartScreen avisa "Windows protegió su PC" la primera vez (Más información → Ejecutar de todas formas). Firmar requiere un certificado pago.
+
 ## Pendientes conocidos
 
 - **Token de depuración de App Check** en el escritorio: provisional (se puede extraer del instalador). Borrarlo de la consola cuando exista una alternativa.
-- **Asociación de `.yaleh`** con la app (doble clic): en el instalador, fase 11.
 - **Sincronización:** pasa a la versión 2 (el escritorio no tiene cuenta de Google).
-- **Empaquetado del asistente sin conexión (fase 11):** `node-llama-cpp` y `@node-llama-cpp/win-x64` deben quedar fuera del asar (`asarUnpack`); incluir solo los binarios de Windows x64 (no CUDA ni ARM) para no inflar el instalador.
+- **Instalador:** probarlo en otra computadora con Windows 10 y 11 (instalación, doble clic, sesiones, desinstalación); sin firma de código (SmartScreen).
 - **Asistente sin conexión:** responde más lento que Gemini (ver mediciones); con documentos largos solo lee una parte (presupuesto de fragmentos); el historial del chat local también vive en memoria.
 - **Exportación a PDF** de documentos: versión 2.
 - **Errores encontrados al probar:** en [docs/BUGS.md](docs/BUGS.md); se corrigen antes de la fase 11.

@@ -81,6 +81,11 @@ if (isSmokeTest) {
   app.setPath('userData', process.env.YALEH_SMOKE_USER_DATA ?? path.join(os.tmpdir(), `yaleh-smoke-${process.pid}`));
   // Las exportaciones de ofimática de la prueba van a la carpeta temporal, no a Documentos.
   app.setPath('documents', app.getPath('userData'));
+} else {
+  // Carpeta de datos fija en %APPDATA%yaleh (fase 11): el instalador usa el nombre "YALEH" y Electron
+  // derivaría la carpeta de ese nombre. Así la app instalada y la de desarrollo comparten historial,
+  // configuración y el modelo sin conexión, y desinstalar no los toca.
+  app.setPath('userData', path.join(app.getPath('appData'), 'yaleh'));
 }
 
 // Se empaqueta como CommonJS (dist-electron/main.cjs): __dirname es dist-electron/.
