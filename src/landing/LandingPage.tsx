@@ -130,7 +130,7 @@ export default function LandingPage() {
 function DownloadButton({ large = false, compact = false }: { large?: boolean; compact?: boolean }) {
   return (
     <a
-      href={DOWNLOADS.installerPath}
+      href={DOWNLOADS.installerUrl}
       download={DOWNLOADS.installerFile}
       data-testid="download-installer"
       className={`inline-flex items-center justify-center gap-2.5 rounded-[18px] bg-accent hover:bg-accent-strong text-on-accent font-semibold whitespace-nowrap transition-colors ${

@@ -21,8 +21,8 @@
     "bench:local-ai": "npm run build:electron && node scripts/bench-local-ai.mjs",
     "icon": "electron scripts/make-icon.cjs",
     "dist": "npm run build && electron-builder --win nsis --x64 --publish never",
-    "web:installer": "node scripts/copy-installer.mjs",
-    "deploy:web": "npm run dist && npm run web:installer && firebase deploy --only hosting --project yaleh-fbe1c"
+    "deploy:web": "npm run build && firebase deploy --only hosting --project yaleh-fbe1c",
+    "release:github": "node scripts/release-github.mjs"
   },
   "dependencies": {
     "node-llama-cpp": "^3.22.1",

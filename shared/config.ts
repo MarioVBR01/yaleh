@@ -200,12 +200,13 @@ export const WIKIPEDIA = {
 export const APP_VERSION = '1.0.0';
 
 /**
- * Descarga de la landing page (el inicio de la web). El instalador se publica en el mismo Firebase Hosting,
- * en downloads/: `npm run deploy:web` compila, genera el instalador, lo copia a dist/downloads y publica.
- * Plan Spark: ~360 MB de transferencia por día para todo el proyecto (unas 2 o 3 descargas del instalador).
+ * Descarga de la landing page (el inicio de la web). Firebase Hosting gratis no admite archivos ejecutables,
+ * así que el instalador se publica en GitHub Releases del repositorio público (`npm run release:github`)
+ * y el botón lo descarga directamente desde ahí.
  */
+export const GITHUB_REPO = 'MarioVBR01/yaleh';
 export const DOWNLOADS = {
   installerFile: `YALEH-Setup-${APP_VERSION}.exe`,
-  installerPath: `downloads/YALEH-Setup-${APP_VERSION}.exe`,
+  installerUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${APP_VERSION}/YALEH-Setup-${APP_VERSION}.exe`,
   installerSizeLabel: '120 MB',
 } as const;

@@ -28,7 +28,8 @@ describe('Landing page', () => {
   it('la versión que se descarga es la de package.json', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
     expect(APP_VERSION).toBe(pkg.version);
-    expect(DOWNLOADS.installerPath).toBe(`downloads/YALEH-Setup-${pkg.version}.exe`);
+    // Firebase Hosting gratis no admite .exe: el instalador está en GitHub Releases.
+    expect(DOWNLOADS.installerUrl).toBe(`https://github.com/MarioVBR01/yaleh/releases/download/v${pkg.version}/YALEH-Setup-${pkg.version}.exe`);
   });
 
   it('título, logo y los dos botones: preparar la sesión y descargar el instalador', () => {
@@ -38,7 +39,7 @@ describe('Landing page', () => {
     const downloads = screen.getAllByTestId('download-installer');
     expect(downloads.length).toBeGreaterThanOrEqual(2);
     for (const a of downloads) {
-      expect(a.getAttribute('href')).toBe(DOWNLOADS.installerPath);
+      expect(a.getAttribute('href')).toBe(DOWNLOADS.installerUrl);
       expect(a.getAttribute('download')).toBe(DOWNLOADS.installerFile);
     }
     expect(screen.getAllByTestId('prepare-session').length).toBeGreaterThanOrEqual(2);

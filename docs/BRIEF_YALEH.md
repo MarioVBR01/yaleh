@@ -151,7 +151,7 @@ La web es independiente (se ejecuta sola con `npm run dev` o en Firebase Hosting
 
 ### 5.1 Flujo de entrada
 
-*Revisión 1.10:* la web empieza en la **landing page** (presentación del producto) con dos botones: **"Preparar mi sesión"** (sigue el flujo de abajo) y **"Descargar para Windows"** (el instalador, en el mismo hosting). Quien no tiene la app solo necesita descargarla. El escritorio no muestra la landing.
+*Revisión 1.10:* la web empieza en la **landing page** (presentación del producto) con dos botones: **"Preparar mi sesión"** (sigue el flujo de abajo) y **"Descargar para Windows"** (el instalador, desde GitHub Releases). Quien no tiene la app solo necesita descargarla. El escritorio no muestra la landing.
 
 Inicio de sesión con Google → dropzone → configurar tiempo → confirmación → **"Descargar archivo de sesión"** → instrucciones para abrirlo en el escritorio, con "Descargar otro archivo" y "Preparar una nueva sesión" (vuelve a la dropzone). *Revisión 1.6:* la web no pasa por la IA; el espacio de trabajo (sección 5.2) existe solo en el kiosko del escritorio.
 
@@ -591,6 +591,6 @@ Cada función o página nueva se abre en una pestaña nueva, como en un navegado
 | # | Tema | Decisión |
 | --- | --- | --- |
 | 67 | Inicio de la web | La landing page es la primera pantalla de la web, en la misma dirección y el mismo hosting: presenta YALEH y ofrece "Preparar mi sesión" (login con Google → Material → Duración → .yaleh) y "Descargar para Windows". Al cerrar sesión se vuelve a la landing; el login tiene "Volver al inicio". El escritorio arranca en su bienvenida y nunca la muestra |
-| 68 | Descargas | El instalador (`YALEH-Setup-<versión>.exe`) se publica en Firebase Hosting, en `downloads/`. El asistente sin conexión se recomienda desde la app; la landing ofrece además la descarga directa con las instrucciones |
+| 68 | Descargas | El instalador (`YALEH-Setup-<versión>.exe`) se publica en **GitHub Releases** del repositorio público, porque Firebase Hosting gratis no admite archivos ejecutables; el botón de la landing descarga directo desde ahí. El asistente sin conexión se recomienda desde la app; la landing ofrece además la descarga directa con las instrucciones |
 | 69 | Instalador | NSIS por usuario sin administrador, accesos directos, asociación de `.yaleh` (doble clic) y pantalla de bienvenida al abrir la app (fase 11) |
 | 70 | Reproductor de YouTube | Sigue en el hosting de la web; su revisión queda pendiente |

@@ -45,8 +45,8 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | `firebase deploy --only hosting --project yaleh-fbe1c` | Publica `dist/` en `https://yaleh-fbe1c.web.app` (ejecutar `npm run build` antes). Incluye `youtube.html`, el reproductor que usan las pestañas del escritorio |
 | `firebase deploy --only firestore:rules --project yaleh-fbe1c` | Publica `firestore.rules` |
 | `npm run dist` | Compila todo y genera el instalador NSIS para Windows x64 en `release/YALEH-Setup-<versión>.exe` (electron-builder, configuración en `electron-builder.yml`). Por usuario, sin administrador, accesos directos y asociación de `.yaleh` |
-| `npm run deploy:web` | Publica la web completa con la descarga: `npm run dist` (compila y genera el instalador) → `npm run web:installer` (lo copia a `dist/downloads/`) → `firebase deploy --only hosting` |
-| `npm run web:installer` | Copia `release/YALEH-Setup-<versión>.exe` a `dist/downloads/` (va después de compilar: `npm run build` vacía `dist/`) |
+| `npm run deploy:web` | Compila y publica la web (landing + preparación de sesiones) en Firebase Hosting |
+| `npm run release:github` | Publica `release/YALEH-Setup-<versión>.exe` en GitHub Releases (`MarioVBR01/yaleh`, release `v<versión>`; si ya existe, reemplaza el archivo). Necesita `gh` con sesión. Va después de `npm run dist` |
 | `npm run icon` | Regenera `build/icon.ico` a partir de `docs/diseno/logo/logo-yaleh.svg` (con Electron; 16 a 256 px) |
 | `npm run db:inspect` | Muestra las últimas sesiones y eventos de la base local (solo lectura; funciona con la app abierta). Opciones: `-- --sessions 20 --events 50 --db <ruta>` |
 
@@ -260,8 +260,8 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 ## Landing page (revisión 1.10)
 
 - **Es el inicio de la web:** fase `landing` (`src/landing/LandingPage.tsx`), la primera que muestra `App.tsx` en el navegador (`startPhase`). Presenta YALEH (cómo funciona, funciones, asistente sin conexión, requisitos, preguntas) con dos caminos: **"Preparar mi sesión"** (al login, o a Material si la cuenta ya está iniciada) y **"Descargar para Windows"**. Al cerrar sesión se vuelve a la landing; el login tiene "Volver al inicio". La barra de cuenta y pasos aparece después de entrar. El escritorio nunca la muestra (arranca en `desktop-start`).
-- **Descargas** (`DOWNLOADS` y `APP_VERSION` en `shared/config.ts`; una prueba exige que `APP_VERSION` sea la de `package.json`): el instalador en el mismo hosting, `downloads/YALEH-Setup-<versión>.exe`. Publicar con `npm run deploy:web`, que lo copia antes de subir. Plan Spark: ~360 MB de transferencia por día para todo el proyecto. El asistente sin conexión: recomendado desde la app; alternativa, descarga directa desde Hugging Face (`LOCAL_AI.url`) y copiarlo a `%APPDATA%\yaleh\models` con su nombre (la app lo da por instalado si el tamaño coincide).
-- El instalador de escritorio no incluye `dist/downloads`. El reproductor de YouTube sigue en el mismo hosting (pendiente de revisar).
+- **Descargas** (`DOWNLOADS` y `APP_VERSION` en `shared/config.ts`; una prueba exige que `APP_VERSION` sea la de `package.json`): el instalador en **GitHub Releases** (`DOWNLOADS.installerUrl`, repositorio público), porque Firebase Hosting gratis **no admite archivos ejecutables** (el deploy con el `.exe` falló: "Executable files are forbidden on the Spark billing plan"). Nueva versión: subir `version` en `package.json` y `APP_VERSION`, `npm run dist`, `npm run release:github` y `npm run deploy:web`. El asistente sin conexión: recomendado desde la app; alternativa, descarga directa desde Hugging Face (`LOCAL_AI.url`) y copiarlo a `%APPDATA%\yaleh\models` con su nombre (la app lo da por instalado si el tamaño coincide).
+- El reproductor de YouTube sigue en el hosting de la web (pendiente de revisar).
 
 ## Pendientes conocidos
 
