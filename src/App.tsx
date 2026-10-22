@@ -20,6 +20,7 @@ import { startPhase } from './lib/mode';
 import { applyOpenedSessionFile } from './lib/session-file';
 import { initialState, type AppPhase, type AppState } from './store/appStore';
 import LoginPhase from './phases/LoginPhase';
+import LandingPage from './landing/LandingPage';
 import WebAccountBar from './phases/WebAccountBar';
 import DesktopStartPhase from './phases/DesktopStartPhase';
 import DropzonePhase from './phases/DropzonePhase';
@@ -36,6 +37,7 @@ const fadeIn = { opacity: 1, scale: 1 };
 const fadeOut = { opacity: 0, scale: 0.97 };
 
 const PHASE_COMPONENTS: Record<AppPhase, ComponentType> = {
+  landing: LandingPage,
   login: LoginPhase,
   'desktop-start': DesktopStartPhase,
   dropzone: DropzonePhase,
@@ -185,11 +187,11 @@ function useAuthSync() {
     });
   }, [dispatch]);
 
-  // Web: el login lleva a la dropzone; sin sesión se vuelve al login.
+  // Web: el login lleva a la dropzone; al cerrar sesión se vuelve a la landing (el inicio).
   useEffect(() => {
     if (isElectron()) return;
     if (signedIn && phase === 'login') dispatch({ type: 'SET_PHASE', payload: 'dropzone' });
-    if (!signedIn && phase !== 'login') dispatch({ type: 'SET_PHASE', payload: 'login' });
+    if (!signedIn && phase !== 'login' && phase !== 'landing') dispatch({ type: 'SET_PHASE', payload: 'landing' });
   }, [signedIn, phase, dispatch]);
 }
 
@@ -251,10 +253,11 @@ function AppContent() {
   useSessionFileResults();
 
   // El escritorio nunca muestra el login de la web.
-  const phase = getElectronAPI() && state.phase === 'login' ? 'desktop-start' : state.phase;
+  // El escritorio nunca muestra la landing ni el login de la web.
+  const phase = getElectronAPI() && (state.phase === 'login' || state.phase === 'landing') ? 'desktop-start' : state.phase;
   const Phase = PHASE_COMPONENTS[phase];
   // Web: con qué cuenta se entró, y cerrar sesión o cambiar de cuenta (BUG-002).
-  const showAccount = !getElectronAPI() && state.session.isAuthenticated && phase !== 'login';
+  const showAccount = !getElectronAPI() && state.session.isAuthenticated && phase !== 'login' && phase !== 'landing';
   // Paso actual de la barra de pasos (ORION #38): Material, Duración, Confirmar, Descargar.
   const webStep = phase === 'timer-select' ? 1 : phase === 'confirm-session' ? (state.downloadedFile ? 3 : 2) : 0;
 
@@ -265,7 +268,7 @@ function AppContent() {
         <AnimatePresence mode="wait">
           <motion.div
             key={phase}
-            className={phase === 'kiosk' ? 'h-screen' : 'flex-1 min-h-0 overflow-y-auto'}
+            className={phase === 'kiosk' ? 'h-screen' : phase === 'landing' ? 'flex-1 min-h-0 overflow-y-auto scroll-smooth' : 'flex-1 min-h-0 overflow-y-auto'}
             initial={fadeOut}
             animate={fadeIn}
             exit={fadeOut}

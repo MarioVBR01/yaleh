@@ -42,17 +42,24 @@ afterEach(() => {
   emit = null;
 });
 
+/** La web empieza en la landing (revisión 1.10): "Preparar mi sesión" lleva al login. */
+function goToLogin() {
+  fireEvent.click(screen.getAllByTestId('prepare-session')[0]);
+}
+
 describe('BUG-002: sesión de Google guardada en el navegador', () => {
-  it('mientras Firebase comprueba la sesión no muestra el botón del login', () => {
+  it('mientras Firebase comprueba la sesión no muestra el botón del login', async () => {
     render(<App />);
-    expect(screen.getByText('Comprobando tu sesión…')).toBeTruthy();
+    goToLogin();
+    expect(await screen.findByText('Comprobando tu sesión…')).toBeTruthy();
     expect(screen.queryByText('Continuar con Google')).toBeNull();
     act(() => emit?.(null));
     expect(screen.getByText('Continuar con Google')).toBeTruthy();
   });
 
-  it('con una sesión guardada muestra la cuenta activa y permite cerrar sesión', async () => {
+  it('con una sesión guardada muestra la cuenta activa; cerrar sesión vuelve a la landing', async () => {
     render(<App />);
+    goToLogin();
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
     expect(await screen.findByText('ana@tecba.edu.bo')).toBeTruthy();
     // El login sale con una animación; después ya no está.
@@ -62,12 +69,14 @@ describe('BUG-002: sesión de Google guardada en el navegador', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     });
     expect(signOut).toHaveBeenCalled();
-    expect(await screen.findByText('Continuar con Google')).toBeTruthy();
+    // Revisión 1.10: al cerrar sesión se vuelve al inicio (la landing).
+    expect((await screen.findAllByTestId('prepare-session')).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Cuenta de Google')).toBeNull();
   });
 
   it('"Cambiar" abre la ventana de Google y, con otra cuenta, muestra la nueva', async () => {
     render(<App />);
+    goToLogin();
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
     await act(async () => {
       fireEvent.click(await screen.findByText('Cambiar'));
@@ -82,6 +91,7 @@ describe('BUG-002: sesión de Google guardada en el navegador', () => {
 describe('Barra superior de la web (ORION #38)', () => {
   it('logo, pasos (Material actual en naranja) y la cuenta con Cambiar y Cerrar sesión', async () => {
     render(<App />);
+    goToLogin();
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
     expect(await screen.findByText('ana@tecba.edu.bo')).toBeTruthy();
     const bar = screen.getByLabelText('Cuenta de Google');

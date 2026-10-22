@@ -131,17 +131,6 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* La landing page (landing.html) sí se desplaza: la app bloquea el scroll de la página. */
-html.landing, html.landing body, html.landing #root {
-  height: auto;
-  overflow: visible;
-}
-html.landing {
-  scroll-behavior: smooth;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
 /* ── Scrollbar personalizada para el tema oscuro ─────────────────────────── */
 ::-webkit-scrollbar {
   width: 5px;

@@ -57,5 +57,6 @@ export function useAssistant(): AssistantProvider | null {
 
 /** Pantalla inicial: la web empieza en el login; el escritorio, en la pantalla de inicio según la conexión. */
 export function startPhase(isDesktop: boolean): AppPhase {
-  return isDesktop ? 'desktop-start' : 'login';
+  // Web: la landing es el inicio; desde ahí se prepara la sesión o se descarga la app.
+  return isDesktop ? 'desktop-start' : 'landing';
 }

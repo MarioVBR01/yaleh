@@ -5,20 +5,22 @@
  * Al iniciar sesión, App.tsx sincroniza el usuario y pasa a la dropzone.
  * Mientras Firebase comprueba si hay una sesión guardada, se muestra "Comprobando tu sesión…"
  * en lugar del botón (BUG-002): así el login no aparece un momento y salta a la dropzone.
+ * Se llega desde la landing ("Preparar mi sesión") y tiene "Volver al inicio" (revisión 1.10).
  * Diseño (ORION #37, docs/diseno/maquetas/web.html, pantalla 1): logo, "YALEH.", frase y el botón
  * blanco de Google sobre el fondo, sin recuadro ni degradé.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { APP_VERSION } from '@shared/config';
 import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
 import { isFirebaseConfigured } from '../firebase/app';
 import { describeAuthError, signInWithGoogle } from '../firebase/auth';
 
 export default function LoginPhase() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +38,14 @@ export default function LoginPhase() {
   };
 
   return (
-    <div className="relative min-h-screen bg-canvas overflow-hidden flex flex-col">
+    <div className="relative min-h-full bg-canvas overflow-hidden flex flex-col">
+      {/* Volver a la landing, el inicio de la web (brief, revisión 1.10). */}
+      <button
+        onClick={() => dispatch({ type: 'SET_PHASE', payload: 'landing' })}
+        className="absolute z-10 top-6 left-6 inline-flex items-center gap-2 h-10 px-3 rounded-xl text-sm text-ink-soft hover:text-ink hover:bg-surface-raised"
+      >
+        <ArrowLeft size={16} /> Volver al inicio
+      </button>
       {/* Misma composición que la bienvenida del escritorio (ORION #37): resplandor suave, sin recuadro. */}
       <span
         aria-hidden="true"
@@ -92,7 +101,7 @@ export default function LoginPhase() {
         </div>
       </motion.div>
 
-      <p className="absolute left-0 right-0 bottom-6 text-center text-xs text-ink-muted">YALEH v0.1 · TECBA 2026 · Proyecto de grado</p>
+      <p className="absolute left-0 right-0 bottom-6 text-center text-xs text-ink-muted">YALEH v{APP_VERSION} · TECBA 2026 · Proyecto de grado</p>
     </div>
   );
 }

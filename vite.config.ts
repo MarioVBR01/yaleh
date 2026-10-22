@@ -71,8 +71,6 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
         youtube: path.resolve(__dirname, "youtube.html"),
-        // landing.html: landing page para promocionar y descargar YALEH (todavía no se publica).
-        landing: path.resolve(__dirname, "landing.html"),
       },
     },
   },

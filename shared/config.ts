@@ -200,13 +200,12 @@ export const WIKIPEDIA = {
 export const APP_VERSION = '1.0.0';
 
 /**
- * Descargas de la landing page (landing.html). El instalador se publica en Firebase Hosting junto a la
- * página, en downloads/ (`npm run landing:installer` lo copia a dist/downloads después de `npm run dist`).
- * Plan Spark: ~360 MB de transferencia por día, unas 2 o 3 descargas del instalador.
+ * Descarga de la landing page (el inicio de la web). El instalador se publica en el mismo Firebase Hosting,
+ * en downloads/: `npm run deploy:web` compila, genera el instalador, lo copia a dist/downloads y publica.
+ * Plan Spark: ~360 MB de transferencia por día para todo el proyecto (unas 2 o 3 descargas del instalador).
  */
 export const DOWNLOADS = {
   installerFile: `YALEH-Setup-${APP_VERSION}.exe`,
   installerPath: `downloads/YALEH-Setup-${APP_VERSION}.exe`,
   installerSizeLabel: '120 MB',
-  webAppUrl: 'https://yaleh-fbe1c.web.app',
 } as const;

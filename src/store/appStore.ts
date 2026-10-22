@@ -13,6 +13,8 @@ import type { SettingsSnapshot } from '@shared/settings';
 export { TAB_LIMIT_MESSAGE };
 
 export type AppPhase =
+  /** Web: landing page, el inicio de todo (presentación, preparar la sesión y descargar la app). */
+  | 'landing'
   | 'login'
   | 'desktop-start'
   | 'dropzone'

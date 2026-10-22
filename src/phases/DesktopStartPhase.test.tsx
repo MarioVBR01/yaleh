@@ -182,9 +182,24 @@ describe('App en el escritorio', () => {
 });
 
 describe('App en la web', () => {
-  it('sigue mostrando el login con Google (después de comprobar la sesión guardada)', async () => {
+  it('empieza en la landing; "Preparar mi sesión" lleva al login con Google y "Volver al inicio" regresa', async () => {
     render(<App />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Estudiá sin distracciones.' })).toBeTruthy();
+    expect(screen.queryByText('Continuar con Google')).toBeNull();
+    fireEvent.click(screen.getAllByTestId('prepare-session')[0]);
     expect(await screen.findByText('Continuar con Google', {}, { timeout: 5000 })).toBeTruthy();
+    fireEvent.click(screen.getByText('Volver al inicio'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Estudiá sin distracciones.' })).toBeTruthy();
+  });
+});
+
+describe('La landing no aparece en el escritorio', () => {
+  it('el escritorio arranca en su bienvenida', async () => {
+    createElectronMock({ connection: 'online' }).install();
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Bienvenido a YALEH.' })).toBeTruthy());
+    expect(screen.queryByTestId('prepare-session')).toBeNull();
+    expect(screen.queryByTestId('download-installer')).toBeNull();
   });
 });
 

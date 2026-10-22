@@ -1,9 +1,10 @@
 /**
  * @file LandingPage.tsx
- * @description Landing page de YALEH (landing.html): presenta el producto y ofrece las descargas
- * (instalador de Windows y, aparte, el asistente sin conexión; brief, revisión 1.8 y web.html).
- * Usa los tokens, letras y logo del diseño (ORION #29) y sigue el modo claro/oscuro del sistema.
- * Todavía no se publica (firebase.json la excluye del hosting).
+ * @description Landing page: el inicio de la web (fase 'landing', brief revisión 1.10). Presenta el producto
+ * y tiene dos caminos: "Preparar mi sesión" (login con Google → Material → Duración → .yaleh) y
+ * "Descargar para Windows" (el instalador, en el mismo hosting). Aparte ofrece el asistente sin conexión.
+ * El escritorio nunca la muestra. Usa los tokens, letras y logo del diseño (ORION #29) y sigue el modo
+ * claro/oscuro del sistema.
  */
 
 import { useState } from 'react';
@@ -15,9 +16,9 @@ import {
   Copy,
   Download,
   FileText,
-  Globe,
   Laptop,
   Lock,
+  LogIn,
   MousePointerClick,
   ShieldCheck,
   Sparkles,
@@ -28,6 +29,7 @@ import {
 } from 'lucide-react';
 import { APP_VERSION, DOWNLOADS, LIMITS, LOCAL_AI } from '@shared/config';
 import Logo from '../components/Logo';
+import { useApp } from '../context/AppContext';
 
 /** Tamaño del modelo en GB decimales (2,7 GB), como en la documentación. */
 const MODEL_SIZE = `${(LOCAL_AI.sizeBytes / 1e9).toFixed(1).replace('.', ',')} GB`;
@@ -80,12 +82,12 @@ const FAQ = [
     a: 'No: es la idea de YALEH. Si se apaga o se reinicia la computadora, la sesión queda como interrumpida y al volver a abrir YALEH podés retomarla con el tiempo que faltaba.',
   },
   {
-    q: '¿Necesito la web para usar YALEH?',
-    a: 'No. La web sirve para preparar la sesión con tus apuntes desde cualquier lugar, pero en la aplicación también podés empezar una sesión con "Iniciar", con o sin conexión.',
+    q: '¿Tengo que preparar la sesión acá?',
+    a: 'No es obligatorio. Prepararla acá te deja subir tus apuntes desde cualquier computadora y llevarlos en el archivo .yaleh, pero en la aplicación también podés empezar una sesión con "Iniciar", con o sin conexión.',
   },
   {
     q: '¿Qué pasa con mis documentos?',
-    a: 'Los archivos originales quedan en tu computadora. En la web se guarda el texto extraído en tu cuenta para armar el archivo de sesión. Con conexión, el asistente en línea (Gemini) recibe ese texto para responder; el asistente sin conexión trabaja en tu equipo y no envía nada.',
+    a: 'Los archivos originales quedan en tu computadora. Al preparar la sesión acá se guarda el texto extraído en tu cuenta para armar el archivo de sesión. Con conexión, el asistente en línea (Gemini) recibe ese texto para responder; el asistente sin conexión trabaja en tu equipo y no envía nada.',
   },
   {
     q: '¿Cuánto cuesta?',
@@ -99,7 +101,7 @@ const FAQ = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-full bg-canvas text-ink">
       <Header />
       <main>
         <Hero />
@@ -118,9 +120,7 @@ export default function LandingPage() {
               YALEH v{APP_VERSION} · Proyecto de grado de Mario Víctor Brañez Rodriguez · TECBA 2026
             </span>
           </div>
-          <a href={DOWNLOADS.webAppUrl} className="hover:text-ink">
-            Web de YALEH
-          </a>
+          <span>Hecho para estudiantes del TECBA</span>
         </div>
       </footer>
     </div>
@@ -150,6 +150,30 @@ function DownloadButton({ large = false, compact = false }: { large?: boolean; c
   );
 }
 
+/** "Preparar mi sesión": el login con Google (o Material si la cuenta ya está iniciada). */
+function PrepareButton({ large = false, compact = false }: { large?: boolean; compact?: boolean }) {
+  const { state, dispatch } = useApp();
+  return (
+    <button
+      onClick={() => dispatch({ type: 'SET_PHASE', payload: state.session.isAuthenticated ? 'dropzone' : 'login' })}
+      data-testid="prepare-session"
+      className={`inline-flex items-center justify-center gap-2 rounded-[18px] border border-line bg-surface text-ink font-medium whitespace-nowrap hover:border-ink-muted ${
+        large ? 'h-14 px-6 text-base' : 'h-11 px-4 text-sm'
+      }`}
+    >
+      <LogIn size={large ? 18 : 16} />
+      {compact ? (
+        <>
+          <span className="sm:hidden">Preparar</span>
+          <span className="hidden sm:inline">Preparar mi sesión</span>
+        </>
+      ) : (
+        'Preparar mi sesión'
+      )}
+    </button>
+  );
+}
+
 function Header() {
   return (
     <header className="sticky top-0 z-40 bg-canvas/85 backdrop-blur border-b border-line">
@@ -158,15 +182,19 @@ function Header() {
           <Logo size={38} />
           <b className="font-display text-[19px] font-extrabold tracking-[0.04em]">YALEH</b>
         </a>
-        <nav className="hidden lg:flex flex-1 justify-center gap-1" aria-label="Secciones">
+        <nav className="hidden xl:flex flex-1 justify-center gap-1" aria-label="Secciones">
           {NAV.map(item => (
-            <a key={item.href} href={item.href} className="px-3 py-2 rounded-lg text-sm text-ink-soft hover:text-ink hover:bg-surface-raised">
+            <a key={item.href} href={item.href} className="px-3 py-2 rounded-lg text-sm text-ink-soft whitespace-nowrap hover:text-ink hover:bg-surface-raised">
               {item.label}
             </a>
           ))}
         </nav>
-        <div className="ml-auto lg:ml-0">
-          <DownloadButton compact />
+        <div className="ml-auto xl:ml-0 flex items-center gap-2">
+          {/* En el celular solo cabe uno: preparar la sesión (los dos botones están en la portada). */}
+          <PrepareButton compact />
+          <span className="hidden sm:inline-flex">
+            <DownloadButton compact />
+          </span>
         </div>
       </div>
     </header>
@@ -194,16 +222,12 @@ function Hero() {
             propios apuntes, con o sin internet.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+            <PrepareButton large />
             <DownloadButton large />
-            <a
-              href={DOWNLOADS.webAppUrl}
-              className="inline-flex items-center justify-center gap-2 h-14 px-6 rounded-[18px] border border-line bg-surface text-ink font-medium whitespace-nowrap hover:border-ink-muted"
-            >
-              <Globe size={18} /> Preparar una sesión en la web
-            </a>
           </div>
           <p className="mt-4 text-[0.8rem] text-ink-muted">
-            Versión {APP_VERSION} · instalador de {DOWNLOADS.installerSizeLabel} · 64 bits · sin permisos de administrador
+            ¿Todavía no tenés la aplicación? Descargala para computadoras con Windows: versión {APP_VERSION}, {DOWNLOADS.installerSizeLabel}, 64 bits,
+            sin permisos de administrador.
           </p>
         </div>
         <KioskPreview />
@@ -281,7 +305,11 @@ function HowItWorks() {
   return (
     <section id="como-funciona" className="scroll-mt-20 border-t border-line">
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-20">
-        <SectionTitle eyebrow="Cómo funciona" title="Tres pasos y a estudiar" text="Como un examen con navegador seguro, pero para tus horas de estudio." />
+        <SectionTitle
+          eyebrow="Cómo funciona"
+          title="Tres pasos y a estudiar"
+          text="Si es la primera vez, descargá e instalá la aplicación. Después, cada sesión empieza acá."
+        />
         <ol className="grid md:grid-cols-3 gap-4">
           {STEPS.map(({ icon: Icon, title, text }, i) => (
             <li key={title} className="rounded-[20px] border border-line bg-surface p-6">
@@ -294,8 +322,12 @@ function HowItWorks() {
             </li>
           ))}
         </ol>
-        <p className="mt-6 text-center text-sm text-ink-muted">
-          ¿Sin la web? En la aplicación tocá <b className="text-ink font-medium">Iniciar</b>, cargá tus archivos y elegí el tiempo.
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+          <PrepareButton large />
+          <DownloadButton large />
+        </div>
+        <p className="mt-5 text-center text-sm text-ink-muted">
+          ¿Sin internet? En la aplicación tocá <b className="text-ink font-medium">Iniciar</b>, cargá tus archivos y elegí el tiempo.
         </p>
       </div>
     </section>
@@ -466,8 +498,11 @@ function FinalCta() {
         <h2 className="font-display text-3xl sm:text-[2.75rem] leading-[1.05] font-extrabold tracking-tight">
           Tu próxima sesión, sin distracciones<span className="text-accent">.</span>
         </h2>
-        <DownloadButton large />
-        <p className="text-[0.8rem] text-ink-muted">Gratis · Windows 10 y 11 · versión {APP_VERSION}</p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <PrepareButton large />
+          <DownloadButton large />
+        </div>
+        <p className="text-[0.8rem] text-ink-muted">Gratis · la aplicación es para Windows 10 y 11 · versión {APP_VERSION}</p>
       </div>
     </section>
   );

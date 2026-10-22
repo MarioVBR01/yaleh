@@ -1,7 +1,7 @@
 /**
  * Copia el instalador (release/YALEH-Setup-<versión>.exe, de `npm run dist`) a dist/downloads/, donde lo
- * busca el botón de la landing page. Uso, al publicar: npm run dist && npm run landing:installer
- * (y quitar "landing.html" y "downloads/**" de "ignore" en firebase.json).
+ * busca el botón "Descargar para Windows" de la landing. Lo usa `npm run deploy:web` (va después de
+ * compilar, porque `npm run build` vacía dist/).
  */
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
