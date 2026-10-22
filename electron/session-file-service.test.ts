@@ -55,6 +55,32 @@ describe('openSessionFile', () => {
     expect(d.start).toHaveBeenCalledWith(120, 'offline', 'sesion123');
   });
 
+  it('al abrir la app con el archivo espera el modo de la conexión: si llega "online", la sesión empieza online', async () => {
+    let answer: (mode: SessionMode) => void = () => {};
+    const currentMode = vi.fn(() => new Promise<SessionMode>(resolve => (answer = resolve)));
+    const d = deps({ currentMode });
+    const result = openSessionFile(await rawFile(), d);
+    await vi.waitFor(() => expect(currentMode).toHaveBeenCalled());
+    expect(d.start).not.toHaveBeenCalled();
+    answer('online');
+    expect(await result).toMatchObject({ ok: true, snapshot: { mode: 'online' } });
+    expect(d.start).toHaveBeenCalledWith(120, 'online', 'sesion123');
+  });
+
+  it('si mientras espera la conexión empieza otra sesión, no empieza una segunda', async () => {
+    let locked = false;
+    let answer: (mode: SessionMode) => void = () => {};
+    const currentMode = vi.fn(() => new Promise<SessionMode>(resolve => (answer = resolve)));
+    const d = deps({ isLocked: () => locked, currentMode });
+    const result = openSessionFile(await rawFile(), d);
+    await vi.waitFor(() => expect(currentMode).toHaveBeenCalled());
+    locked = true;
+    answer('online');
+    expect(await result).toMatchObject({ ok: false, message: 'Ya hay una sesión en curso.' });
+    expect(d.start).not.toHaveBeenCalled();
+    expect(d.saveSources).not.toHaveBeenCalled();
+  });
+
   it('uso único: el mismo archivo no se puede abrir dos veces', async () => {
     const d = deps();
     expect((await openSessionFile(await rawFile(), d)).ok).toBe(true);

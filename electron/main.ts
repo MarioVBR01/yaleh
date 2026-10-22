@@ -137,9 +137,13 @@ function isLocked(): boolean {
   return controller.isActive();
 }
 
-/** El modo de una sesión lo decide el proceso principal según la conexión al empezar. */
-function currentSessionMode(): SessionMode {
-  return connectivity.getMode() === 'online' ? 'online' : 'offline';
+/**
+ * El modo de una sesión lo decide el proceso principal según la conexión al empezar. Si la primera
+ * comprobación todavía no terminó, la espera (hasta ~5 s): al abrir con doble clic un .yaleh la sesión
+ * empezaba sin conexión aunque hubiera internet.
+ */
+function sessionModeForStart(): Promise<SessionMode> {
+  return connectivity.sessionMode();
 }
 
 function send(channel: string, payload: unknown): void {
@@ -191,7 +195,7 @@ async function openSessionFileContent(raw: string): Promise<OpenSessionFileResul
       }
       return workspace.listSources(sessionId);
     },
-    currentMode: currentSessionMode,
+    currentMode: sessionModeForStart,
     start: (durationSeconds, mode, sessionId) => controller.start(durationSeconds, mode, sessionId),
   });
   if (result.ok) googleAccountHint = isUsableEmail(result.createdBy.email) ? result.createdBy.email : null;
@@ -255,11 +259,13 @@ function registerIpcHandlers(): void {
   handle(IPC_INVOKE.appGetInfo, (): AppInfo => ({ version: app.getVersion(), isPackaged }));
 
   // Flujo local ("Iniciar"): el modo lo decide la conexión en este momento.
-  handle(IPC_INVOKE.sessionStart, (_event, durationSeconds, sessionId) => {
+  handle(IPC_INVOKE.sessionStart, async (_event, durationSeconds, sessionId) => {
     const seconds = parseDurationSeconds(durationSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60);
+    const id = parseOptionalSessionId(sessionId);
+    const mode = await sessionModeForStart();
     // Flujo local: no hay correo de la web.
     googleAccountHint = null;
-    return controller.start(seconds, currentSessionMode(), parseOptionalSessionId(sessionId));
+    return controller.start(seconds, mode, id);
   });
   handle(IPC_INVOKE.sessionGetState, () => controller.getSnapshot());
   handle(IPC_INVOKE.sessionResume, () => controller.resume());

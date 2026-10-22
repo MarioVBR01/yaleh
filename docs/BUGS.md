@@ -86,3 +86,17 @@ Los errores se corrigen al final (antes de la fase 11); al corregir uno, cambia 
   - `firebase.json`: `/` también con `Cache-Control: no-cache`.
   - Pruebas: `src/firebase/persistence.test.ts`.
 - **Para probar:** abrir la web con una sesión iniciada antes → debe mostrar el login con "Continuar con Google". Iniciar sesión → dropzone con la barra de la cuenta. Recargar → vuelve a pedir la cuenta.
+
+### BUG-003 — El .yaleh abierto con doble clic empieza la sesión sin conexión
+
+- **Reportado:** 2026-10-22, por Mario, con la app instalada (v1.0.0).
+- **Dónde:** escritorio (app instalada) → abrir un `.yaleh` con doble clic con YALEH cerrada.
+- **Qué pasó:** con internet, la sesión empezó en modo sin conexión: sin herramientas de Google y con la IA sin conexión.
+- **Qué debería pasar:** con internet, la sesión empieza con conexión (herramientas de Google y Gemini).
+- **Diagnóstico (confirmado en el código):** al arrancar, la primera comprobación de la red (`connectivity.start()`) no se espera y el modo queda en `unknown` hasta que responde la web de YALEH (hasta 5 s, `CONNECTIVITY.probeTimeoutMs`). El `.yaleh` se abre apenas carga la interfaz, y el modo de la sesión convertía `unknown` en `offline`; el modo se fija al empezar y no cambia después. El botón "Iniciar" usaba la misma función.
+- **Corrección:**
+  - `ConnectivityMonitor.sessionMode()` (`electron/connectivity.ts`): si el modo todavía es `unknown`, espera la comprobación en curso (no hace otra petición; como máximo el tiempo límite de 5 s).
+  - Lo usan los dos puntos de entrada en `electron/main.ts`: abrir un `.yaleh` (`openSessionFile`, ahora con el modo asíncrono) y el inicio local (`session:start`).
+  - `openSessionFile` vuelve a comprobar, después de esperar, que no haya empezado otra sesión ni se haya usado el mismo archivo.
+  - Pruebas: `electron/connectivity.test.ts` (modo `unknown` + respuesta "con conexión" después → online; sin internet → offline; límite de 5 s) y `electron/session-file-service.test.ts`.
+- **Para probar (app instalada):** con internet y YALEH cerrada, doble clic en un `.yaleh` nuevo → con conexión. Con YALEH abierta, otro `.yaleh` → con conexión. Sin internet → sin conexión, con una espera de unos 5 s como máximo.

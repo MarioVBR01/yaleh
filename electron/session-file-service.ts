@@ -18,8 +18,8 @@ export interface OpenSessionFileDeps {
   isUsed: (sessionId: string) => boolean;
   /** Guarda las fuentes en SQLite y devuelve la lista guardada. */
   saveSources: (sessionId: string, sources: SessionFileSource[]) => LocalSourceInfo[];
-  /** Modo según la conexión en este momento. */
-  currentMode: () => SessionMode;
+  /** Modo según la conexión; puede esperar la primera comprobación de la red (hasta ~5 s). */
+  currentMode: () => SessionMode | Promise<SessionMode>;
   /** Empieza la sesión (bloquea el equipo). */
   start: (durationSeconds: number, mode: SessionMode, sessionId: string) => SessionSnapshot;
   now?: () => Date;
@@ -34,8 +34,14 @@ export async function openSessionFile(raw: string, deps: OpenSessionFileDeps): P
   const file = validation.file;
   if (deps.isUsed(file.sessionId)) return { ok: false, message: SESSION_FILE_ERRORS.used };
 
+  // Modo de la conexión: si la app recién abre con el archivo, la primera comprobación puede estar en curso.
+  const mode = await deps.currentMode();
+  // Mientras se esperaba pudo empezar otra sesión o abrirse este mismo archivo.
+  if (deps.isLocked()) return { ok: false, message: 'Ya hay una sesión en curso.' };
+  if (deps.isUsed(file.sessionId)) return { ok: false, message: SESSION_FILE_ERRORS.used };
+
   const sources = deps.saveSources(file.sessionId, file.sources);
-  const snapshot = deps.start(file.durationSeconds, deps.currentMode(), file.sessionId);
+  const snapshot = deps.start(file.durationSeconds, mode, file.sessionId);
   return { ok: true, snapshot, sources, createdBy: file.createdBy };
 }
 

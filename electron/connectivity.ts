@@ -5,7 +5,7 @@
  * una petición HTTPS antes del tiempo límite; cualquier respuesta HTTP cuenta.
  */
 
-import type { ConnectionMode } from '../shared/ipc-types';
+import type { ConnectionMode, SessionMode } from '../shared/ipc-types';
 
 /** Devuelve true si el servidor respondió (con cualquier código HTTP). */
 export type Probe = () => Promise<boolean>;
@@ -52,6 +52,17 @@ export class ConnectivityMonitor {
 
   getMode(): ConnectionMode {
     return this.mode;
+  }
+
+  /**
+   * Modo con el que empieza una sesión. Si todavía no se sabe (la app recién abre, por ejemplo con un
+   * .yaleh por doble clic), espera la comprobación en curso, que tarda como máximo el tiempo límite de la
+   * petición (CONNECTIVITY.probeTimeoutMs). Antes se tomaba 'unknown' como sin conexión y la sesión
+   * quedaba sin las herramientas ni la IA en línea aunque hubiera internet.
+   */
+  async sessionMode(): Promise<SessionMode> {
+    const mode = this.mode === 'unknown' ? await this.check() : this.mode;
+    return mode === 'online' ? 'online' : 'offline';
   }
 
   /** Comprueba ahora y luego cada `intervalMs`. */

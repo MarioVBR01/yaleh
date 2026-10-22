@@ -113,6 +113,45 @@ describe('ConnectivityMonitor', () => {
   });
 });
 
+describe('Modo para empezar una sesión', () => {
+  it('con el modo en "unknown", espera la comprobación: si responde con conexión, la sesión empieza online', async () => {
+    let answer: (reachable: boolean) => void = () => {};
+    const probe = vi.fn<Probe>(() => new Promise<boolean>(resolve => (answer = resolve)));
+    const { monitor } = createMonitor({ systemOnline: true }, probe);
+    void monitor.start();
+    expect(monitor.getMode()).toBe('unknown');
+
+    const mode = monitor.sessionMode();
+    answer(true);
+    expect(await mode).toBe('online');
+    // Reutiliza la comprobación en curso: una sola petición.
+    expect(probe).toHaveBeenCalledTimes(1);
+    monitor.stop();
+  });
+
+  it('sin internet espera lo mismo y empieza sin conexión', async () => {
+    const { net, probe } = fakeNetwork({ systemOnline: true, serverReachable: false });
+    const { monitor } = createMonitor(net, probe);
+    expect(await monitor.sessionMode()).toBe('offline');
+  });
+
+  it('con el modo ya conocido no espera ni vuelve a comprobar', async () => {
+    const { net, probe } = fakeNetwork({ systemOnline: true, serverReachable: true });
+    const { monitor } = createMonitor(net, probe);
+    await monitor.check();
+    expect(await monitor.sessionMode()).toBe('online');
+    expect(probe).toHaveBeenCalledTimes(1);
+  });
+
+  it('la espera no pasa del tiempo límite de la petición (el servidor no responde)', async () => {
+    const neverAnswers = createHttpProbe(() => new Promise(() => {}), 'https://yaleh-fbe1c.web.app', 5_000);
+    const { monitor } = createMonitor({ systemOnline: true }, neverAnswers);
+    const mode = monitor.sessionMode();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(await mode).toBe('offline');
+  });
+});
+
 describe('createHttpProbe', () => {
   it('cualquier respuesta HTTP cuenta como conexión (también 404 o 500)', async () => {
     const fetchImpl = vi.fn(async () => ({ status: 500 }));
