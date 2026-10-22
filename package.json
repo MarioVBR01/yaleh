@@ -1,7 +1,7 @@
 {
   "name": "yaleh",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "YALEH: entorno de estudio con bloqueo del sistema operativo e IA para estudiantes del TECBA",
   "author": "Mario Víctor Brañez Rodriguez",
   "type": "module",

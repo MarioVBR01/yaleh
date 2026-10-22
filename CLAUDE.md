@@ -26,7 +26,7 @@ Rama de trabajo: `v1-yaleh` (el MVP original está en `main`). Remoto: GitHub `M
 | 9. Editores de ofimática con exportación | Hecha (eliminados después en ORION #12; queda la exportación a .pptx) |
 | 10. Historial y estadísticas (SQLite; la sincronización pasa a v2) | Hecha |
 | 10b. IA sin conexión (Qwen3.5-4B con node-llama-cpp, FTS5; revisión 1.8) | Hecha |
-| 11. Pruebas y empaquetado | Instalador hecho (`npm run dist`, v1.0.0); falta probarlo en otra computadora |
+| 11. Pruebas y empaquetado | Instalador publicado (v1.0.1 en GitHub Releases, descarga desde la landing); falta probarlo en otra computadora |
 
 ## Comandos
 
@@ -249,11 +249,11 @@ Tabla `session_events` de `yaleh.db`: inicio, fin, retomada, interrumpida, pérd
 
 ## Instalador (fase 11)
 
-- **electron-builder** (`electron-builder.yml`): NSIS x64, `oneClick: false`, `perMachine: false` (se instala en `%LOCALAPPDATA%ProgramsYALEH` sin administrador), accesos directos en el escritorio y el menú Inicio, `deleteAppDataOnUninstall: false`. Versión: la de `package.json` (1.0.0). Icono: `build/icon.ico`.
+- **electron-builder** (`electron-builder.yml`): NSIS x64, `oneClick: false`, `perMachine: false` (se instala en `%LOCALAPPDATA%\Programs\YALEH` sin administrador), accesos directos en el escritorio y el menú Inicio, `deleteAppDataOnUninstall: false`. Versión: la de `package.json` (hoy 1.0.1; v1.0.0 tenía el BUG-003). Icono: `build/icon.ico`.
 - **Qué entra:** `dist/`, `dist-electron/` (sin `bench-local-ai.cjs` ni mapas) y `package.json`. Nunca `.env` ni el modelo. **Dependencias:** en `dependencies` van solo los paquetes que el proceso principal carga al ejecutarse (`node-llama-cpp`, `pptxgenjs`); todo lo de la interfaz (React, Firebase, pdf.js…) va en `devDependencies` porque Vite lo compila dentro de `dist/`. Si se agrega una dependencia del proceso principal que no se empaqueta con esbuild, va en `dependencies`.
 - **node-llama-cpp:** fuera del asar (`asarUnpack`), solo `@node-llama-cpp/win-x64` (CPU) y `win-x64-vulkan`; sin CUDA, ARM ni `llama/gitRelease.bundle` (código fuente). `npmRebuild: false`. Probado: el ejecutable empaquetado carga los binarios (Vulkan y CPU) y genera texto con el modelo.
 - **Pantalla de bienvenida** (`electron/splash.ts`): ventana chica sin bordes con el logo, "YALEH.", la versión, el copyright y una barra de carga; aparece al arrancar y se cierra cuando la ventana principal está dibujada (mínimo `SPLASH_MIN_MS`, 1,5 s; a los 15 s se muestra igual). Si al abrir con un `.yaleh` empieza la sesión, se cierra en el acto para no quedar encima del kiosko. Aislada: partición propia que solo acepta su página `data:`, sin JavaScript. No aparece en la prueba de humo.
-- **Carpeta de datos:** `main.ts` la fija en `%APPDATA%yaleh` (el nombre del producto es "YALEH"); la app instalada y la de desarrollo comparten historial, configuración y modelo.
+- **Carpeta de datos:** `main.ts` la fija en `%APPDATA%\yaleh` (el nombre del producto es "YALEH"); la app instalada y la de desarrollo comparten historial, configuración y modelo.
 - **Tamaño:** instalador de ~120 MB (Electron ~85 MB comprimido + binarios de llama.cpp ~100 MB sin comprimir).
 - **Sin firma de código:** Windows SmartScreen avisa "Windows protegió su PC" la primera vez (Más información → Ejecutar de todas formas). Firmar requiere un certificado pago.
 
