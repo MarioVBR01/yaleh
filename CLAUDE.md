@@ -186,7 +186,7 @@ Una sola compilación de la interfaz (`dist/`, `base: './'`, entradas `index.htm
 
 - **Detección (proceso principal, `connectivity.ts`):** online si `net.isOnline()` y la web de YALEH responde una petición HEAD en menos de 5 s (cualquier código HTTP cuenta). Se repite cada 30 s, al volver de la suspensión (`powerMonitor`) y cuando la interfaz ve eventos `online`/`offline` (solo piden una nueva comprobación; decide el proceso principal). Parámetros en `CONNECTIVITY` (`shared/config.ts`).
 - **Escritorio sin login:** arranca en la bienvenida (`desktop-start`), que avisa solo si no hay conexión (ORION #30).
-- **Modo de la sesión** (`sessionMode`, guardado en `sessions.mode`): online si hay conexión al empezar, offline si no. Lo decide el proceso principal con `connectivity.sessionMode()`: si la primera comprobación todavía no terminó (la app recién abre, por ejemplo con un `.yaleh` por doble clic), la espera, como máximo 5 s (BUG-003). Vale para el `.yaleh` y para "Iniciar".
+- **Modo de la sesión** (`sessionMode`, guardado en `sessions.mode`): online si hay conexión al empezar, offline si no. Lo decide el proceso principal con `connectivity.sessionMode()`, que comprueba la conexión en el momento de empezar (reutiliza la comprobación en curso si la hay; sin red es inmediato, con red tarda lo que responda la web, como máximo 5 s; BUG-003). Vale para el `.yaleh` y para "Iniciar".
 - **Qué se muestra (`useModeFlags`):** en la web, todo. En el escritorio, las herramientas online y la IA solo en una sesión online con conexión. Si se corta la red en una sesión online: aviso "Sin conexión: puedes seguir con los módulos locales"; el kiosko y el tiempo no cambian; el proceso principal registra `connection-lost` / `connection-restored`.
 
 ## SQLite (fase 3)

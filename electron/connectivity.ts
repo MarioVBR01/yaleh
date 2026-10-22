@@ -55,14 +55,14 @@ export class ConnectivityMonitor {
   }
 
   /**
-   * Modo con el que empieza una sesión. Si todavía no se sabe (la app recién abre, por ejemplo con un
-   * .yaleh por doble clic), espera la comprobación en curso, que tarda como máximo el tiempo límite de la
-   * petición (CONNECTIVITY.probeTimeoutMs). Antes se tomaba 'unknown' como sin conexión y la sesión
-   * quedaba sin las herramientas ni la IA en línea aunque hubiera internet.
+   * Modo con el que empieza una sesión: comprueba la conexión en ese momento (BUG-003). Si ya hay una
+   * comprobación en curso (la app recién abre, por ejemplo con un .yaleh por doble clic), la reutiliza.
+   * Sin red del sistema es inmediato; con red tarda lo que la web de YALEH en responder, como máximo el
+   * tiempo límite de la petición (CONNECTIVITY.probeTimeoutMs). Antes se usaba el último resultado
+   * ('unknown' al arrancar contaba como sin conexión, y en marcha podía tener hasta 30 s).
    */
   async sessionMode(): Promise<SessionMode> {
-    const mode = this.mode === 'unknown' ? await this.check() : this.mode;
-    return mode === 'online' ? 'online' : 'offline';
+    return (await this.check()) === 'online' ? 'online' : 'offline';
   }
 
   /** Comprueba ahora y luego cada `intervalMs`. */

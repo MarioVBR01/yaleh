@@ -135,12 +135,30 @@ describe('Modo para empezar una sesión', () => {
     expect(await monitor.sessionMode()).toBe('offline');
   });
 
-  it('con el modo ya conocido no espera ni vuelve a comprobar', async () => {
+  it('comprueba en el momento de empezar: si internet se cortó desde la última comprobación, empieza sin conexión', async () => {
     const { net, probe } = fakeNetwork({ systemOnline: true, serverReachable: true });
     const { monitor } = createMonitor(net, probe);
     await monitor.check();
+    expect(monitor.getMode()).toBe('online');
+    // El router se cae, pero Windows sigue con el Wi-Fi conectado (no hay evento de red).
+    net.serverReachable = false;
+    expect(await monitor.sessionMode()).toBe('offline');
+  });
+
+  it('y si internet volvió desde la última comprobación, empieza con conexión', async () => {
+    const { net, probe } = fakeNetwork({ systemOnline: false, serverReachable: true });
+    const { monitor } = createMonitor(net, probe);
+    await monitor.check();
+    expect(monitor.getMode()).toBe('offline');
+    net.systemOnline = true;
     expect(await monitor.sessionMode()).toBe('online');
-    expect(probe).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin red del sistema no hace la petición (es inmediato)', async () => {
+    const { net, probe } = fakeNetwork({ systemOnline: false, serverReachable: true });
+    const { monitor } = createMonitor(net, probe);
+    expect(await monitor.sessionMode()).toBe('offline');
+    expect(probe).not.toHaveBeenCalled();
   });
 
   it('la espera no pasa del tiempo límite de la petición (el servidor no responde)', async () => {

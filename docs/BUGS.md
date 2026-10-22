@@ -95,7 +95,7 @@ Los errores se corrigen al final (antes de la fase 11); al corregir uno, cambia 
 - **Qué debería pasar:** con internet, la sesión empieza con conexión (herramientas de Google y Gemini).
 - **Diagnóstico (confirmado en el código):** al arrancar, la primera comprobación de la red (`connectivity.start()`) no se espera y el modo queda en `unknown` hasta que responde la web de YALEH (hasta 5 s, `CONNECTIVITY.probeTimeoutMs`). El `.yaleh` se abre apenas carga la interfaz, y el modo de la sesión convertía `unknown` en `offline`; el modo se fija al empezar y no cambia después. El botón "Iniciar" usaba la misma función.
 - **Corrección:**
-  - `ConnectivityMonitor.sessionMode()` (`electron/connectivity.ts`): si el modo todavía es `unknown`, espera la comprobación en curso (no hace otra petición; como máximo el tiempo límite de 5 s).
+  - `ConnectivityMonitor.sessionMode()` (`electron/connectivity.ts`): comprueba la conexión en el momento de empezar la sesión (reutiliza la comprobación en curso si la hay; sin red es inmediato; con red, como máximo el tiempo límite de 5 s). Así tampoco se usa un resultado viejo de hasta 30 s.
   - Lo usan los dos puntos de entrada en `electron/main.ts`: abrir un `.yaleh` (`openSessionFile`, ahora con el modo asíncrono) y el inicio local (`session:start`).
   - `openSessionFile` vuelve a comprobar, después de esperar, que no haya empezado otra sesión ni se haya usado el mismo archivo.
   - Pruebas: `electron/connectivity.test.ts` (modo `unknown` + respuesta "con conexión" después → online; sin internet → offline; límite de 5 s) y `electron/session-file-service.test.ts`.
