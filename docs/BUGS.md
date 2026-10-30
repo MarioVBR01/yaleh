@@ -100,3 +100,22 @@ Los errores se corrigen al final (antes de la fase 11); al corregir uno, cambia 
   - `openSessionFile` vuelve a comprobar, después de esperar, que no haya empezado otra sesión ni se haya usado el mismo archivo.
   - Pruebas: `electron/connectivity.test.ts` (modo `unknown` + respuesta "con conexión" después → online; sin internet → offline; límite de 5 s) y `electron/session-file-service.test.ts`.
 - **Para probar (app instalada):** con internet y YALEH cerrada, doble clic en un `.yaleh` nuevo → con conexión. Con YALEH abierta, otro `.yaleh` → con conexión. Sin internet → sin conexión, con una espera de unos 5 s como máximo.
+
+### BUG-004 — El login con Google de la web dice "Este dominio no está autorizado"
+
+- **Estado:** En corrección (código listo; falta autorizar el dominio en la consola de Firebase cuando se sepa cuál es). ORION #81.
+- **Gravedad:** Alta (sin login no se prepara ninguna sesión ni se descarga el .yaleh)
+- **Dónde:** Web (navegador de una máquina del laboratorio; no se anotó la dirección)
+- **Modo:** Con conexión
+- **Fecha:** 2026-10-26
+- **Pasos para reproducirlo:**
+  1. Abrir la web de YALEH en el navegador.
+  2. Pulsar "Continuar con Google".
+- **Qué pasó:** debajo del botón, en rojo: "Este dominio no está autorizado para iniciar sesión. Avisa al administrador de YALEH." No entra.
+- **Qué debería pasar:** se abre la ventana de Google, se elige la cuenta y se entra, como en `https://yaleh-fbe1c.web.app`.
+- **Causa:** Firebase devuelve `auth/unauthorized-domain`: la web se abrió desde un dominio que no está en Authentication → Configuración → Dominios autorizados del proyecto `yaleh-fbe1c` (por defecto solo `localhost`, `yaleh-fbe1c.web.app` y `yaleh-fbe1c.firebaseapp.com`). Casos probables: un canal de vista previa de Hosting (`yaleh-fbe1c--<canal>.web.app`), la IP de la red local con `vite --host` (`192.168.x.x:5173`), `127.0.0.1` u otro hosting. No es un fallo del código de la web publicada.
+- **Corrección en el código:**
+  - `describeAuthError` (`src/firebase/auth.ts`) agrega la dirección de la página al mensaje: "Este dominio (192.168.1.20:5173) no está autorizado…". La próxima captura dice qué dominio autorizar.
+  - `resolveAuthDomain` (`src/firebase/app.ts`) también usa el propio dominio en los canales de vista previa (`YALEH_PREVIEW_ORIGIN` en `shared/config.ts`); si no, usaría `yaleh-fbe1c.firebaseapp.com` y volvería el BUG-001 en Chrome.
+  - Pruebas en `src/firebase/auth.test.ts`.
+- **Paso manual (lo hace el administrador):** agregar el host que muestra el mensaje (sin `https://` ni puerto) en Firebase → Authentication → Configuración → Dominios autorizados. Si es un canal de vista previa, agregar además `https://<ese host>/__/auth/handler` a los URI de redireccionamiento del cliente OAuth "Web client (auto created by Google Service)", como en el BUG-001.

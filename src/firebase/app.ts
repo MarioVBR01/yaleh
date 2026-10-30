@@ -8,7 +8,7 @@ import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { CustomProvider, initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { browserPopupRedirectResolver, getAuth, inMemoryPersistence, initializeAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
-import { YALEH_WEB_ORIGINS } from '@shared/config';
+import { YALEH_PREVIEW_ORIGIN, YALEH_WEB_ORIGINS } from '@shared/config';
 
 const env = import.meta.env;
 
@@ -16,10 +16,14 @@ const env = import.meta.env;
  * Dominio de autenticación (BUG-001). En la web publicada se usa el mismo dominio de la página
  * (Firebase Hosting sirve /__/auth/handler en web.app y en firebaseapp.com): si el login usa otro
  * dominio, los navegadores que bloquean el almacenamiento de terceros (Chrome) cierran la ventana
- * de Google sin entregar el resultado. En localhost y en el escritorio se usa el de .env.
+ * de Google sin entregar el resultado. Lo mismo en los canales de vista previa de Hosting
+ * (yaleh-fbe1c--<canal>.web.app, BUG-004), que también sirven /__/auth/handler. En localhost y en el
+ * escritorio se usa el de .env.
  */
 export function resolveAuthDomain(origin: string | undefined, fallback: string | undefined): string | undefined {
-  if (origin && (YALEH_WEB_ORIGINS as readonly string[]).includes(origin)) return new URL(origin).host;
+  if (origin && ((YALEH_WEB_ORIGINS as readonly string[]).includes(origin) || YALEH_PREVIEW_ORIGIN.test(origin))) {
+    return new URL(origin).host;
+  }
   return fallback;
 }
 

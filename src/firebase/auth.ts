@@ -42,8 +42,15 @@ export function currentUser(): User | null {
   return isFirebaseConfigured ? getFirebaseAuth().currentUser : null;
 }
 
-/** Mensaje en español para los errores más comunes del inicio de sesión. */
-export function describeAuthError(error: unknown): string {
+function currentHost(): string {
+  return typeof window !== 'undefined' ? window.location.host : '';
+}
+
+/**
+ * Mensaje en español para los errores más comunes del inicio de sesión. `host` es la dirección de la
+ * página (BUG-004): con un dominio no autorizado, la captura ya dice cuál hay que autorizar en Firebase.
+ */
+export function describeAuthError(error: unknown, host: string = currentHost()): string {
   const code = (error as { code?: string })?.code ?? '';
   if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
     return 'Cerraste la ventana de Google antes de terminar.';
@@ -51,7 +58,10 @@ export function describeAuthError(error: unknown): string {
   if (code === 'auth/popup-blocked') return 'El navegador bloqueó la ventana de Google. Permite las ventanas emergentes.';
   if (code === 'auth/network-request-failed') return 'No hay conexión. Revisa tu internet.';
   if (code === 'auth/invalid-credential') return 'La credencial de Google no es válida o expiró. Vuelve a intentarlo.';
-  if (code === 'auth/unauthorized-domain') return 'Este dominio no está autorizado para iniciar sesión. Avisa al administrador de YALEH.';
+  if (code === 'auth/unauthorized-domain') {
+    const where = host ? ` (${host})` : '';
+    return `Este dominio${where} no está autorizado para iniciar sesión. Avisa al administrador de YALEH.`;
+  }
   // El código ayuda a diagnosticar (BUG-001): se muestra junto al mensaje.
   return code
     ? `No se pudo iniciar sesión con Google (${code}). Inténtalo de nuevo.`

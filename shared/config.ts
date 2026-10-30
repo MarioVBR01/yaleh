@@ -24,6 +24,9 @@ export const YALEH_WEB_ORIGINS = [
   'https://yaleh-fbe1c.firebaseapp.com',
 ] as const;
 
+/** Canales de vista previa de Firebase Hosting (`firebase hosting:channel:deploy`): yaleh-fbe1c--<canal>.web.app. */
+export const YALEH_PREVIEW_ORIGIN = /^https:\/\/yaleh-fbe1c--[a-z0-9-]+\.web\.app$/;
+
 /**
  * Lista de sitios que pueden cargarse como página o marco (brief, sección 9).
  * Todo lo demás se bloquea. Solo HTTPS.
