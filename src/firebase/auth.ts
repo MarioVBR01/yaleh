@@ -42,6 +42,11 @@ export function currentUser(): User | null {
   return isFirebaseConfigured ? getFirebaseAuth().currentUser : null;
 }
 
+/** true si Firebase rechazó el inicio de sesión porque la página no está en un dominio autorizado (BUG-004). */
+export function isUnauthorizedDomain(error: unknown): boolean {
+  return (error as { code?: string })?.code === 'auth/unauthorized-domain';
+}
+
 function currentHost(): string {
   return typeof window !== 'undefined' ? window.location.host : '';
 }

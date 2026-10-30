@@ -12,27 +12,33 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { APP_VERSION } from '@shared/config';
+import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react';
+import { APP_VERSION, YALEH_WEB_ORIGINS } from '@shared/config';
 import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
 import { isFirebaseConfigured } from '../firebase/app';
-import { describeAuthError, signInWithGoogle } from '../firebase/auth';
+import { describeAuthError, isUnauthorizedDomain, signInWithGoogle } from '../firebase/auth';
+
+/** Web oficial, donde el login siempre está autorizado. */
+const OFFICIAL_WEB = YALEH_WEB_ORIGINS[0];
 
 export default function LoginPhase() {
   const { state, dispatch } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wrongDomain, setWrongDomain] = useState(false);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+    setWrongDomain(false);
     try {
       await signInWithGoogle();
       // App.tsx recibe el usuario (onAuthStateChanged) y cambia de pantalla.
     } catch (err) {
       console.error('Error al iniciar sesión con Google:', err);
       setError(describeAuthError(err));
+      setWrongDomain(isUnauthorizedDomain(err));
       setLoading(false);
     }
   };
@@ -96,6 +102,15 @@ export default function LoginPhase() {
             <p role="alert" className="text-sm text-danger">
               {error}
             </p>
+          )}
+          {/* BUG-004: abierta desde otra dirección (IP de la red, vista previa…), se ofrece la web oficial. */}
+          {wrongDomain && (
+            <a
+              href={OFFICIAL_WEB}
+              className="mx-auto inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-accent text-on-accent text-sm font-medium hover:opacity-90"
+            >
+              Abrir la web oficial ({new URL(OFFICIAL_WEB).host}) <ExternalLink size={15} />
+            </a>
           )}
           {!isFirebaseConfigured && <p className="text-xs text-warning">Falta la configuración de Firebase (.env).</p>}
         </div>
