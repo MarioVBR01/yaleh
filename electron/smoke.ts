@@ -120,6 +120,40 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
             history: window.electronAPI ? Array.isArray(await window.electronAPI.listSessionHistory()) : false,
             localAi: window.electronAPI ? (await window.electronAPI.localAi.getStatus()).state : null,
             settings: window.electronAPI ? (await window.electronAPI.settings.get()).settings.endWarningMinutes : null,
+            // Lo que recibe un clic real en el centro del botón (element.click() no pasa por acá).
+            welcomeButtons: (() => {
+              const receivesClicks = label => {
+                const button = document.querySelector('button[aria-label^="' + label + '"]');
+                if (!button) return false;
+                const r = button.getBoundingClientRect();
+                return button.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+              };
+              return { gear: receivesClicks('Configuración'), theme: receivesClicks('Cambiar a modo') };
+            })(),
+            welcomeClean: !/Hola,|Abrir archivo de sesión/.test(document.body.innerText),
+            themeToggle: await (async () => {
+              const wait = ms => new Promise(r => setTimeout(r, ms));
+              const theme = () => document.documentElement.dataset.theme;
+              const before = theme();
+              document.querySelector('button[aria-label^="Cambiar a modo"]')?.click();
+              await wait(500);
+              const after = theme();
+              document.querySelector('button[aria-label^="Cambiar a modo"]')?.click();
+              await wait(500);
+              return { before, after, restored: theme() === before };
+            })(),
+            settingsNight: await (async () => {
+              const wait = ms => new Promise(r => setTimeout(r, ms));
+              document.querySelector('button[aria-label="Configuración"]')?.click();
+              let section = null;
+              for (let i = 0; i < 20 && !section; i++) {
+                await wait(250);
+                section = document.querySelector('section[aria-label="Modo nocturno"]');
+              }
+              [...document.querySelectorAll('button')].find(b => b.textContent.includes('Volver al inicio'))?.click();
+              for (let i = 0; i < 40 && !document.querySelector('button[aria-label="Configuración"]'); i++) await wait(250);
+              return Boolean(section);
+            })(),
             // ORION #30: la IA Local ya no está en la bienvenida, sino en Configuración.
             localAiCardOnWelcome: Boolean(document.querySelector('[aria-label="Modelo de IA Local"]')),
             localAiCard: await (async () => {
@@ -212,6 +246,12 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
           base.connection !== null &&
           base.history &&
           base.settings === 5 &&
+          base.welcomeButtons.gear &&
+          base.welcomeButtons.theme &&
+          base.welcomeClean &&
+          base.themeToggle.before !== base.themeToggle.after &&
+          base.themeToggle.restored &&
+          base.settingsNight &&
           ['not-installed', 'unsupported'].includes(base.localAi) &&
           !base.localAiCardOnWelcome &&
           (base.localAiCard === 'download' || base.localAiCard === 'connect' || base.localAiCard === 'unsupported') &&

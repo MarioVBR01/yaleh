@@ -175,6 +175,33 @@ describe('App en el escritorio', () => {
     expect(screen.queryByText('Continuar con Google')).toBeNull();
   });
 
+  it('los botones de la esquina quedan por encima del contenido central, que ocupa toda la pantalla', () => {
+    createElectronMock({ connection: 'online' }).install();
+    renderWelcome('online');
+    // jsdom no calcula qué elemento recibe el clic: la comprobación real está en smoke:electron.
+    expect(screen.getByTestId('welcome-corner').className).toContain('z-10');
+    expect(screen.getByRole('button', { name: 'Configuración' }).closest('[data-testid="welcome-corner"]')).toBeTruthy();
+  });
+
+  it.each([
+    [true, 'Cambiar a modo claro', 'light', 'Cambiar a modo oscuro'],
+    [false, 'Cambiar a modo oscuro', 'dark', 'Cambiar a modo claro'],
+  ] as const)('Sol/Luna cambia el tema al instante (darkMode %s)', async (darkMode, label, theme, nextLabel) => {
+    const mock = createElectronMock({ connection: 'online', settings: { darkMode } });
+    mock.install();
+    render(<App />);
+
+    fireEvent.click(await waitFor(() => {
+      const button = screen.getByRole('button', { name: label }) as HTMLButtonElement;
+      expect(button.disabled).toBe(false);
+      return button;
+    }));
+
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe(theme));
+    expect(mock.api.settings.update).toHaveBeenCalledWith({ darkMode: !darkMode });
+    expect(screen.getByRole('button', { name: nextLabel })).toBeTruthy();
+  });
+
   it('un .yaleh abierto desde fuera de la app (doble clic o segunda instancia) entra al kiosko', async () => {
     const mock = createElectronMock({ connection: 'online' });
     mock.install();

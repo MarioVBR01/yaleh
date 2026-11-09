@@ -10,11 +10,12 @@
  * - Con conexión, una nota explica cómo tener Gemini y las herramientas de Google (solo texto: la app
  *   no abre el navegador). Sin conexión, un aviso dice con qué se va a estudiar (IA Local o no instalada).
  *   Instalar o eliminar el asistente está en Configuración → IA Local.
- * - Configuración (ORION #7): engranaje arriba a la derecha.
+ * - Configuración (ORION #7): engranaje arriba a la derecha y, a su lado, Sol/Luna para cambiar el tema al instante.
  */
 
+import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Play, Settings, WifiOff } from 'lucide-react';
+import { Globe, Moon, Play, Settings, Sun, WifiOff } from 'lucide-react';
 import { YALEH_WEB_HOST } from '@shared/config';
 import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
@@ -30,12 +31,42 @@ function initialsOf(name: string): string {
     .slice(0, 2);
 }
 
+/** Botón cuadrado de la esquina, con su texto al pasar el mouse. */
+function CornerButton({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className="group relative w-12 h-12 rounded-[14px] border border-line bg-surface text-ink-soft hover:text-ink hover:border-line-strong grid place-items-center disabled:opacity-60"
+    >
+      {children}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1 rounded-lg bg-inverse text-on-inverse text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export default function DesktopStartPhase() {
   const { state, dispatch } = useApp();
   const api = getElectronAPI();
 
   const profileName = state.settings?.profileName ?? null;
   const aiState = state.localAi?.state;
+  // El escritorio arranca en oscuro hasta leer la configuración (main.tsx).
+  const darkMode = state.settings?.settings.darkMode ?? true;
+
+  const toggleTheme = () => {
+    if (!api) return;
+    api.settings
+      .update({ darkMode: !darkMode })
+      .then(snapshot => dispatch({ type: 'SET_SETTINGS', payload: snapshot }))
+      .catch(error => console.error('No se pudo cambiar el tema:', error));
+  };
 
   /** Flujo local: espacio de trabajo nuevo en SQLite (su id será el de la sesión). */
   const handleStart = () => {
@@ -58,19 +89,15 @@ export default function DesktopStartPhase() {
         style={{ background: 'radial-gradient(circle, color-mix(in oklab, var(--color-accent) 15%, transparent) 0%, transparent 60%)' }}
       />
 
-      <button
-        onClick={() => dispatch({ type: 'SET_PHASE', payload: 'settings' })}
-        aria-label="Configuración"
-        className="group absolute top-6 right-6 w-12 h-12 rounded-[14px] border border-line bg-surface text-ink-soft hover:text-ink hover:border-line-strong grid place-items-center"
-      >
-        <Settings size={22} />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1 rounded-lg bg-inverse text-on-inverse text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
-        >
-          Configuración
-        </span>
-      </button>
+      {/* z-10: el contenido central ocupa toda la pantalla y, sin esto, recibía los clics de estos botones. */}
+      <div data-testid="welcome-corner" className="absolute z-10 top-6 right-6 flex items-center gap-3">
+        <CornerButton label={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} onClick={toggleTheme} disabled={!state.settings}>
+          {darkMode ? <Sun size={22} /> : <Moon size={22} />}
+        </CornerButton>
+        <CornerButton label="Configuración" onClick={() => dispatch({ type: 'SET_PHASE', payload: 'settings' })}>
+          <Settings size={22} />
+        </CornerButton>
+      </div>
 
       <motion.div
         className="relative flex-1 flex flex-col items-center justify-center gap-7 px-4 pb-10"
