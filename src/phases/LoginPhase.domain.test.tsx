@@ -29,7 +29,7 @@ describe('Login desde una dirección no autorizada (BUG-004)', () => {
     signIn.mockRejectedValueOnce({ code: 'auth/unauthorized-domain' });
     vi.spyOn(console, 'error').mockImplementation(() => {});
     renderLogin();
-    fireEvent.click(screen.getByText('Ingresar'));
+    fireEvent.click(screen.getByText('Registrarse con Google'));
 
     expect((await screen.findByRole('alert')).textContent).toContain(`(${window.location.host})`);
     const link = screen.getByRole('link', { name: /Abrir la web oficial \(yaleh-fbe1c\.web\.app\)/ });
@@ -40,7 +40,7 @@ describe('Login desde una dirección no autorizada (BUG-004)', () => {
     signIn.mockRejectedValueOnce({ code: 'auth/popup-blocked' });
     vi.spyOn(console, 'error').mockImplementation(() => {});
     renderLogin();
-    fireEvent.click(screen.getByText('Ingresar'));
+    fireEvent.click(screen.getByText('Registrarse con Google'));
 
     await screen.findByRole('alert');
     expect(screen.queryByRole('link', { name: /Abrir la web oficial/ })).toBeNull();

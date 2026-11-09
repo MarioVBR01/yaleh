@@ -50,7 +50,7 @@ function goToLogin() {
   fireEvent.click(screen.getAllByTestId('sign-in')[0]);
 }
 
-describe('Ingresar', () => {
+describe('Iniciar sesión', () => {
   it('lleva a "Mis sesiones" y guarda el perfil', async () => {
     render(<App />);
     goToLogin();
@@ -68,9 +68,9 @@ describe('BUG-002: cuenta de Google guardada en el navegador', () => {
     render(<App />);
     goToLogin();
     expect(await screen.findByText('Comprobando tu cuenta…')).toBeTruthy();
-    expect(screen.queryByText('Ingresar')).toBeNull();
+    expect(screen.queryByText('Registrarse con Google')).toBeNull();
     act(() => emit?.(null));
-    expect(screen.getByText('Ingresar')).toBeTruthy();
+    expect(screen.getByText('Registrarse con Google')).toBeTruthy();
   });
 
   it('con una cuenta guardada muestra la cuenta activa; Salir vuelve a la landing', async () => {
@@ -79,7 +79,7 @@ describe('BUG-002: cuenta de Google guardada en el navegador', () => {
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
     expect(await screen.findByText('ana@tecba.edu.bo')).toBeTruthy();
     // El login sale con una animación; después ya no está.
-    await waitFor(() => expect(screen.queryByText('Ingresar')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Registrarse con Google')).toBeNull());
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Salir' }));

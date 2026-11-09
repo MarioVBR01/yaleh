@@ -172,7 +172,7 @@ describe('App en el escritorio', () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Bienvenido a YALEH.' })).toBeTruthy());
-    expect(screen.queryByText('Ingresar')).toBeNull();
+    expect(screen.queryByText('Registrarse con Google')).toBeNull();
   });
 
   it('los botones de la esquina quedan por encima del contenido central, que ocupa toda la pantalla', () => {

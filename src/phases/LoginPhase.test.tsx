@@ -17,19 +17,23 @@ function renderLogin(authChecked = true) {
 }
 
 describe('Web: pantalla de entrar (ORION #37)', () => {
-  it('logo nuevo, "YALEH." y la frase de la web', () => {
+  it('logo, el título "Iniciar sesión" y la frase de la web', () => {
     renderLogin();
     expect(screen.getByTestId('yaleh-logo')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'YALEH.' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeTruthy();
     expect(screen.getByText('Prepara tu sesión aquí y estudia en la app de escritorio.')).toBeTruthy();
   });
 
-  it('botón blanco "Ingresar" con el logo de Google y cómo se crea la cuenta', () => {
+  it('botón blanco "Registrarse con Google" con su logo, la ayuda y la nota de la versión', () => {
     renderLogin();
-    const button = screen.getByText('Ingresar').closest('button')!;
+    const button = screen.getByText('Registrarse con Google').closest('button')!;
     expect(button.className).toContain('bg-white');
     expect(button.querySelector('svg path[fill="#4285F4"]')).toBeTruthy();
-    expect(screen.getByText('Ingresa con tu cuenta de Google. Si es tu primera vez, tu cuenta de YALEH se crea automáticamente.')).toBeTruthy();
+    expect(screen.getByText('Si ya te registraste, entras directo a Mis sesiones.')).toBeTruthy();
+    const note = screen.getByText('Versión 1: el registro se hace con tu cuenta de Google.');
+    expect(note.className).toContain('text-xs');
+    expect(note.className).toContain('text-ink-muted');
+    expect(note.querySelector('svg')).toBeTruthy();
   });
 
   it('tiene el botón de tema', () => {
@@ -44,7 +48,7 @@ describe('Web: pantalla de entrar (ORION #37)', () => {
 
   it('mientras se comprueba la cuenta (BUG-002) no muestra el botón', () => {
     renderLogin(false);
-    expect(screen.queryByText('Ingresar')).toBeNull();
+    expect(screen.queryByText('Registrarse con Google')).toBeNull();
     expect(screen.getByRole('status').textContent).toContain('Comprobando tu cuenta');
   });
 });

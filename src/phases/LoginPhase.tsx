@@ -2,17 +2,18 @@
  * @file LoginPhase.tsx
  * @description Ingreso a la web con Google (brief, sección 5.1). El registro es el primer ingreso.
  * Solo existe en la web: el escritorio no tiene login propio (brief, sección 4.2).
- * Al ingresar, App.tsx sincroniza el usuario y pasa a "Mis sesiones".
+ * "Registrarse con Google": si la cuenta ya existe, entra; si no, la crea (ensureUserProfile, en App.tsx).
+ * Al iniciar sesión, App.tsx sincroniza el usuario y pasa a "Mis sesiones".
  * Mientras Firebase comprueba si hay una cuenta guardada, se muestra "Comprobando tu cuenta…"
  * en lugar del botón (BUG-002): así el login no aparece un momento y salta a la pantalla siguiente.
- * Se llega desde la landing ("Preparar mi sesión") y tiene "Volver al inicio" (revisión 1.10).
+ * Se llega desde la landing ("Iniciar sesión") y tiene "Volver al inicio" (revisión 1.10).
  * Diseño (ORION #37, docs/diseno/maquetas/web.html, pantalla 1): logo, "YALEH.", frase y el botón
  * blanco de Google sobre el fondo, sin recuadro ni degradé.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Info, Loader2 } from 'lucide-react';
 import { APP_VERSION, YALEH_WEB_ORIGINS } from '@shared/config';
 import Logo from '../components/Logo';
 import WebThemeToggle from '../components/WebThemeToggle';
@@ -37,7 +38,7 @@ export default function LoginPhase() {
       await signInWithGoogle();
       // App.tsx recibe el usuario (onAuthStateChanged) y cambia de pantalla.
     } catch (err) {
-      console.error('Error al ingresar con Google:', err);
+      console.error('Error al iniciar sesión con Google:', err);
       setError(describeAuthError(err));
       setWrongDomain(isUnauthorizedDomain(err));
       setLoading(false);
@@ -71,7 +72,7 @@ export default function LoginPhase() {
         <Logo size={128} />
         <div className="text-center">
           <h1 className="font-display text-5xl sm:text-[56px] leading-none font-extrabold tracking-[0.02em] text-ink">
-            YALEH<span className="text-accent">.</span>
+            Iniciar sesión
           </h1>
           <p className="mt-2.5 text-[17px] font-light text-ink-soft">Prepara tu sesión aquí y estudia en la app de escritorio.</p>
         </div>
@@ -97,10 +98,13 @@ export default function LoginPhase() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               )}
-              Ingresar
+              Registrarse con Google
             </button>
           )}
-          <small className="text-[13px] text-ink-muted">Ingresa con tu cuenta de Google. Si es tu primera vez, tu cuenta de YALEH se crea automáticamente.</small>
+          <small className="text-[13px] text-ink-muted">Si ya te registraste, entras directo a Mis sesiones.</small>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-ink-muted">
+            <Info size={13} aria-hidden="true" className="flex-shrink-0" /> Versión 1: el registro se hace con tu cuenta de Google.
+          </p>
 
           {error && (
             <p role="alert" className="text-sm text-danger">
