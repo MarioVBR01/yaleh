@@ -24,9 +24,6 @@ import {
 import { removeRemoteSource, loadRemoteSources } from '../data/sources';
 import { getDb } from './app';
 
-/** Cuántas sesiones pasadas se muestran. */
-const PAST_SESSIONS_LIMIT = 20;
-
 /** Cuántas sesiones muestra "Mis sesiones". */
 const MY_SESSIONS_LIMIT = 50;
 export const SESSION_TITLE_MAX = 60;
@@ -50,13 +47,6 @@ const sessionsCollection = (uid: string) => collection(getDb(), 'users', uid, 's
 /** Título automático: el nombre del archivo sin extensión. */
 export function titleFromFileName(name: string): string {
   return name.replace(/\.[^.]+$/, '').trim().slice(0, SESSION_TITLE_MAX);
-}
-
-export interface PastSession {
-  id: string;
-  lastExportedAt: Date | null;
-  durationSeconds: number;
-  sourceNames: string[];
 }
 
 /**
@@ -111,23 +101,6 @@ export async function markSessionExported(
     },
     { merge: true }
   );
-}
-
-/** Las últimas sesiones descargadas. Los borradores no tienen lastExportedAt: orderBy los deja fuera. */
-export async function listPastSessions(uid: string): Promise<PastSession[]> {
-  const snap = await getDocs(
-    query(collection(getDb(), 'users', uid, 'sessions'), orderBy('lastExportedAt', 'desc'), limit(PAST_SESSIONS_LIMIT))
-  );
-  return snap.docs.map(d => {
-    // 'estimate': justo después de descargar, la fecha del servidor puede estar pendiente.
-    const data = d.data({ serverTimestamps: 'estimate' });
-    return {
-      id: d.id,
-      lastExportedAt: data.lastExportedAt?.toDate?.() ?? null,
-      durationSeconds: Number(data.durationSeconds ?? 0),
-      sourceNames: Array.isArray(data.sourceNames) ? data.sourceNames.map(String) : [],
-    };
-  });
 }
 
 /** Actualiza en el documento de la sesión lo que "Mis sesiones" muestra de sus fuentes. */

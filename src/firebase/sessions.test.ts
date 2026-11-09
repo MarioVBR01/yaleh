@@ -29,7 +29,6 @@ const {
   discardEmptyDraft,
   ensureUserProfile,
   listMySessions,
-  listPastSessions,
   markSessionExported,
   refreshSessionSummary,
   renameSession,
@@ -84,26 +83,6 @@ describe('markSessionExported', () => {
       },
       { merge: true }
     );
-  });
-});
-
-describe('listPastSessions', () => {
-  it('pide las últimas 20 por fecha de descarga y convierte los datos', async () => {
-    const date = new Date(2026, 10, 9, 8, 5);
-    fs.getDocs.mockResolvedValueOnce({
-      docs: [
-        { id: 's1', data: () => ({ lastExportedAt: { toDate: () => date }, durationSeconds: 3000, sourceNames: ['a.pdf'] }) },
-        { id: 's2', data: () => ({}) },
-      ],
-    });
-
-    await expect(listPastSessions('u1')).resolves.toEqual([
-      { id: 's1', lastExportedAt: date, durationSeconds: 3000, sourceNames: ['a.pdf'] },
-      { id: 's2', lastExportedAt: null, durationSeconds: 0, sourceNames: [] },
-    ]);
-    expect(fs.collection).toHaveBeenCalledWith('db', 'users', 'u1', 'sessions');
-    expect(fs.orderBy).toHaveBeenCalledWith('lastExportedAt', 'desc');
-    expect(fs.limit).toHaveBeenCalledWith(20);
   });
 });
 

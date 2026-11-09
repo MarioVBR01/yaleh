@@ -246,7 +246,7 @@ function AppContent() {
   return (
     <MotionConfig reducedMotion={state.settings?.settings.reduceMotion ? 'always' : 'user'}>
       <div className="h-screen flex flex-col bg-canvas text-ink">
-        {showAccount && <WebAccountBar step={webStep} />}
+        {showAccount && <WebAccountBar step={webStep} home={phase === 'sessions-home'} />}
         <AnimatePresence mode="wait">
           <motion.div
             key={phase}

@@ -14,6 +14,13 @@ export function formatDateTime(date: Date): string {
   return `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear()} ${two(date.getHours())}:${two(date.getMinutes())}`;
 }
 
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+/** Fecha corta: "9 nov 2026". */
+export function formatShortDate(date: Date): string {
+  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 /** Formatea minutos a texto legible ("45 minutos", "1h 30min", "2 horas"). */
 export function formatMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes} minuto${minutes === 1 ? '' : 's'}`;

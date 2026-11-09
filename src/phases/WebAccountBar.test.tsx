@@ -26,7 +26,7 @@ vi.mock('../firebase/auth', () => ({
 }));
 const ensureUserProfile = vi.hoisted(() => vi.fn(async () => {}));
 const createDraftSession = vi.hoisted(() => vi.fn(async () => 'draft1'));
-vi.mock('../firebase/sessions', () => ({ createDraftSession, ensureUserProfile, listPastSessions: vi.fn(async () => []), listMySessions: vi.fn(async () => []) }));
+vi.mock('../firebase/sessions', () => ({ createDraftSession, ensureUserProfile, listMySessions: vi.fn(async () => []) }));
 
 const { default: App } = await import('../App');
 const { default: WebAccountBar } = await import('./WebAccountBar');
@@ -104,11 +104,24 @@ describe('BUG-002: cuenta de Google guardada en el navegador', () => {
 });
 
 describe('Barra superior de la web (ORION #38)', () => {
-  it('logo, pasos (Material actual en naranja) y la cuenta con Cambiar y Salir', async () => {
+  it('en "Mis sesiones" no hay pasos; están la cuenta, Cambiar y Salir', async () => {
     render(<App />);
     goToLogin();
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
     expect(await screen.findByText('ana@tecba.edu.bo')).toBeTruthy();
+    const bar = screen.getByLabelText('Cuenta de Google');
+    expect(await screen.findByRole('heading', { name: 'Mis sesiones' }, { timeout: 4000 })).toBeTruthy();
+    expect(bar.querySelectorAll('li')).toHaveLength(0);
+    expect(screen.getByText('Cambiar')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Salir' })).toBeTruthy();
+  });
+
+  it('dentro de una sesión: logo, pasos (Material actual en naranja) y la cuenta', () => {
+    render(
+      <AppProvider initial={{ ...initialState, phase: 'dropzone', authChecked: true, session: { ...initialState.session, isAuthenticated: true } }}>
+        <WebAccountBar step={0} />
+      </AppProvider>
+    );
     const bar = screen.getByLabelText('Cuenta de Google');
     expect(bar.querySelector('[data-testid="yaleh-logo"]')).toBeTruthy();
     const steps = [...bar.querySelectorAll('li')];

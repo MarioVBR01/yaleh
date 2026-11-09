@@ -5,6 +5,7 @@
  * Google con la que se entró, con "Cambiar" (otra cuenta) y "Salir" (BUG-002). En una
  * computadora compartida hay que poder ver qué cuenta está activa y salir de ella.
  * Al cambiar de cuenta o salir, App.tsx descarta los archivos y el borrador anteriores.
+ * En "Mis sesiones" no hay pasos; el logo siempre lleva a esa pantalla.
  */
 
 import { Fragment, useState } from 'react';
@@ -12,11 +13,13 @@ import { LogOut, RefreshCw } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
 import { describeAuthError, signInWithGoogle, signOut } from '../firebase/auth';
+import { useGoToMySessions } from '../lib/useGoToMySessions';
 
 export const WEB_STEPS = ['Material', 'Duración', 'Confirmar', 'Descargar'] as const;
 
-export default function WebAccountBar({ step = 0 }: { step?: number }) {
+export default function WebAccountBar({ step = 0, home = false }: { step?: number; home?: boolean }) {
   const { state } = useApp();
+  const goToMySessions = useGoToMySessions();
   const { displayName, email, avatar, initials } = state.session;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,18 +42,19 @@ export default function WebAccountBar({ step = 0 }: { step?: number }) {
   return (
     <header className="relative flex-shrink-0 bg-surface border-b border-line" aria-label="Cuenta de Google">
       <div className="h-[72px] flex items-center gap-6 px-4 lg:px-8">
-        <div className="flex items-center gap-2.5 flex-shrink-0">
+        <button onClick={goToMySessions} aria-label="Ir a Mis sesiones" className="flex items-center gap-2.5 flex-shrink-0">
           <Logo size={38} />
-          <b className="font-display text-[19px] font-extrabold tracking-[0.04em] text-ink hidden sm:block">YALEH</b>
-        </div>
+          <b className={`font-display text-[19px] font-extrabold tracking-[0.04em] text-ink hidden ${home ? 'sm:block' : 'xl:block'}`}>YALEH</b>
+        </button>
 
-        <ol className="flex-1 hidden md:flex justify-center items-center gap-2" aria-label="Pasos">
+        {!home && (
+        <ol className="flex-1 hidden lg:flex justify-center items-center gap-2" aria-label="Pasos">
           {WEB_STEPS.map((label, i) => {
             const done = i < step;
             const now = i === step;
             return (
               <Fragment key={label}>
-                {i > 0 && <span aria-hidden="true" className="w-9 h-[1.5px] bg-line" />}
+                {i > 0 && <span aria-hidden="true" className="w-4 xl:w-9 h-[1.5px] bg-line" />}
                 <li
                   aria-current={now ? 'step' : undefined}
                   data-state={done ? 'done' : now ? 'now' : 'todo'}
@@ -69,8 +73,9 @@ export default function WebAccountBar({ step = 0 }: { step?: number }) {
             );
           })}
         </ol>
+        )}
 
-        <div className="ml-auto md:ml-0 flex items-center gap-2.5 p-1.5 rounded-[14px] border border-line min-w-0">
+        <div className={`ml-auto ${home ? '' : 'lg:ml-0'} flex items-center gap-2.5 p-1.5 rounded-[14px] border border-line min-w-0`}>
           {avatar ? (
             <img src={avatar} alt="" className="w-[34px] h-[34px] rounded-full flex-shrink-0" referrerPolicy="no-referrer" />
           ) : (
@@ -78,7 +83,7 @@ export default function WebAccountBar({ step = 0 }: { step?: number }) {
               {initials ?? '?'}
             </span>
           )}
-          <div className="min-w-0 leading-tight pr-1 hidden lg:block">
+          <div className={`min-w-0 leading-tight pr-1 hidden ${home ? 'md:block' : 'xl:block'}`}>
             <p className="text-[13px] text-ink truncate">{displayName}</p>
             {email && <p className="text-[11.5px] text-ink-muted truncate">{email}</p>}
           </div>
