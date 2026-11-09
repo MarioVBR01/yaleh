@@ -26,7 +26,7 @@ export async function sha256Web(text: string): Promise<string> {
 export async function buildSessionFileBlob(
   state: AppState,
   store: WorkspaceStore | null
-): Promise<{ blob: Blob; fileName: string }> {
+): Promise<{ blob: Blob; fileName: string; sources: { name: string; size: number }[] }> {
   const ready = state.uploadedFiles.filter(f => f.status === 'ready' || f.status === undefined);
   const sources: SessionFileSource[] = store
     ? await Promise.all(
@@ -58,7 +58,11 @@ export async function buildSessionFileBlob(
       )}. Quita alguna fuente e inténtalo de nuevo.`
     );
   }
-  return { blob: new Blob([json], { type: 'application/json' }), fileName: sessionFileName() };
+  return {
+    blob: new Blob([json], { type: 'application/json' }),
+    fileName: sessionFileName(),
+    sources: ready.map(({ name, size }) => ({ name, size })),
+  };
 }
 
 export function downloadBlob(blob: Blob, fileName: string): void {

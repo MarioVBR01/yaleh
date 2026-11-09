@@ -11,9 +11,15 @@ import ConfirmSessionPhase from './ConfirmSessionPhase';
 
 vi.mock('../data/workspace', () => ({ getWorkspaceStore: () => ({}) }));
 vi.mock('../lib/session-file', () => ({
-  buildSessionFileBlob: vi.fn(async () => ({ blob: new Blob(['{}']), fileName: 'YALEH sesión 2026-10-16 10-00.yaleh' })),
+  buildSessionFileBlob: vi.fn(async () => ({
+    blob: new Blob(['{}']),
+    fileName: 'YALEH sesión 2026-10-16 10-00.yaleh',
+    sources: [{ name: 'clase1.pdf', size: 1000 }],
+  })),
   downloadBlob: vi.fn(),
 }));
+const markSessionExported = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../firebase/sessions', () => ({ markSessionExported }));
 
 function Phase() {
   return <output data-testid="phase">{useApp().state.phase}</output>;
@@ -34,6 +40,27 @@ function renderConfirm(overrides: Partial<AppState> = {}) {
 }
 
 afterEach(() => uninstallElectronMock());
+
+describe('Web: la descarga queda en "Tus sesiones pasadas"', () => {
+  const signedIn = { session: { ...initialState.session, uid: 'u1' }, workspaceId: 'w1' };
+
+  it('registra la sesión descargada con su duración y sus archivos', async () => {
+    renderConfirm(signedIn);
+    fireEvent.click(screen.getByText('Descargar archivo de sesión'));
+    await screen.findByText('Tu sesión está lista');
+    expect(markSessionExported).toHaveBeenCalledWith('u1', 'w1', { durationSeconds: 50 * 60, sources: [{ name: 'clase1.pdf', size: 1000 }] });
+  });
+
+  it('si no se puede registrar, la descarga sigue', async () => {
+    markSessionExported.mockRejectedValueOnce(new Error('sin permiso'));
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderConfirm(signedIn);
+    fireEvent.click(screen.getByText('Descargar archivo de sesión'));
+    expect(await screen.findByText('Tu sesión está lista')).toBeTruthy();
+    await vi.waitFor(() => expect(logged).toHaveBeenCalled());
+    logged.mockRestore();
+  });
+});
 
 describe('Escritorio: Confirmar en el flujo local', () => {
   it('avisa que es una sesión rápida', () => {

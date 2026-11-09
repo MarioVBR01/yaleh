@@ -8,6 +8,12 @@ export function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1)).toString().replace(".", ",")} ${sizes[i]}`;
 }
 
+/** Fecha y hora como dd/mm/aaaa hh:mm. */
+export function formatDateTime(date: Date): string {
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear()} ${two(date.getHours())}:${two(date.getMinutes())}`;
+}
+
 /** Formatea minutos a texto legible ("45 minutos", "1h 30min", "2 horas"). */
 export function formatMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes} minuto${minutes === 1 ? '' : 's'}`;

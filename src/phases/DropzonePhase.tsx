@@ -7,6 +7,7 @@
  * El paso es opcional: se puede continuar sin archivos.
  * Diseño (ORION #38, docs/diseno/maquetas/web.html, pantalla 2): "¿Con qué vas a estudiar?", zona grande
  * para arrastrar, archivos con tamaño y X, barra de uso, "Seguir sin archivos" y "Continuar".
+ * En la web, debajo van las sesiones ya descargadas (PastSessions).
  */
 
 import { useState, useRef } from 'react';
@@ -16,7 +17,9 @@ import { LIMITS } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import { ACCEPT_ATTRIBUTE } from '../data/file-types';
 import { useIngest } from '../data/useIngest';
+import { isElectron } from '../lib/electron';
 import { formatBytes } from '../utils/format';
+import PastSessions from './PastSessions';
 
 const MAX_TOTAL_LABEL = formatBytes(LIMITS.maxUploadBytes);
 
@@ -187,6 +190,8 @@ export default function DropzonePhase() {
           </button>
         </div>
       </div>
+
+      {!isElectron() && state.session.uid && <PastSessions uid={state.session.uid} />}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { motion } from 'framer-motion';
 import { Check, Clock, Download, FileText, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getWorkspaceStore } from '../data/workspace';
+import { markSessionExported } from '../firebase/sessions';
 import { getElectronAPI } from '../lib/electron';
 import { buildSessionFileBlob, downloadBlob } from '../lib/session-file';
 import { formatMinutes } from '../utils/format';
@@ -36,9 +37,15 @@ export default function ConfirmSessionPhase() {
     setBusy(true);
     setError(null);
     try {
-      const { blob, fileName } = await buildSessionFileBlob(state, getWorkspaceStore(state));
+      const { blob, fileName, sources } = await buildSessionFileBlob(state, getWorkspaceStore(state));
       downloadBlob(blob, fileName);
       setDownloaded(fileName);
+      // Para "Tus sesiones pasadas". Si falla, la descarga ya salió bien.
+      if (state.session.uid && state.workspaceId) {
+        markSessionExported(state.session.uid, state.workspaceId, { durationSeconds: state.sessionDuration, sources }).catch(err =>
+          console.error('No se pudo guardar la sesión descargada:', err)
+        );
+      }
       logActivity({ type: 'tool', label: `Archivo de sesión descargado: ${minutes} minutos`, icon: '📥' });
     } catch (err) {
       console.error('No se pudo crear el archivo de sesión:', err);

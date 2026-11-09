@@ -24,7 +24,7 @@ vi.mock('../firebase/auth', () => ({
   signInWithGoogle: () => signInWithGoogle(),
   describeAuthError: () => 'error',
 }));
-vi.mock('../firebase/sessions', () => ({ createDraftSession: vi.fn(async () => 'draft1') }));
+vi.mock('../firebase/sessions', () => ({ createDraftSession: vi.fn(async () => 'draft1'), listPastSessions: vi.fn(async () => []) }));
 
 const { default: App } = await import('../App');
 const { default: WebAccountBar } = await import('./WebAccountBar');
