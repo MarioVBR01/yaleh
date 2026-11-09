@@ -7,13 +7,13 @@
  * lateral nunca queda debajo de una pestaña.
  * - +15, +25 y +50 a un clic; con la barra expandida, también "Otro tiempo" (1 a 180 minutos).
  * - Con la barra colapsada, una columna angosta con los tres botones.
- * - Se puede ocultar con la X; vuelve a salir si la sesión se extiende.
+ * - No se puede cerrar: sigue visible hasta que se extienda la sesión o se acabe el tiempo.
  * - Entra deslizándose (sin animación con "Reducir animaciones" o si el sistema lo pide).
  * Extender lo decide el proceso principal: suma el tiempo sin liberar el kiosko.
  */
 
 import { useState } from 'react';
-import { TimerReset, X } from 'lucide-react';
+import { TimerReset } from 'lucide-react';
 import { EXTEND_ACTIVE_WINDOW_SECONDS, EXTEND_SESSION_MINUTES, LIMITS } from '@shared/config';
 import { useApp } from '../context/AppContext';
 import { useExtendSession } from './useExtendSession';
@@ -25,15 +25,8 @@ export default function FloatingExtend({ collapsed }: { collapsed: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
   const [custom, setCustom] = useState('');
-  /** Duración de la sesión para la que se ocultó (si se extiende, cambia y vuelve a salir). */
-  const [hiddenFor, setHiddenFor] = useState<number | null>(null);
 
-  const visible =
-    allowed &&
-    state.sessionDuration > 0 &&
-    state.timeRemaining > 0 &&
-    state.timeRemaining <= EXTEND_ACTIVE_WINDOW_SECONDS &&
-    hiddenFor !== state.sessionDuration;
+  const visible = allowed && state.sessionDuration > 0 && state.timeRemaining > 0 && state.timeRemaining <= EXTEND_ACTIVE_WINDOW_SECONDS;
   if (!visible) return null;
 
   const run = async (minutes: number) => {
@@ -86,19 +79,11 @@ export default function FloatingExtend({ collapsed }: { collapsed: boolean }) {
           <div className="flex items-start gap-2">
             <TimerReset size={18} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="flex-1 min-w-0">
-              <p className="font-display text-[0.95rem] font-bold leading-tight">¿Necesitás más tiempo?</p>
+              <p className="font-display text-[0.95rem] font-bold leading-tight">¿Necesitas más tiempo?</p>
               <p className="text-xs opacity-80">
                 {minutesLeft === 1 ? 'Queda 1 minuto' : `Quedan ${minutesLeft} minutos`} de sesión.
               </p>
             </div>
-            <button
-              onClick={() => setHiddenFor(state.sessionDuration)}
-              className="p-1 -m-1 rounded-lg hover:bg-black/10"
-              title="Ocultar"
-              aria-label="Ocultar"
-            >
-              <X size={16} />
-            </button>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {EXTEND_SESSION_MINUTES.map(minutes => (

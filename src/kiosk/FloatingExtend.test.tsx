@@ -49,7 +49,7 @@ describe('Extender desde el recuadro flotante (ORION #44)', () => {
     renderFloating(240);
     const floating = box()!;
     expect(floating.getAttribute('aria-label')).toBe('Extender la sesión');
-    expect(within(floating).getByText('¿Necesitás más tiempo?')).toBeTruthy();
+    expect(within(floating).getByText('¿Necesitas más tiempo?')).toBeTruthy();
     expect(['+15', '+25', '+50'].every(t => within(floating).getByText(t))).toBe(true);
     // Flota (posición absoluta) y entra con animación, salvo con reducir animaciones.
     expect(floating.className).toContain('absolute');
@@ -97,11 +97,12 @@ describe('Extender desde el recuadro flotante (ORION #44)', () => {
     expect(within(floating).queryByText('Otro tiempo')).toBeNull();
   });
 
-  it('se puede ocultar con la X', () => {
+  it('no se puede ocultar: no hay ningún botón "Ocultar"', () => {
     createElectronMock(active).install();
     renderFloating(200);
-    fireEvent.click(screen.getByLabelText('Ocultar'));
-    expect(box()).toBeNull();
+    expect(box()).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Ocultar' })).toBeNull();
+    expect(screen.queryByTitle('Ocultar')).toBeNull();
   });
 
   it('no aparece si la configuración no permite extender', () => {
