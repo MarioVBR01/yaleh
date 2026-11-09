@@ -118,7 +118,7 @@ export function createLocalProvider(api: Pick<ElectronAPI, 'localAi'>): Assistan
 }
 
 /** Por qué no hay asistente. */
-export type NoAssistantReason = 'needs-download' | 'unsupported';
+export type NoAssistantReason = 'needs-download' | 'unsupported' | 'quick-needs-download' | 'quick-unsupported';
 
 export type AssistantChoice = { kind: AssistantKind } | { kind: 'none'; reason: NoAssistantReason };
 
@@ -134,5 +134,8 @@ export function selectAssistant(input: AssistantSelectionInput): AssistantChoice
   if (!input.isDesktop) return { kind: 'online' };
   if (input.sessionMode === 'online' && input.connection === 'online') return { kind: 'online' };
   if (input.localAi?.state === 'installed') return { kind: 'local' };
-  return { kind: 'none', reason: input.localAi?.state === 'unsupported' ? 'unsupported' : 'needs-download' };
+  const unsupported = input.localAi?.state === 'unsupported';
+  // Sesión rápida con internet: el aviso no puede decir que no hay conexión.
+  if (input.connection === 'online') return { kind: 'none', reason: unsupported ? 'quick-unsupported' : 'quick-needs-download' };
+  return { kind: 'none', reason: unsupported ? 'unsupported' : 'needs-download' };
 }

@@ -138,9 +138,9 @@ function isLocked(): boolean {
 }
 
 /**
- * El modo de una sesión lo decide el proceso principal según la conexión al empezar. Si la primera
- * comprobación todavía no terminó, la espera (hasta ~5 s): al abrir con doble clic un .yaleh la sesión
- * empezaba sin conexión aunque hubiera internet.
+ * El modo de una sesión abierta con un .yaleh lo decide el proceso principal según la conexión al empezar.
+ * Si la primera comprobación todavía no terminó, la espera (hasta ~5 s): al abrir con doble clic un .yaleh
+ * la sesión empezaba sin conexión aunque hubiera internet.
  */
 function sessionModeForStart(): Promise<SessionMode> {
   return connectivity.sessionMode();
@@ -258,14 +258,13 @@ function handle(channel: string, listener: (event: IpcMainInvokeEvent, ...args: 
 function registerIpcHandlers(): void {
   handle(IPC_INVOKE.appGetInfo, (): AppInfo => ({ version: app.getVersion(), isPackaged }));
 
-  // Flujo local ("Iniciar"): el modo lo decide la conexión en este momento.
-  handle(IPC_INVOKE.sessionStart, async (_event, durationSeconds, sessionId) => {
+  // Flujo local ("Iniciar"): sesión rápida sin cuenta, siempre en modo sin conexión; la sesión en línea solo se abre con un .yaleh.
+  handle(IPC_INVOKE.sessionStart, (_event, durationSeconds, sessionId) => {
     const seconds = parseDurationSeconds(durationSeconds, LIMITS.minSessionMinutes * 60, LIMITS.maxSessionMinutes * 60);
     const id = parseOptionalSessionId(sessionId);
-    const mode = await sessionModeForStart();
     // Flujo local: no hay correo de la web.
     googleAccountHint = null;
-    return controller.start(seconds, mode, id);
+    return controller.startLocal(seconds, id);
   });
   handle(IPC_INVOKE.sessionGetState, () => controller.getSnapshot());
   handle(IPC_INVOKE.sessionResume, () => controller.resume());

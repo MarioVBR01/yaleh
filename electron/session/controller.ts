@@ -122,6 +122,11 @@ export class SessionController {
     return this.getSnapshot();
   }
 
+  /** Flujo local ("Iniciar"): sesión rápida sin cuenta, siempre sin conexión aunque haya internet. */
+  startLocal(durationSeconds: number, sessionId?: string): SessionSnapshot {
+    return this.start(durationSeconds, 'offline', sessionId);
+  }
+
   resume(): SessionSnapshot {
     if (this.status !== 'resumable' || !this.current) {
       throw new Error('No hay ninguna sesión para retomar.');
@@ -202,11 +207,11 @@ export class SessionController {
   }
 
   /**
-   * Registra que se perdió o se recuperó la conexión durante la sesión.
-   * El kiosko sigue bloqueado y el tiempo sigue corriendo: no cambia nada más.
+   * Registra que se perdió o se recuperó la conexión durante una sesión online (a una sesión sin
+   * conexión no le afecta). El kiosko sigue bloqueado y el tiempo sigue corriendo: no cambia nada más.
    */
   recordConnectionChange(mode: ConnectionMode, previous: ConnectionMode): void {
-    if (!this.isActive()) return;
+    if (!this.isActive() || this.current?.mode !== 'online') return;
     if (mode === 'offline' && previous === 'online') this.log('connection-lost', this.current?.id ?? null);
     if (mode === 'online' && previous === 'offline') this.log('connection-restored', this.current?.id ?? null);
   }

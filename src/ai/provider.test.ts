@@ -34,6 +34,12 @@ describe('selectAssistant', () => {
     expect(choose(true, 'offline', 'offline', null)).toEqual({ kind: 'none', reason: 'needs-download' });
   });
 
+  it('sesión rápida con internet: nunca en línea; el local si está instalado y, si no, un motivo que no habla de conexión', () => {
+    expect(choose(true, 'offline', 'online', 'installed')).toEqual({ kind: 'local' });
+    expect(choose(true, 'offline', 'online', 'not-installed')).toEqual({ kind: 'none', reason: 'quick-needs-download' });
+    expect(choose(true, 'offline', 'online', 'unsupported')).toEqual({ kind: 'none', reason: 'quick-unsupported' });
+  });
+
   it('equipo sin requisitos: ninguno, con ese motivo', () => {
     expect(choose(true, 'offline', 'offline', 'unsupported')).toEqual({ kind: 'none', reason: 'unsupported' });
   });

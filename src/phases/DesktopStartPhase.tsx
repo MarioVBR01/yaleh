@@ -3,24 +3,29 @@
  * @description Bienvenida de la app de escritorio (brief, revisión 1.5; diseño ORION #30,
  * docs/diseno/maquetas/bienvenida.html): logo, título, subtítulo e "Iniciar" sobre el fondo, sin recuadro.
  * El escritorio no inicia sesión con Google:
- * - "Iniciar": flujo local (dropzone → tiempo → confirmación → kiosko).
+ * - "Iniciar": flujo local (dropzone → tiempo → confirmación → kiosko). Es la sesión rápida sin cuenta:
+ *   siempre sin conexión, aunque haya internet. La sesión en línea solo se abre con un .yaleh.
  * - El .yaleh se abre con doble clic (asociación en el instalador, fase 11), por los argumentos de
  *   arranque o una segunda instancia. "Abrir archivo de sesión" y el arrastre solo existen en
  *   desarrollo (import.meta.env.DEV) hasta que la fase 11 asocie la extensión.
- * - Sin conexión, un aviso dice con qué se va a estudiar (asistente sin conexión o no instalado).
+ * - Con conexión, una nota explica cómo tener Gemini y las herramientas de Google (solo texto: la app
+ *   no abre el navegador). Sin conexión, un aviso dice con qué se va a estudiar (asistente sin conexión o no instalado).
  *   Instalar o eliminar el asistente está en Configuración → IA sin conexión.
  * - Configuración (ORION #7): engranaje arriba a la derecha. Saludo con el nombre, arriba a la izquierda.
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileUp, Loader2, Play, Settings, WifiOff } from 'lucide-react';
+import { FileUp, Globe, Loader2, Play, Settings, WifiOff } from 'lucide-react';
+import { YALEH_WEB_ORIGINS } from '@shared/config';
 import { SESSION_FILE_EXTENSION } from '@shared/session-file';
 import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
 import { newId } from '../data/workspace';
 import { getElectronAPI } from '../lib/electron';
 import { applyOpenedSessionFile } from '../lib/session-file';
+
+const WEB_HOST = new URL(YALEH_WEB_ORIGINS[0]).host;
 
 function initialsOf(name: string): string {
   return name
@@ -141,13 +146,26 @@ export default function DesktopStartPhase() {
           <p className="mt-3 text-[19px] font-light text-ink-soft">Tu entorno de estudio sin distracciones.</p>
         </div>
 
-        <button
-          onClick={handleStart}
-          disabled={opening}
-          className="h-16 min-w-[320px] px-8 rounded-[18px] text-lg font-semibold bg-accent hover:bg-accent-strong text-on-accent transition-colors flex items-center justify-center gap-3 disabled:opacity-60"
-        >
-          <Play size={20} fill="currentColor" /> Iniciar
-        </button>
+        <div className="flex flex-col items-center gap-2.5">
+          <button
+            onClick={handleStart}
+            disabled={opening}
+            className="h-16 min-w-[320px] px-8 rounded-[18px] text-lg font-semibold bg-accent hover:bg-accent-strong text-on-accent transition-colors flex items-center justify-center gap-3 disabled:opacity-60"
+          >
+            <Play size={20} fill="currentColor" /> Iniciar
+          </button>
+          <p className="text-[13.5px] text-ink-soft text-center">Sesión rápida: tus archivos, notas, Pomodoro y asistente sin conexión.</p>
+        </div>
+
+        {state.connection === 'online' && (
+          <div role="status" data-testid="online-note" className="max-w-[520px] flex items-center gap-3 px-4 py-3 rounded-[14px] border border-line bg-surface text-[13.5px] text-ink-soft">
+            <Globe size={18} className="text-accent-soft flex-shrink-0" />
+            <span>
+              <b className="text-ink font-medium">¿Quieres Gemini y las herramientas de Google con tu cuenta?</b> Prepara tu sesión en {WEB_HOST} y abre
+              el archivo .yaleh con doble clic.
+            </span>
+          </div>
+        )}
 
         {state.connection === 'offline' && (
           <div role="status" data-testid="offline-note" className="max-w-[520px] flex items-center gap-3 px-4 py-3 rounded-[14px] border border-line bg-surface text-[13.5px] text-ink-soft">

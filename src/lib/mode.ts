@@ -23,8 +23,9 @@ export interface ModeFlags {
 
 /**
  * - Web: sin cambios en esta fase (todo visible).
- * - Escritorio: las herramientas online solo aparecen en una sesión online con conexión; el asistente
- * lo elige selectAssistant (en línea, sin conexión o ninguno).
+ * - Escritorio: las herramientas online solo aparecen en una sesión online (abierta con un .yaleh) con
+ * conexión; el asistente lo elige selectAssistant (en línea, sin conexión o ninguno). La sesión rápida
+ * ("Iniciar") es siempre 'offline', aunque haya internet.
  */
 export function getModeFlags(state: AppState, isDesktop: boolean): ModeFlags {
   if (!isDesktop) {

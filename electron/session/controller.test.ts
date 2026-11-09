@@ -304,6 +304,21 @@ describe('SessionController: modo y conexión', () => {
     expect(unlock).not.toHaveBeenCalled();
   });
 
+  it('el flujo local empieza siempre sin conexión', () => {
+    const { controller, store } = setup();
+    expect(controller.startLocal(120).mode).toBe('offline');
+    expect(store.session?.mode).toBe('offline');
+    expect(store.events[0]).toMatchObject({ type: 'session-started', detail: 'offline, 120s' });
+  });
+
+  it('en una sesión sin conexión no registra cortes ni vueltas de la conexión', () => {
+    const { controller, store } = setup();
+    controller.startLocal(120);
+    controller.recordConnectionChange('offline', 'online');
+    controller.recordConnectionChange('online', 'offline');
+    expect(store.events.map(e => e.type)).toEqual(['session-started']);
+  });
+
   it('no registra cambios de conexión sin sesión activa ni la primera detección', () => {
     const { controller, store } = setup();
     controller.recordConnectionChange('offline', 'online');

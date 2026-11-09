@@ -3,9 +3,10 @@
  */
 
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppProvider, useApp } from '../context/AppContext';
 import { initialState, type AppState, type UploadedFile } from '../store/appStore';
+import { createElectronMock, uninstallElectronMock } from '../test/electron-mock';
 import ConfirmSessionPhase from './ConfirmSessionPhase';
 
 vi.mock('../data/workspace', () => ({ getWorkspaceStore: () => ({}) }));
@@ -31,6 +32,21 @@ function renderConfirm(overrides: Partial<AppState> = {}) {
     </AppProvider>
   );
 }
+
+afterEach(() => uninstallElectronMock());
+
+describe('Escritorio: Confirmar en el flujo local', () => {
+  it('avisa que es una sesión rápida', () => {
+    createElectronMock().install();
+    renderConfirm();
+    expect(screen.getByText('Sesión rápida: sin Gemini ni herramientas de Google.')).toBeTruthy();
+  });
+
+  it('en la web no aparece', () => {
+    renderConfirm();
+    expect(screen.queryByText(/Sesión rápida/)).toBeNull();
+  });
+});
 
 describe('Web: Confirmar y Descargado (ORION #39)', () => {
   it('resumen con Archivos (cantidad y nombres) y Duración, cada uno con "Cambiar"', () => {

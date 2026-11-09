@@ -76,10 +76,27 @@ describe('Bienvenida del escritorio', () => {
     expect(screen.getByTestId('offline-note').textContent).toMatch(/no está instalado: se descarga desde la página de YALEH/);
   });
 
-  it('con conexión no hay ningún aviso', () => {
+  it('con conexión explica cómo tener la sesión completa, solo con texto, sin el aviso de sin conexión', () => {
     createElectronMock({ connection: 'online' }).install();
     renderWelcome('online');
     expect(screen.queryByTestId('offline-note')).toBeNull();
+    const note = screen.getByTestId('online-note');
+    expect(note.textContent).toContain(
+      '¿Quieres Gemini y las herramientas de Google con tu cuenta? Prepara tu sesión en yaleh-fbe1c.web.app y abre el archivo .yaleh con doble clic.'
+    );
+    expect(note.querySelector('a, button')).toBeNull();
+  });
+
+  it('sin conexión no muestra la nota de la sesión completa', () => {
+    createElectronMock({ connection: 'offline' }).install();
+    renderWelcome('offline');
+    expect(screen.queryByTestId('online-note')).toBeNull();
+  });
+
+  it.each<ConnectionMode>(['online', 'offline'])('debajo de Iniciar dice qué es la sesión rápida (%s)', connection => {
+    createElectronMock({ connection }).install();
+    renderWelcome(connection);
+    expect(screen.getByText('Sesión rápida: tus archivos, notas, Pomodoro y asistente sin conexión.')).toBeTruthy();
   });
 
   it('en producción no aparecen "Abrir archivo de sesión" ni el arrastre (solo en desarrollo)', () => {
