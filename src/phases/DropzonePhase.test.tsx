@@ -31,7 +31,7 @@ describe('Material (ORION #38)', () => {
     renderDropzone();
     expect(screen.getByRole('heading', { name: '¿Con qué vas a estudiar?' })).toBeTruthy();
     expect(screen.getByTestId('dropzone').className).toContain('border-dashed');
-    expect(screen.getByText('o hacé clic para elegirlos · PDF, Word o texto')).toBeTruthy();
+    expect(screen.getByText('o haz clic para elegirlos · PDF, Word o texto')).toBeTruthy();
     expect(screen.getByTestId('usage').textContent).toBe('0 B de 500 MB');
   });
 

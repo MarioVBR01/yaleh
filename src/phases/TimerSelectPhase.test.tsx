@@ -70,6 +70,6 @@ describe('TimerSelectPhase (ORION #38)', () => {
     expect(card(25).getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByText('Continuar con 40 min')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Minutos propios'), { target: { value: '500' } });
-    expect((screen.getByText('Elegí una duración') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByText('Elige una duración') as HTMLButtonElement).disabled).toBe(true);
   });
 });

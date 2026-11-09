@@ -83,7 +83,7 @@ export default function TimerSelectPhase() {
         </div>
 
         <div className="flex items-center gap-3 text-xs text-ink-muted">
-          <span className="flex-1 h-px bg-line" />o elegí los minutos<span className="flex-1 h-px bg-line" />
+          <span className="flex-1 h-px bg-line" />o elige los minutos<span className="flex-1 h-px bg-line" />
         </div>
 
         <label className="flex items-center gap-3">
@@ -117,7 +117,7 @@ export default function TimerSelectPhase() {
           disabled={!isValid}
           className="h-12 rounded-[14px] text-[15px] font-medium bg-accent hover:bg-accent-strong text-on-accent disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isValid ? `Continuar con ${effectiveMinutes} min` : 'Elegí una duración'}
+          {isValid ? `Continuar con ${effectiveMinutes} min` : 'Elige una duración'}
         </button>
       </div>
     </div>

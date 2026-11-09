@@ -9,7 +9,7 @@
  */
 
 import { Fragment, useState } from 'react';
-import { LogOut, RefreshCw } from 'lucide-react';
+import { ArrowLeft, LogOut, RefreshCw } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
 import { describeAuthError, signInWithGoogle, signOut } from '../firebase/auth';
@@ -41,11 +41,17 @@ export default function WebAccountBar({ step = 0, home = false }: { step?: numbe
 
   return (
     <header className="relative flex-shrink-0 bg-surface border-b border-line" aria-label="Cuenta de Google">
-      <div className="h-[72px] flex items-center gap-6 px-4 lg:px-8">
+      <div className="h-[72px] flex items-center gap-3 lg:gap-4 px-4 lg:px-8">
         <button onClick={goToMySessions} aria-label="Ir a Mis sesiones" className="flex items-center gap-2.5 flex-shrink-0">
           <Logo size={38} />
           <b className={`font-display text-[19px] font-extrabold tracking-[0.04em] text-ink hidden ${home ? 'sm:block' : 'xl:block'}`}>YALEH</b>
         </button>
+
+        {!home && (
+          <button onClick={goToMySessions} className={`${ghost} flex-shrink-0 whitespace-nowrap`} aria-label="Volver a Mis sesiones">
+            <ArrowLeft size={14} /> <span className="hidden sm:inline">Mis sesiones</span>
+          </button>
+        )}
 
         {!home && (
         <ol className="flex-1 hidden lg:flex justify-center items-center gap-2" aria-label="Pasos">

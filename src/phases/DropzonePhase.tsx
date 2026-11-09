@@ -57,7 +57,7 @@ export default function DropzonePhase() {
     <div className="min-h-full bg-canvas flex flex-col items-center px-4 py-10 lg:py-12 gap-7">
       <motion.div className="text-center max-w-[640px]" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <h1 className="font-display text-3xl sm:text-[40px] leading-[1.05] font-extrabold tracking-tight text-ink">¿Con qué vas a estudiar?</h1>
-        <p className="mt-2.5 text-base text-ink-soft">Subí los documentos de tu sesión. Es opcional: también podés estudiar sin archivos.</p>
+        <p className="mt-2.5 text-base text-ink-soft">Sube los documentos de tu sesión. Es opcional: también puedes estudiar sin archivos.</p>
       </motion.div>
 
       <div className="w-full max-w-[640px] bg-surface border border-line rounded-[20px] p-5 sm:p-7 flex flex-col gap-5">
@@ -90,9 +90,9 @@ export default function DropzonePhase() {
             {ready ? <Upload size={26} /> : <Loader2 size={26} className="animate-spin" />}
           </span>
           <b className="text-base font-medium text-ink">
-            {!ready ? 'Preparando tu espacio de trabajo…' : isDragging ? 'Soltá los archivos acá' : 'Arrastrá tus archivos acá'}
+            {!ready ? 'Preparando tu espacio de trabajo…' : isDragging ? 'Suelta los archivos aquí' : 'Arrastra tus archivos aquí'}
           </b>
-          <small className="text-[13px] text-ink-muted">o hacé clic para elegirlos · PDF, Word o texto</small>
+          <small className="text-[13px] text-ink-muted">o haz clic para elegirlos · PDF, Word o texto</small>
         </div>
 
         <AnimatePresence>
@@ -167,7 +167,7 @@ export default function DropzonePhase() {
           <button
             onClick={goNext}
             disabled={hasFiles}
-            title={hasFiles ? 'Ya cargaste archivos: continuá con ellos' : undefined}
+            title={hasFiles ? 'Ya cargaste archivos: continúa con ellos' : undefined}
             className="h-12 px-5 rounded-[14px] text-[15px] text-ink-soft hover:text-ink hover:bg-surface-raised disabled:opacity-40 disabled:hover:bg-transparent"
           >
             Seguir sin archivos

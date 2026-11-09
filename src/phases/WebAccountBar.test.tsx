@@ -26,11 +26,12 @@ vi.mock('../firebase/auth', () => ({
 }));
 const ensureUserProfile = vi.hoisted(() => vi.fn(async () => {}));
 const createDraftSession = vi.hoisted(() => vi.fn(async () => 'draft1'));
-vi.mock('../firebase/sessions', () => ({ createDraftSession, ensureUserProfile, listMySessions: vi.fn(async () => []) }));
+const discardEmptyDraft = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../firebase/sessions', () => ({ createDraftSession, discardEmptyDraft, ensureUserProfile, listMySessions: vi.fn(async () => []) }));
 
 const { default: App } = await import('../App');
 const { default: WebAccountBar } = await import('./WebAccountBar');
-const { AppProvider } = await import('../context/AppContext');
+const { AppProvider, useApp } = await import('../context/AppContext');
 const { initialState } = await import('../store/appStore');
 
 const user = (uid: string, email: string) =>
@@ -130,6 +131,35 @@ describe('Barra superior de la web (ORION #38)', () => {
     expect(steps[0].querySelector('span')!.className).toContain('bg-accent');
     expect(screen.getByText('Cambiar')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Salir' })).toBeTruthy();
+  });
+
+  it('el enlace "Mis sesiones" y el logo vuelven a la lista; un borrador vacío se descarta', () => {
+    function Phase() {
+      return <output data-testid="phase">{useApp().state.phase}</output>;
+    }
+    const state = { ...initialState, phase: 'dropzone' as const, authChecked: true, workspaceId: 'w1', session: { ...initialState.session, uid: 'u1', isAuthenticated: true } };
+    const { unmount } = render(
+      <AppProvider initial={state}>
+        <WebAccountBar step={0} />
+        <Phase />
+      </AppProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Volver a Mis sesiones' }));
+    expect(screen.getByTestId('phase').textContent).toBe('sessions-home');
+    expect(discardEmptyDraft).toHaveBeenCalledWith('u1', 'w1');
+    unmount();
+
+    discardEmptyDraft.mockClear();
+    const files = [{ id: 'f', name: 'a.pdf', size: 1, type: 'application/pdf', uploadedAt: new Date() }];
+    render(
+      <AppProvider initial={{ ...state, uploadedFiles: files }}>
+        <WebAccountBar step={1} />
+        <Phase />
+      </AppProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ir a Mis sesiones' }));
+    expect(screen.getByTestId('phase').textContent).toBe('sessions-home');
+    expect(discardEmptyDraft).not.toHaveBeenCalled();
   });
 
   it('marca con ✓ los pasos hechos', () => {

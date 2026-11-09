@@ -7,7 +7,7 @@
  * - Web: descarga el archivo de sesión .yaleh (brief, revisión 1.5) y explica
  *   cómo abrirlo en la app de escritorio. La web nunca bloquea nada.
  *   ORION #39: resumen con Archivos y Duración (cada uno con "Cambiar"), botón naranja y pantalla
- *   "Tu sesión está lista" con tres pasos (Descargas → doble clic → la sesión empieza).
+ *   "Tu sesión está lista" con tres pasos (Descargas → doble clic → la sesión empieza). El título se puede cambiar aquí.
  * - Escritorio: inicia la sesión local; el proceso principal bloquea el equipo.
  */
 
@@ -19,7 +19,9 @@ import { getWorkspaceStore } from '../data/workspace';
 import { markSessionExported } from '../firebase/sessions';
 import { getElectronAPI } from '../lib/electron';
 import { buildSessionFileBlob, downloadBlob } from '../lib/session-file';
+import { useGoToMySessions } from '../lib/useGoToMySessions';
 import { formatMinutes } from '../utils/format';
+import SessionTitleEditor from './SessionTitleEditor';
 
 export default function ConfirmSessionPhase() {
   const { state, dispatch, logActivity } = useApp();
@@ -31,6 +33,7 @@ export default function ConfirmSessionPhase() {
   const minutes = Math.round(state.sessionDuration / 60);
   const files = state.uploadedFiles;
   const api = getElectronAPI();
+  const goToMySessions = useGoToMySessions();
 
   /** Web: genera y descarga el .yaleh con el texto de las fuentes. */
   const handleDownload = async () => {
@@ -40,7 +43,7 @@ export default function ConfirmSessionPhase() {
       const { blob, fileName, sources } = await buildSessionFileBlob(state, getWorkspaceStore(state));
       downloadBlob(blob, fileName);
       setDownloaded(fileName);
-      // Para "Tus sesiones pasadas". Si falla, la descarga ya salió bien.
+      // Para "Mis sesiones". Si falla, la descarga ya salió bien.
       if (state.session.uid && state.workspaceId) {
         markSessionExported(state.session.uid, state.workspaceId, { durationSeconds: state.sessionDuration, sources }).catch(err =>
           console.error('No se pudo guardar la sesión descargada:', err)
@@ -74,17 +77,6 @@ export default function ConfirmSessionPhase() {
     }
   };
 
-  /**
-   * Web: prepara una sesión nueva desde la dropzone. Se crea otro espacio en
-   * Firestore (useWebWorkspace) y se vacía la lista de archivos.
-   */
-  const prepareNewSession = () => {
-    dispatch({ type: 'SET_FILES', payload: [] });
-    dispatch({ type: 'SET_WORKSPACE', payload: null });
-    dispatch({ type: 'SET_SESSION_DURATION', payload: 0 });
-    dispatch({ type: 'SET_PHASE', payload: 'dropzone' });
-  };
-
   if (downloaded) {
     // Pantalla 5 de docs/diseno/maquetas/web.html (ORION #39 y #43).
     return (
@@ -100,8 +92,8 @@ export default function ConfirmSessionPhase() {
           </p>
           <ol className="flex flex-col gap-3">
             {[
-              'Buscá el archivo en tu carpeta de Descargas.',
-              'Abrilo con doble clic. Se abre YALEH.',
+              'Busca el archivo en tu carpeta de Descargas.',
+              'Ábrelo con doble clic. Se abre YALEH.',
               `La sesión de ${formatMinutes(minutes)} empieza y la computadora queda bloqueada.`,
             ].map((step, i) => (
               <li key={step} className="flex items-start gap-3 text-[0.9rem] text-ink">
@@ -114,7 +106,7 @@ export default function ConfirmSessionPhase() {
           </ol>
           <div className="text-ink-muted text-[0.78rem] text-center">
             <p>El archivo vale 24 horas y se puede usar una sola vez.</p>
-            <p>La encontrarás en Tus sesiones pasadas para volver a descargarla.</p>
+            <p>La encontrarás en Mis sesiones para volver a descargarla.</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
@@ -125,10 +117,10 @@ export default function ConfirmSessionPhase() {
               Descargar otra vez
             </button>
             <button
-              onClick={prepareNewSession}
+              onClick={goToMySessions}
               className="flex-1 h-12 rounded-[14px] text-[0.94rem] font-medium bg-ink text-canvas hover:opacity-90"
             >
-              Preparar otra sesión
+              Ir a Mis sesiones
             </button>
           </div>
         </div>
@@ -142,13 +134,15 @@ export default function ConfirmSessionPhase() {
   return (
     <div className="min-h-full bg-canvas flex flex-col items-center px-4 py-10 lg:py-12 gap-7">
       <motion.div className="text-center max-w-[640px]" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="font-display text-3xl sm:text-[2.5rem] leading-[1.05] font-extrabold tracking-tight text-ink">Revisá tu sesión</h1>
+        <h1 className="font-display text-3xl sm:text-[2.5rem] leading-[1.05] font-extrabold tracking-tight text-ink">Revisa tu sesión</h1>
         <p className="mt-2.5 text-base text-ink-soft">
-          {api ? 'Si todo está bien, empezá la sesión: la computadora queda bloqueada.' : 'Si todo está bien, descargá el archivo y abrilo en la app de escritorio.'}
+          {api ? 'Si todo está bien, empieza la sesión: la computadora queda bloqueada.' : 'Si todo está bien, descarga el archivo y ábrelo en la app de escritorio.'}
         </p>
       </motion.div>
 
       <div className="w-full max-w-[640px] bg-surface border border-line rounded-[20px] p-5 sm:p-7 flex flex-col gap-5">
+        {!api && state.session.uid && state.workspaceId && <SessionTitleEditor uid={state.session.uid} sessionId={state.workspaceId} />}
+
         <div>
           {/* Resumen: Archivos (cantidad y nombres) y Duración, cada uno con "Cambiar" */}
           <section aria-label="Archivos" className="flex items-start gap-3.5 pb-4 border-b border-line">

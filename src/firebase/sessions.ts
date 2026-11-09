@@ -133,6 +133,12 @@ export function refreshSessionSummary(uid: string, sessionId: string): Promise<v
   return next;
 }
 
+export async function getSessionTitle(uid: string, sessionId: string): Promise<string | null> {
+  const snap = await getDoc(sessionRef(uid, sessionId));
+  const title = snap.data()?.title;
+  return title ? String(title) : null;
+}
+
 export async function saveSessionDuration(uid: string, sessionId: string, durationSeconds: number): Promise<void> {
   await setDoc(sessionRef(uid, sessionId), { durationSeconds, updatedAt: serverTimestamp() }, { merge: true });
 }
