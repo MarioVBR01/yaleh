@@ -73,7 +73,7 @@ describe('BUG-002: cuenta de Google guardada en el navegador', () => {
     expect(screen.getByText('Registrarse con Google')).toBeTruthy();
   });
 
-  it('con una cuenta guardada muestra la cuenta activa; Salir vuelve a la landing', async () => {
+  it('con una cuenta guardada muestra la cuenta activa; "Cerrar sesión" vuelve a la landing', async () => {
     render(<App />);
     goToLogin();
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
@@ -82,10 +82,10 @@ describe('BUG-002: cuenta de Google guardada en el navegador', () => {
     await waitFor(() => expect(screen.queryByText('Registrarse con Google')).toBeNull());
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Salir' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     });
     expect(signOut).toHaveBeenCalled();
-    // Revisión 1.10: al salir se vuelve al inicio (la landing).
+    // Revisión 1.10: al cerrar sesión se vuelve al inicio (la landing).
     expect((await screen.findAllByTestId('sign-in')).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Cuenta de Google')).toBeNull();
   });
@@ -105,7 +105,7 @@ describe('BUG-002: cuenta de Google guardada en el navegador', () => {
 });
 
 describe('Barra superior de la web (ORION #38)', () => {
-  it('en "Mis sesiones" no hay pasos; están la cuenta, Cambiar y Salir', async () => {
+  it('en "Mis sesiones" no hay pasos; están la cuenta, Cambiar y Cerrar sesión', async () => {
     render(<App />);
     goToLogin();
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
@@ -114,7 +114,7 @@ describe('Barra superior de la web (ORION #38)', () => {
     expect(await screen.findByRole('heading', { name: 'Mis sesiones' }, { timeout: 4000 })).toBeTruthy();
     expect(bar.querySelectorAll('li')).toHaveLength(0);
     expect(screen.getByText('Cambiar')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Salir' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
   });
 
   it('dentro de una sesión: logo, pasos (Material actual en naranja) y la cuenta', () => {
@@ -130,7 +130,7 @@ describe('Barra superior de la web (ORION #38)', () => {
     expect(steps[0].getAttribute('aria-current')).toBe('step');
     expect(steps[0].querySelector('span')!.className).toContain('bg-accent');
     expect(screen.getByText('Cambiar')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Salir' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
   });
 
   it('el enlace "Mis sesiones" y el logo vuelven a la lista; un borrador vacío se descarta', () => {
@@ -160,6 +160,41 @@ describe('Barra superior de la web (ORION #38)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ir a Mis sesiones' }));
     expect(screen.getByTestId('phase').textContent).toBe('sessions-home');
     expect(discardEmptyDraft).not.toHaveBeenCalled();
+  });
+
+  it('"Cerrar sesión" tiene su texto, title y aria-label', () => {
+    render(
+      <AppProvider initial={{ ...initialState, phase: 'sessions-home', authChecked: true }}>
+        <WebAccountBar home />
+      </AppProvider>
+    );
+    const button = screen.getByRole('button', { name: 'Cerrar sesión' });
+    expect(button.getAttribute('title')).toBe('Cerrar sesión');
+    expect(button.textContent).toContain('Cerrar sesión');
+    expect(screen.queryByText('Salir')).toBeNull();
+  });
+
+  it('desde "Mis sesiones" se puede volver a la landing con la cuenta abierta', async () => {
+    render(<App />);
+    goToLogin();
+    act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
+    // La pantalla entra con una animación: se espera a que termine antes de salir de ella.
+    expect(await screen.findByRole('heading', { name: 'Mis sesiones' }, { timeout: 4000 })).toBeTruthy();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Ir al inicio' }));
+    expect(await screen.findByTestId('account-menu-button', {}, { timeout: 4000 })).toBeTruthy();
+    expect(screen.queryByLabelText('Cuenta de Google')).toBeNull();
+  });
+
+  it('dentro de una sesión no está el enlace a la landing', () => {
+    render(
+      <AppProvider initial={{ ...initialState, phase: 'dropzone', authChecked: true }}>
+        <WebAccountBar step={0} />
+      </AppProvider>
+    );
+    expect(screen.queryByRole('button', { name: 'Ir al inicio' })).toBeNull();
   });
 
   it('tiene el botón de tema', () => {

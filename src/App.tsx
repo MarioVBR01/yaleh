@@ -193,7 +193,7 @@ function useAuthSync() {
     });
   }, [dispatch]);
 
-  // Web: ingresar lleva a "Mis sesiones"; al salir se vuelve a la landing (el inicio).
+  // Web: iniciar sesión lleva a "Mis sesiones"; al cerrarla se vuelve a la landing (el inicio).
   useEffect(() => {
     if (isElectron()) return;
     if (signedIn && phase === 'login') dispatch({ type: 'SET_PHASE', payload: 'sessions-home' });

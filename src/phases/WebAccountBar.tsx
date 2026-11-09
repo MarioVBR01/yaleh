@@ -2,14 +2,14 @@
  * @file WebAccountBar.tsx
  * @description Web: barra superior fija (ORION #38, docs/diseno/maquetas/web.html) con el logo, la barra
  * de pasos (Material, Duración, Confirmar, Descargar: ✓ los hechos, naranja el actual) y la cuenta de
- * Google con la que se entró, con "Cambiar" (otra cuenta) y "Salir" (BUG-002). En una
+ * Google con la que se entró, con "Cambiar" (otra cuenta) y "Cerrar sesión" (BUG-002). En una
  * computadora compartida hay que poder ver qué cuenta está activa y salir de ella.
- * Al cambiar de cuenta o salir, App.tsx descarta los archivos y el borrador anteriores.
- * En "Mis sesiones" no hay pasos; el logo siempre lleva a esa pantalla.
+ * Al cambiar de cuenta o cerrar sesión, App.tsx descarta los archivos y el borrador anteriores.
+ * En "Mis sesiones" no hay pasos y hay un enlace a la landing; el logo siempre lleva a "Mis sesiones".
  */
 
 import { Fragment, useState } from 'react';
-import { ArrowLeft, LogOut, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Home, LogOut, RefreshCw } from 'lucide-react';
 import Logo from '../components/Logo';
 import UserAvatar from '../components/UserAvatar';
 import WebThemeToggle from '../components/WebThemeToggle';
@@ -20,7 +20,7 @@ import { useGoToMySessions } from '../lib/useGoToMySessions';
 export const WEB_STEPS = ['Material', 'Duración', 'Confirmar', 'Descargar'] as const;
 
 export default function WebAccountBar({ step = 0, home = false }: { step?: number; home?: boolean }) {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const goToMySessions = useGoToMySessions();
   const { displayName, email, avatar, initials } = state.session;
   const [busy, setBusy] = useState(false);
@@ -48,6 +48,12 @@ export default function WebAccountBar({ step = 0, home = false }: { step?: numbe
           <Logo size={38} />
           <b className={`font-display text-[19px] font-extrabold tracking-[0.04em] text-ink hidden ${home ? 'sm:block' : 'xl:block'}`}>YALEH</b>
         </button>
+
+        {home && (
+          <button onClick={() => dispatch({ type: 'SET_PHASE', payload: 'landing' })} className={`${ghost} flex-shrink-0`} aria-label="Ir al inicio" title="Ir al inicio">
+            <Home size={14} /> <span className="hidden sm:inline">Inicio</span>
+          </button>
+        )}
 
         {!home && (
           <button onClick={goToMySessions} className={`${ghost} flex-shrink-0 whitespace-nowrap`} aria-label="Volver a Mis sesiones">
@@ -89,12 +95,12 @@ export default function WebAccountBar({ step = 0, home = false }: { step?: numbe
             <p className="text-[13px] text-ink truncate">{displayName}</p>
             {email && <p className="text-[11.5px] text-ink-muted truncate">{email}</p>}
           </div>
-          {/* El popup se abre directo con el clic (sin salir antes) para que el navegador no lo bloquee. */}
+          {/* El popup se abre directo con el clic (sin cerrar sesión antes) para que el navegador no lo bloquee. */}
           <button onClick={() => void run(signInWithGoogle)} disabled={busy} className={ghost} title="Elegir otra cuenta de Google">
             <RefreshCw size={14} /> Cambiar
           </button>
-          <button onClick={() => void run(signOut)} disabled={busy} className={ghost} title="Salir de tu cuenta">
-            <LogOut size={14} /> Salir
+          <button onClick={() => void run(signOut)} disabled={busy} className={`${ghost} whitespace-nowrap`} title="Cerrar sesión" aria-label="Cerrar sesión">
+            <LogOut size={14} /> <span className="hidden sm:inline">Cerrar sesión</span>
           </button>
         </div>
         <WebThemeToggle />
