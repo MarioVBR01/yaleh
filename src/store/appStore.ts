@@ -16,6 +16,8 @@ export type AppPhase =
   /** Web: landing page, el inicio de todo (presentación, preparar la sesión y descargar la app). */
   | 'landing'
   | 'login'
+  /** Web: "Mis sesiones", la pantalla principal después de ingresar. */
+  | 'sessions-home'
   | 'desktop-start'
   | 'dropzone'
   | 'timer-select'

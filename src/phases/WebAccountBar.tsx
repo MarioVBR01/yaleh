@@ -2,9 +2,9 @@
  * @file WebAccountBar.tsx
  * @description Web: barra superior fija (ORION #38, docs/diseno/maquetas/web.html) con el logo, la barra
  * de pasos (Material, Duración, Confirmar, Descargar: ✓ los hechos, naranja el actual) y la cuenta de
- * Google con la que se entró, con "Cambiar" (otra cuenta) y "Cerrar sesión" (BUG-002). En una
+ * Google con la que se entró, con "Cambiar" (otra cuenta) y "Salir" (BUG-002). En una
  * computadora compartida hay que poder ver qué cuenta está activa y salir de ella.
- * Al cambiar de cuenta o cerrar sesión, App.tsx descarta los archivos y el borrador anteriores.
+ * Al cambiar de cuenta o salir, App.tsx descarta los archivos y el borrador anteriores.
  */
 
 import { Fragment, useState } from 'react';
@@ -82,18 +82,12 @@ export default function WebAccountBar({ step = 0 }: { step?: number }) {
             <p className="text-[13px] text-ink truncate">{displayName}</p>
             {email && <p className="text-[11.5px] text-ink-muted truncate">{email}</p>}
           </div>
-          {/* El popup se abre directo con el clic (sin cerrar sesión antes) para que el navegador no lo bloquee. */}
+          {/* El popup se abre directo con el clic (sin salir antes) para que el navegador no lo bloquee. */}
           <button onClick={() => void run(signInWithGoogle)} disabled={busy} className={ghost} title="Elegir otra cuenta de Google">
             <RefreshCw size={14} /> Cambiar
           </button>
-          <button
-            onClick={() => void run(signOut)}
-            disabled={busy}
-            className="w-8 h-8 rounded-[10px] grid place-items-center text-ink-soft hover:text-ink hover:bg-surface-raised disabled:opacity-50"
-            title="Cerrar sesión"
-            aria-label="Cerrar sesión"
-          >
-            <LogOut size={16} />
+          <button onClick={() => void run(signOut)} disabled={busy} className={ghost} title="Salir de tu cuenta">
+            <LogOut size={14} /> Salir
           </button>
         </div>
       </div>

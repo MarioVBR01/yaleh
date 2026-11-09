@@ -15,7 +15,7 @@ import { TEXT_SCALES } from '@shared/settings';
 import { AppProvider, useApp } from './context/AppContext';
 import { getElectronAPI, isElectron } from './lib/electron';
 import { watchUser } from './firebase/auth';
-import { createDraftSession } from './firebase/sessions';
+import { createDraftSession, ensureUserProfile } from './firebase/sessions';
 import { startPhase } from './lib/mode';
 import { applyOpenedSessionFile } from './lib/session-file';
 import { initialState, type AppPhase, type AppState } from './store/appStore';
@@ -30,6 +30,7 @@ import ResumeSessionPhase from './phases/ResumeSessionPhase';
 import SessionCompletePhase from './phases/SessionCompletePhase';
 import KioskLayout from './kiosk/KioskLayout';
 import SettingsPhase from './settings/SettingsPhase';
+import SessionsHomePhase from './phases/SessionsHomePhase';
 
 /** Propiedades de animación de entrada para transiciones de fase */
 const fadeIn = { opacity: 1, scale: 1 };
@@ -47,6 +48,7 @@ const PHASE_COMPONENTS: Record<AppPhase, ComponentType> = {
   kiosk: KioskLayout,
   'session-complete': SessionCompletePhase,
   settings: SettingsPhase,
+  'sessions-home': SessionsHomePhase,
 };
 
 /**
@@ -163,6 +165,8 @@ function useAuthSync() {
       }
       lastUid.current = uid;
       if (user) {
+        // El registro es el primer ingreso. Si falla, se puede seguir usando la web.
+        if (!isElectron()) ensureUserProfile(user).catch(error => console.error('No se pudo guardar el perfil:', error));
         const name = user.displayName ?? user.email ?? 'Estudiante';
         dispatch({
           type: 'SET_SESSION',
@@ -187,10 +191,10 @@ function useAuthSync() {
     });
   }, [dispatch]);
 
-  // Web: el login lleva a la dropzone; al cerrar sesión se vuelve a la landing (el inicio).
+  // Web: ingresar lleva a "Mis sesiones"; al salir se vuelve a la landing (el inicio).
   useEffect(() => {
     if (isElectron()) return;
-    if (signedIn && phase === 'login') dispatch({ type: 'SET_PHASE', payload: 'dropzone' });
+    if (signedIn && phase === 'login') dispatch({ type: 'SET_PHASE', payload: 'sessions-home' });
     if (!signedIn && phase !== 'login' && phase !== 'landing') dispatch({ type: 'SET_PHASE', payload: 'landing' });
   }, [signedIn, phase, dispatch]);
 }
@@ -200,12 +204,11 @@ function useWebWorkspace() {
   const { state, dispatch } = useApp();
   const uid = state.session.uid;
   const workspaceId = state.workspaceId;
-  const profile = { displayName: state.session.displayName ?? null, email: state.session.email ?? null };
 
   useEffect(() => {
     if (isElectron() || !uid || workspaceId) return;
     let cancelled = false;
-    createDraftSession(uid, profile)
+    createDraftSession(uid)
       .then(id => {
         if (!cancelled) dispatch({ type: 'SET_WORKSPACE', payload: id });
       })
@@ -213,7 +216,6 @@ function useWebWorkspace() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, workspaceId, dispatch]);
 }
 
@@ -252,9 +254,8 @@ function AppContent() {
   useWebWorkspace();
   useSessionFileResults();
 
-  // El escritorio nunca muestra el login de la web.
-  // El escritorio nunca muestra la landing ni el login de la web.
-  const phase = getElectronAPI() && (state.phase === 'login' || state.phase === 'landing') ? 'desktop-start' : state.phase;
+  // El escritorio nunca muestra las pantallas de la web: landing, ingreso ni "Mis sesiones".
+  const phase = getElectronAPI() && (state.phase === 'login' || state.phase === 'landing' || state.phase === 'sessions-home') ? 'desktop-start' : state.phase;
   const Phase = PHASE_COMPONENTS[phase];
   // Web: con qué cuenta se entró, y cerrar sesión o cambiar de cuenta (BUG-002).
   const showAccount = !getElectronAPI() && state.session.isAuthenticated && phase !== 'login' && phase !== 'landing';

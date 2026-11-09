@@ -24,7 +24,8 @@ vi.mock('../firebase/auth', () => ({
   signInWithGoogle: () => signInWithGoogle(),
   describeAuthError: () => 'error',
 }));
-vi.mock('../firebase/sessions', () => ({ createDraftSession: vi.fn(async () => 'draft1'), listPastSessions: vi.fn(async () => []) }));
+const ensureUserProfile = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../firebase/sessions', () => ({ createDraftSession: vi.fn(async () => 'draft1'), ensureUserProfile, listPastSessions: vi.fn(async () => []), listMySessions: vi.fn(async () => []) }));
 
 const { default: App } = await import('../App');
 const { default: WebAccountBar } = await import('./WebAccountBar');
@@ -47,29 +48,40 @@ function goToLogin() {
   fireEvent.click(screen.getAllByTestId('prepare-session')[0]);
 }
 
-describe('BUG-002: sesión de Google guardada en el navegador', () => {
+describe('Ingresar', () => {
+  it('lleva a "Mis sesiones" y guarda el perfil', async () => {
+    render(<App />);
+    goToLogin();
+    const ana = user('u1', 'ana@tecba.edu.bo');
+    act(() => emit?.(ana));
+    expect(await screen.findByRole('heading', { name: 'Mis sesiones' }, { timeout: 4000 })).toBeTruthy();
+    expect(ensureUserProfile).toHaveBeenCalledWith(ana);
+  });
+});
+
+describe('BUG-002: cuenta de Google guardada en el navegador', () => {
   it('mientras Firebase comprueba la sesión no muestra el botón del login', async () => {
     render(<App />);
     goToLogin();
-    expect(await screen.findByText('Comprobando tu sesión…')).toBeTruthy();
-    expect(screen.queryByText('Continuar con Google')).toBeNull();
+    expect(await screen.findByText('Comprobando tu cuenta…')).toBeTruthy();
+    expect(screen.queryByText('Ingresar')).toBeNull();
     act(() => emit?.(null));
-    expect(screen.getByText('Continuar con Google')).toBeTruthy();
+    expect(screen.getByText('Ingresar')).toBeTruthy();
   });
 
-  it('con una sesión guardada muestra la cuenta activa; cerrar sesión vuelve a la landing', async () => {
+  it('con una cuenta guardada muestra la cuenta activa; Salir vuelve a la landing', async () => {
     render(<App />);
     goToLogin();
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
     expect(await screen.findByText('ana@tecba.edu.bo')).toBeTruthy();
     // El login sale con una animación; después ya no está.
-    await waitFor(() => expect(screen.queryByText('Continuar con Google')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Ingresar')).toBeNull());
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Salir' }));
     });
     expect(signOut).toHaveBeenCalled();
-    // Revisión 1.10: al cerrar sesión se vuelve al inicio (la landing).
+    // Revisión 1.10: al salir se vuelve al inicio (la landing).
     expect((await screen.findAllByTestId('prepare-session')).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Cuenta de Google')).toBeNull();
   });
@@ -89,7 +101,7 @@ describe('BUG-002: sesión de Google guardada en el navegador', () => {
 });
 
 describe('Barra superior de la web (ORION #38)', () => {
-  it('logo, pasos (Material actual en naranja) y la cuenta con Cambiar y Cerrar sesión', async () => {
+  it('logo, pasos (Material actual en naranja) y la cuenta con Cambiar y Salir', async () => {
     render(<App />);
     goToLogin();
     act(() => emit?.(user('u1', 'ana@tecba.edu.bo')));
@@ -101,7 +113,7 @@ describe('Barra superior de la web (ORION #38)', () => {
     expect(steps[0].getAttribute('aria-current')).toBe('step');
     expect(steps[0].querySelector('span')!.className).toContain('bg-accent');
     expect(screen.getByText('Cambiar')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Salir' })).toBeTruthy();
   });
 
   it('marca con ✓ los pasos hechos', () => {

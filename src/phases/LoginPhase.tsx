@@ -1,10 +1,10 @@
 /**
  * @file LoginPhase.tsx
- * @description Inicio de sesión de la web con Google (brief, sección 5.1).
+ * @description Ingreso a la web con Google (brief, sección 5.1). El registro es el primer ingreso.
  * Solo existe en la web: el escritorio no tiene login propio (brief, sección 4.2).
- * Al iniciar sesión, App.tsx sincroniza el usuario y pasa a la dropzone.
- * Mientras Firebase comprueba si hay una sesión guardada, se muestra "Comprobando tu sesión…"
- * en lugar del botón (BUG-002): así el login no aparece un momento y salta a la dropzone.
+ * Al ingresar, App.tsx sincroniza el usuario y pasa a "Mis sesiones".
+ * Mientras Firebase comprueba si hay una cuenta guardada, se muestra "Comprobando tu cuenta…"
+ * en lugar del botón (BUG-002): así el login no aparece un momento y salta a la pantalla siguiente.
  * Se llega desde la landing ("Preparar mi sesión") y tiene "Volver al inicio" (revisión 1.10).
  * Diseño (ORION #37, docs/diseno/maquetas/web.html, pantalla 1): logo, "YALEH.", frase y el botón
  * blanco de Google sobre el fondo, sin recuadro ni degradé.
@@ -36,7 +36,7 @@ export default function LoginPhase() {
       await signInWithGoogle();
       // App.tsx recibe el usuario (onAuthStateChanged) y cambia de pantalla.
     } catch (err) {
-      console.error('Error al iniciar sesión con Google:', err);
+      console.error('Error al ingresar con Google:', err);
       setError(describeAuthError(err));
       setWrongDomain(isUnauthorizedDomain(err));
       setLoading(false);
@@ -69,13 +69,13 @@ export default function LoginPhase() {
           <h1 className="font-display text-5xl sm:text-[56px] leading-none font-extrabold tracking-[0.02em] text-ink">
             YALEH<span className="text-accent">.</span>
           </h1>
-          <p className="mt-2.5 text-[17px] font-light text-ink-soft">Prepará tu sesión acá y estudiá en la app de escritorio.</p>
+          <p className="mt-2.5 text-[17px] font-light text-ink-soft">Prepara tu sesión aquí y estudia en la app de escritorio.</p>
         </div>
 
         <div className="w-full max-w-[440px] flex flex-col gap-3.5 text-center">
           {!state.authChecked ? (
             <p className="flex items-center justify-center gap-2 h-14 text-sm text-ink-muted" role="status">
-              <Loader2 size={16} className="animate-spin" /> Comprobando tu sesión…
+              <Loader2 size={16} className="animate-spin" /> Comprobando tu cuenta…
             </p>
           ) : (
             <button
@@ -93,10 +93,10 @@ export default function LoginPhase() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               )}
-              Continuar con Google
+              Ingresar
             </button>
           )}
-          <small className="text-[13px] text-ink-muted">Usá tu cuenta institucional de TECBA.</small>
+          <small className="text-[13px] text-ink-muted">Ingresa con tu cuenta de Google. Si es tu primera vez, tu cuenta de YALEH se crea automáticamente.</small>
 
           {error && (
             <p role="alert" className="text-sm text-danger">

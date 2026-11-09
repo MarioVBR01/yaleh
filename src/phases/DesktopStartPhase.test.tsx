@@ -172,7 +172,7 @@ describe('App en el escritorio', () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Bienvenido a YALEH.' })).toBeTruthy());
-    expect(screen.queryByText('Continuar con Google')).toBeNull();
+    expect(screen.queryByText('Ingresar')).toBeNull();
   });
 
   it('los botones de la esquina quedan por encima del contenido central, que ocupa toda la pantalla', () => {
@@ -231,9 +231,9 @@ describe('App en la web', () => {
   it('empieza en la landing; "Preparar mi sesión" lleva al login con Google y "Volver al inicio" regresa', async () => {
     render(<App />);
     expect(screen.getByRole('heading', { level: 1, name: 'Estudiá sin distracciones.' })).toBeTruthy();
-    expect(screen.queryByText('Continuar con Google')).toBeNull();
+    expect(screen.queryByText('Ingresar')).toBeNull();
     fireEvent.click(screen.getAllByTestId('prepare-session')[0]);
-    expect(await screen.findByText('Continuar con Google', {}, { timeout: 5000 })).toBeTruthy();
+    expect(await screen.findByText('Ingresar', {}, { timeout: 5000 })).toBeTruthy();
     fireEvent.click(screen.getByText('Volver al inicio'));
     expect(await screen.findByRole('heading', { level: 1, name: 'Estudiá sin distracciones.' })).toBeTruthy();
   });

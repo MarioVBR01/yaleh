@@ -52,7 +52,7 @@ function currentHost(): string {
 }
 
 /**
- * Mensaje en español para los errores más comunes del inicio de sesión. `host` es la dirección de la
+ * Mensaje en español para los errores más comunes al ingresar. `host` es la dirección de la
  * página (BUG-004): con un dominio no autorizado, la captura ya dice cuál hay que autorizar en Firebase.
  */
 export function describeAuthError(error: unknown, host: string = currentHost()): string {
@@ -65,10 +65,10 @@ export function describeAuthError(error: unknown, host: string = currentHost()):
   if (code === 'auth/invalid-credential') return 'La credencial de Google no es válida o expiró. Vuelve a intentarlo.';
   if (code === 'auth/unauthorized-domain') {
     const where = host ? ` (${host})` : '';
-    return `Este dominio${where} no está autorizado para iniciar sesión. Avisa al administrador de YALEH.`;
+    return `Este dominio${where} no está autorizado para ingresar. Avisa al administrador de YALEH.`;
   }
   // El código ayuda a diagnosticar (BUG-001): se muestra junto al mensaje.
   return code
-    ? `No se pudo iniciar sesión con Google (${code}). Inténtalo de nuevo.`
-    : 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.';
+    ? `No se pudo ingresar con Google (${code}). Inténtalo de nuevo.`
+    : 'No se pudo ingresar con Google. Inténtalo de nuevo.';
 }

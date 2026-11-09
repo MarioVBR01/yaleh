@@ -28,15 +28,15 @@ describe('resolveAuthDomain (BUG-001)', () => {
 
 describe('describeAuthError', () => {
   it('muestra el código cuando el error no es uno de los conocidos', () => {
-    expect(describeAuthError({ code: 'auth/internal-error' })).toBe('No se pudo iniciar sesión con Google (auth/internal-error). Inténtalo de nuevo.');
-    expect(describeAuthError(new Error('x'))).toBe('No se pudo iniciar sesión con Google. Inténtalo de nuevo.');
+    expect(describeAuthError({ code: 'auth/internal-error' })).toBe('No se pudo ingresar con Google (auth/internal-error). Inténtalo de nuevo.');
+    expect(describeAuthError(new Error('x'))).toBe('No se pudo ingresar con Google. Inténtalo de nuevo.');
   });
   it('con un dominio no autorizado dice cuál es (BUG-004)', () => {
     expect(describeAuthError({ code: 'auth/unauthorized-domain' }, '192.168.1.20:5173')).toBe(
-      'Este dominio (192.168.1.20:5173) no está autorizado para iniciar sesión. Avisa al administrador de YALEH.'
+      'Este dominio (192.168.1.20:5173) no está autorizado para ingresar. Avisa al administrador de YALEH.'
     );
     expect(describeAuthError({ code: 'auth/unauthorized-domain' }, '')).toBe(
-      'Este dominio no está autorizado para iniciar sesión. Avisa al administrador de YALEH.'
+      'Este dominio no está autorizado para ingresar. Avisa al administrador de YALEH.'
     );
   });
   it('por defecto toma la dirección de la página actual', () => {

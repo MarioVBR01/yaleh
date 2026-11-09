@@ -31,11 +31,29 @@ export interface PastSession {
   sourceNames: string[];
 }
 
-/** Crea el perfil (si no existe) y una sesión en borrador; devuelve su id. */
-export async function createDraftSession(uid: string, profile: { displayName: string | null; email: string | null }) {
-  const db = getDb();
-  await setDoc(doc(db, 'users', uid), { ...profile, updatedAt: serverTimestamp() }, { merge: true });
-  const ref = doc(collection(db, 'users', uid, 'sessions'));
+/**
+ * El registro es el primer ingreso con Google: guarda el perfil en users/{uid} y, solo si el documento
+ * no existía, la fecha de creación de la cuenta.
+ */
+export async function ensureUserProfile(user: { uid: string; displayName: string | null; email: string | null; photoURL: string | null }): Promise<void> {
+  const ref = doc(getDb(), 'users', user.uid);
+  const existing = await getDoc(ref);
+  await setDoc(
+    ref,
+    {
+      displayName: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+      lastLoginAt: serverTimestamp(),
+      ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
+    },
+    { merge: true }
+  );
+}
+
+/** Crea una sesión en borrador y devuelve su id. */
+export async function createDraftSession(uid: string) {
+  const ref = doc(collection(getDb(), 'users', uid, 'sessions'));
   await setDoc(ref, {
     mode: 'online',
     status: 'draft',

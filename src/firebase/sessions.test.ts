@@ -21,10 +21,28 @@ const fs = vi.hoisted(() => ({
 vi.mock('firebase/firestore', () => fs);
 vi.mock('./app', () => ({ getDb: () => 'db' }));
 
-const { discardEmptyDraft, listPastSessions, markSessionExported } = await import('./sessions');
+const { discardEmptyDraft, ensureUserProfile, listPastSessions, markSessionExported } = await import('./sessions');
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe('ensureUserProfile', () => {
+  const user = { uid: 'u1', displayName: 'Ana', email: 'ana@tecba.edu.bo', photoURL: 'foto.png' };
+  const profile = { displayName: 'Ana', email: 'ana@tecba.edu.bo', photoURL: 'foto.png', lastLoginAt: 'AHORA' };
+
+  it('el primer ingreso crea la cuenta con createdAt', async () => {
+    fs.getDoc.mockResolvedValueOnce({ exists: () => false });
+    await ensureUserProfile(user);
+    expect(fs.doc).toHaveBeenCalledWith('db', 'users', 'u1');
+    expect(fs.setDoc).toHaveBeenCalledWith(expect.anything(), { ...profile, createdAt: 'AHORA' }, { merge: true });
+  });
+
+  it('los ingresos siguientes no tocan createdAt', async () => {
+    fs.getDoc.mockResolvedValueOnce({ exists: () => true });
+    await ensureUserProfile(user);
+    expect(fs.setDoc).toHaveBeenCalledWith(expect.anything(), profile, { merge: true });
+  });
 });
 
 describe('markSessionExported', () => {

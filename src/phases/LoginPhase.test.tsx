@@ -21,15 +21,15 @@ describe('Web: pantalla de entrar (ORION #37)', () => {
     renderLogin();
     expect(screen.getByTestId('yaleh-logo')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'YALEH.' })).toBeTruthy();
-    expect(screen.getByText('Prepará tu sesión acá y estudiá en la app de escritorio.')).toBeTruthy();
+    expect(screen.getByText('Prepara tu sesión aquí y estudia en la app de escritorio.')).toBeTruthy();
   });
 
-  it('botón blanco "Continuar con Google" con el logo de Google y la indicación de TECBA', () => {
+  it('botón blanco "Ingresar" con el logo de Google y cómo se crea la cuenta', () => {
     renderLogin();
-    const button = screen.getByText('Continuar con Google').closest('button')!;
+    const button = screen.getByText('Ingresar').closest('button')!;
     expect(button.className).toContain('bg-white');
     expect(button.querySelector('svg path[fill="#4285F4"]')).toBeTruthy();
-    expect(screen.getByText('Usá tu cuenta institucional de TECBA.')).toBeTruthy();
+    expect(screen.getByText('Ingresa con tu cuenta de Google. Si es tu primera vez, tu cuenta de YALEH se crea automáticamente.')).toBeTruthy();
   });
 
   it('sin recuadro ni degradé azul', () => {
@@ -37,9 +37,9 @@ describe('Web: pantalla de entrar (ORION #37)', () => {
     expect(container.innerHTML).not.toMatch(/from-slate|via-blue|bg-gradient|backdrop-blur|Iniciar Sesión/);
   });
 
-  it('mientras se comprueba la sesión (BUG-002) no muestra el botón', () => {
+  it('mientras se comprueba la cuenta (BUG-002) no muestra el botón', () => {
     renderLogin(false);
-    expect(screen.queryByText('Continuar con Google')).toBeNull();
-    expect(screen.getByRole('status').textContent).toContain('Comprobando tu sesión');
+    expect(screen.queryByText('Ingresar')).toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('Comprobando tu cuenta');
   });
 });
