@@ -4,11 +4,12 @@
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '@shared/settings';
 import type { ConnectionMode, OpenSessionFileResult } from '@shared/ipc-types';
 import App from '../App';
 import { AppProvider, useApp } from '../context/AppContext';
+import { applyOpenedSessionFile } from '../lib/session-file';
 import ChatColumn from '../workspace/ChatColumn';
 import { initialState, type AppState } from '../store/appStore';
 import { createElectronMock, makeLocalAiStatus, uninstallElectronMock } from '../test/electron-mock';
@@ -108,36 +109,29 @@ describe('Bienvenida del escritorio', () => {
     expect(screen.getByTestId('local-module-note').textContent).toBe(text);
   });
 
-  it('en producción no aparecen "Abrir archivo de sesión" ni el arrastre (solo en desarrollo)', () => {
-    vi.stubEnv('DEV', false);
-    try {
-      createElectronMock().install();
-      renderWelcome('online');
-      expect(screen.queryByText('Abrir archivo de sesión (.yaleh)')).toBeNull();
-      expect(screen.queryByTestId('dev-session-file')).toBeNull();
-    } finally {
-      vi.unstubAllEnvs();
-    }
+  it('el .yaleh solo se abre con doble clic: sin botón, sin frase y sin arrastre', () => {
+    const mock = createElectronMock({ openResult: OPENED });
+    mock.install();
+    const { container } = renderWelcome('online');
+    expect(screen.queryByText('Abrir archivo de sesión (.yaleh)')).toBeNull();
+    expect(screen.queryByText(/también puedes arrastrar/)).toBeNull();
+    expect(screen.queryByTestId('dev-session-file')).toBeNull();
+    const file = new File(['{}'], 'sesion.yaleh');
+    fireEvent.drop(container.firstElementChild!, { dataTransfer: { files: [file] } });
+    expect(mock.api.openSessionFileContent).not.toHaveBeenCalled();
+    expect('openSessionFileDialog' in mock.api).toBe(false);
   });
 
-  it('en desarrollo se puede abrir el .yaleh desde la bienvenida', () => {
-    createElectronMock().install();
-    renderWelcome('online');
-    expect(screen.getByText('Abrir archivo de sesión (.yaleh)')).toBeTruthy();
-  });
-
-  it('saluda con el nombre arriba a la izquierda; sin nombre no muestra nada', () => {
+  it('no saluda con el nombre', () => {
     createElectronMock().install();
     const settings = { settings: { ...DEFAULT_SETTINGS }, profileName: 'Ana', exportDirResolved: '', sessionActive: false };
-    const { unmount } = render(
+    render(
       <AppProvider initial={{ ...initialState, phase: 'desktop-start', connection: 'online', settings }}>
         <DesktopStartPhase />
       </AppProvider>
     );
-    expect(screen.getByText('Ana').parentElement!.textContent).toBe('Hola, Ana');
-    unmount();
-    renderWelcome('online');
-    expect(screen.queryByText(/^Hola,/)).toBeNull();
+    expect(screen.queryByText(/Hola/)).toBeNull();
+    expect(screen.queryByText('Ana')).toBeNull();
   });
 
   it('"Iniciar" lleva al flujo local con un espacio de trabajo nuevo', () => {
@@ -150,39 +144,25 @@ describe('Bienvenida del escritorio', () => {
     expect(screen.getByTestId('workspace').textContent).not.toBe('null');
   });
 
-  it('un .yaleh válido entra directo al kiosko con sus fuentes y el modo que decidió el proceso principal', async () => {
-    const mock = createElectronMock({ connection: 'online', openResult: OPENED });
-    mock.install();
-    renderWelcome('online');
+  it('un .yaleh válido entra directo al kiosko con sus fuentes y el modo que decidió el proceso principal', () => {
+    createElectronMock({ connection: 'online' }).install();
+    function ApplyResult() {
+      const { dispatch } = useApp();
+      return <button onClick={() => applyOpenedSessionFile(dispatch, OPENED)}>aplicar</button>;
+    }
+    render(
+      <AppProvider initial={{ ...initialState, phase: 'desktop-start', connection: 'online' }}>
+        <StateProbe />
+        <ApplyResult />
+      </AppProvider>
+    );
 
-    fireEvent.click(screen.getByText('Abrir archivo de sesión (.yaleh)'));
+    fireEvent.click(screen.getByText('aplicar'));
 
-    await waitFor(() => expect(screen.getByTestId('phase').textContent).toBe('kiosk'));
+    expect(screen.getByTestId('phase').textContent).toBe('kiosk');
     expect(screen.getByTestId('session-mode').textContent).toBe('online');
     expect(screen.getByTestId('workspace').textContent).toBe('archivo1');
     expect(screen.getByTestId('files').textContent).toBe('apuntes.pdf');
-  });
-
-  it('un .yaleh caducado o ya usado muestra el mensaje y no sale de la bienvenida', async () => {
-    const message = 'Este archivo de sesión ya se usó. Descarga uno nuevo en la web de YALEH.';
-    createElectronMock({ openResult: { ok: false, message } }).install();
-    renderWelcome('offline');
-
-    fireEvent.click(screen.getByText('Abrir archivo de sesión (.yaleh)'));
-
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(message));
-    expect(screen.getByTestId('phase').textContent).toBe('desktop-start');
-  });
-
-  it('cancelar el diálogo no muestra ningún mensaje', async () => {
-    const mock = createElectronMock();
-    mock.install();
-    renderWelcome('offline');
-
-    fireEvent.click(screen.getByText('Abrir archivo de sesión (.yaleh)'));
-
-    await waitFor(() => expect(mock.api.openSessionFileDialog).toHaveBeenCalled());
-    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
@@ -204,6 +184,19 @@ describe('App en el escritorio', () => {
     mock.emitSessionFileResult(OPENED);
 
     await waitFor(() => expect(screen.getByText('00:50:00')).toBeTruthy());
+  });
+
+  it('un .yaleh caducado o ya usado muestra el mensaje y no sale de la bienvenida', async () => {
+    const message = 'Este archivo de sesión ya se usó. Descarga uno nuevo en la web de YALEH.';
+    const mock = createElectronMock({ connection: 'offline' });
+    mock.install();
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Bienvenido a YALEH.' })).toBeTruthy());
+
+    mock.emitSessionFileResult({ ok: false, message });
+
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(message));
+    expect(screen.getByRole('heading', { name: 'Bienvenido a YALEH.' })).toBeTruthy();
   });
 });
 

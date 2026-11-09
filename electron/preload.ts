@@ -28,7 +28,6 @@ const api: ElectronAPI = {
   discardResume: () => ipcRenderer.invoke(IPC_INVOKE.sessionDiscardResume),
   onSessionTick: callback => subscribe(IPC_EVENT.sessionTick, callback),
   onSessionEnded: callback => subscribe(IPC_EVENT.sessionEnded, callback),
-  openSessionFileDialog: () => ipcRenderer.invoke(IPC_INVOKE.sessionFileOpenDialog),
   openSessionFileContent: content => ipcRenderer.invoke(IPC_INVOKE.sessionFileOpenContent, content),
   onSessionFileResult: callback => subscribe(IPC_EVENT.sessionFileResult, callback),
   getConnectionMode: () => ipcRenderer.invoke(IPC_INVOKE.connectionGet),

@@ -15,7 +15,6 @@ export const IPC_INVOKE = {
   sessionResume: 'session:resume',
   sessionExtend: 'session:extend',
   sessionDiscardResume: 'session:discard-resume',
-  sessionFileOpenDialog: 'session-file:open-dialog',
   sessionFileOpenContent: 'session-file:open-content',
   connectionGet: 'connection:get',
   connectionRecheck: 'connection:recheck',
@@ -139,7 +138,7 @@ export type OpenSessionFileResult =
       sources: LocalSourceInfo[];
       createdBy: { name: string; email: string };
     }
-  | { ok: false; message: string; canceled?: boolean };
+  | { ok: false; message: string };
 
 /** Una sesión del historial del escritorio (SQLite). */
 export interface SessionHistoryEntry {
@@ -360,9 +359,7 @@ export interface ElectronAPI {
   discardResume: () => Promise<SessionSnapshot>;
   onSessionTick: (callback: (payload: SessionTickPayload) => void) => () => void;
   onSessionEnded: (callback: (payload: SessionEndedPayload) => void) => () => void;
-  /** Abre el diálogo del sistema para elegir un .yaleh (solo fuera de la sesión). */
-  openSessionFileDialog: () => Promise<OpenSessionFileResult>;
-  /** Abre un .yaleh cuyo contenido ya se leyó (por ejemplo, arrastrado a la ventana). */
+  /** Abre un .yaleh cuyo contenido ya se leyó (lo usa la prueba de humo). */
   openSessionFileContent: (content: string) => Promise<OpenSessionFileResult>;
   /** .yaleh abierto por los argumentos de arranque o por una segunda instancia. */
   onSessionFileResult: (callback: (result: OpenSessionFileResult) => void) => () => void;

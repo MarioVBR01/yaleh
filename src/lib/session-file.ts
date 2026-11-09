@@ -82,7 +82,7 @@ export function downloadBlob(blob: Blob, fileName: string): void {
  */
 export function applyOpenedSessionFile(dispatch: Dispatch<AppAction>, result: OpenSessionFileResult): void {
   if (!result.ok) {
-    if (!result.canceled) dispatch({ type: 'SET_NOTICE', payload: result.message });
+    dispatch({ type: 'SET_NOTICE', payload: result.message });
     return;
   }
   const { snapshot, sources, createdBy } = result;

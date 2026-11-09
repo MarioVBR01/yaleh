@@ -46,7 +46,7 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
   let connectionListener: ((p: ConnectionChangedPayload) => void) | null = null;
   let fileListener: ((r: OpenSessionFileResult) => void) | null = null;
   let connection: ConnectionMode = options.connection ?? 'offline';
-  const openResult: OpenSessionFileResult = options.openResult ?? { ok: false, canceled: true, message: '' };
+  const openResult: OpenSessionFileResult = options.openResult ?? { ok: false, message: '' };
 
   const snapshot: SessionSnapshot = {
     status: 'idle',
@@ -102,7 +102,6 @@ export function createElectronMock(options: ElectronMockOptions = {}) {
         ended = null;
       };
     }),
-    openSessionFileDialog: vi.fn(async () => openResult),
     openSessionFileContent: vi.fn(async () => openResult),
     onSessionFileResult: vi.fn(cb => {
       fileListener = cb;

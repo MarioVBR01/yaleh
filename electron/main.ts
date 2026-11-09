@@ -10,7 +10,6 @@
 import {
   app,
   BrowserWindow,
-  dialog,
   globalShortcut,
   ipcMain,
   Menu,
@@ -276,17 +275,6 @@ function registerIpcHandlers(): void {
   });
   handle(IPC_INVOKE.sessionDiscardResume, () => controller.discardResume());
 
-  // Archivo de sesión: el diálogo del sistema solo existe fuera de la sesión.
-  handle(IPC_INVOKE.sessionFileOpenDialog, async (): Promise<OpenSessionFileResult> => {
-    if (isLocked() || !mainWindow) return { ok: false, message: 'Ya hay una sesión en curso.' };
-    const choice = await dialog.showOpenDialog(mainWindow, {
-      title: 'Abrir archivo de sesión de YALEH',
-      filters: [{ name: 'Sesión de YALEH', extensions: ['yaleh'] }],
-      properties: ['openFile'],
-    });
-    if (choice.canceled || choice.filePaths.length === 0) return { ok: false, canceled: true, message: '' };
-    return openSessionFilePath(choice.filePaths[0]);
-  });
   handle(IPC_INVOKE.sessionFileOpenContent, async (_event, content): Promise<OpenSessionFileResult> => {
     if (typeof content !== 'string') return { ok: false, message: SESSION_FILE_ERRORS.invalid };
     return openSessionFileContent(content);

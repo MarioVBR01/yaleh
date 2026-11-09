@@ -195,12 +195,16 @@ describe('la configuración en el resto de la app', () => {
     expect(document.documentElement.classList.contains('reduce-motion')).toBe(true);
   });
 
-  it('la bienvenida tiene "Configuración" y saluda con el nombre', async () => {
+  it('la bienvenida tiene "Configuración" con todas las opciones y "Volver al inicio" regresa', async () => {
     createElectronMock({ profileName: 'Ana' }).install();
     render(<App />);
-    expect((await screen.findByText('Ana')).parentElement!.textContent).toBe('Hola, Ana');
-    fireEvent.click(screen.getByRole('button', { name: 'Configuración' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Configuración' }));
     expect(await screen.findByText('⚙️ Configuración')).toBeTruthy();
+    for (const name of ['Sesión', 'Modo nocturno', 'IA Local', 'Datos', 'Perfil']) {
+      expect(screen.getByRole('region', { name })).toBeTruthy();
+    }
+    fireEvent.click(screen.getByText('Volver al inicio'));
+    expect(await screen.findByRole('heading', { name: 'Bienvenido a YALEH.' }, { timeout: 4000 })).toBeTruthy();
   });
 
   it('la vista de duración propone la duración predeterminada', () => {

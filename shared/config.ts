@@ -18,11 +18,12 @@ export interface AllowedSite {
   reason: string;
 }
 
+/** Dirección de la web de YALEH: la única definición (para pasar a un dominio propio se cambia aquí). */
+export const YALEH_WEB_HOST = 'yaleh-fbe1c.web.app';
+export const YALEH_WEB_URL = `https://${YALEH_WEB_HOST}` as const;
+
 /** Orígenes de la web de YALEH (Firebase Hosting). */
-export const YALEH_WEB_ORIGINS = [
-  'https://yaleh-fbe1c.web.app',
-  'https://yaleh-fbe1c.firebaseapp.com',
-] as const;
+export const YALEH_WEB_ORIGINS = [YALEH_WEB_URL, 'https://yaleh-fbe1c.firebaseapp.com'] as const;
 
 /** Canales de vista previa de Firebase Hosting (`firebase hosting:channel:deploy`): yaleh-fbe1c--<canal>.web.app. */
 export const YALEH_PREVIEW_ORIGIN = /^https:\/\/yaleh-fbe1c--[a-z0-9-]+\.web\.app$/;
@@ -32,7 +33,7 @@ export const YALEH_PREVIEW_ORIGIN = /^https:\/\/yaleh-fbe1c--[a-z0-9-]+\.web\.ap
  * Todo lo demás se bloquea. Solo HTTPS.
  */
 export const ALLOWED_SITES: readonly AllowedSite[] = [
-  { host: 'yaleh-fbe1c.web.app', reason: 'Web de YALEH' },
+  { host: YALEH_WEB_HOST, reason: 'Web de YALEH' },
   { host: 'yaleh-fbe1c.firebaseapp.com', reason: 'Web de YALEH y marco de Firebase Auth' },
 
   { host: 'workspace.google.com', reason: 'Google Workspace' },
