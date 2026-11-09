@@ -48,6 +48,7 @@ describe('Web: la descarga queda en "Tus sesiones pasadas"', () => {
     renderConfirm(signedIn);
     fireEvent.click(screen.getByText('Descargar archivo de sesión'));
     await screen.findByText('Tu sesión está lista');
+    expect(screen.getByText(/La encontrarás en Tus sesiones pasadas para volver a descargarla\./)).toBeTruthy();
     expect(markSessionExported).toHaveBeenCalledWith('u1', 'w1', { durationSeconds: 50 * 60, sources: [{ name: 'clase1.pdf', size: 1000 }] });
   });
 

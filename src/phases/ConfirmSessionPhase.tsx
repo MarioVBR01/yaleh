@@ -112,7 +112,10 @@ export default function ConfirmSessionPhase() {
               </li>
             ))}
           </ol>
-          <p className="text-ink-muted text-[0.78rem] text-center">El archivo vale 24 horas y se puede usar una sola vez.</p>
+          <div className="text-ink-muted text-[0.78rem] text-center">
+            <p>El archivo vale 24 horas y se puede usar una sola vez.</p>
+            <p>La encontrarás en Tus sesiones pasadas para volver a descargarla.</p>
+          </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => void handleDownload()}

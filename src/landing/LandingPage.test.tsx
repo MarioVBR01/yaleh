@@ -63,6 +63,7 @@ describe('Landing page', () => {
       expect(container.querySelector(`#${id}`)).toBeTruthy();
     }
     expect(screen.getAllByTestId('feature').length).toBe(8);
+    expect(screen.getByText('Sesiones guardadas')).toBeTruthy();
     expect(screen.getByText('Windows 10 u 11 de 64 bits')).toBeTruthy();
     expect(screen.getByText(/Windows protegió su PC/)).toBeTruthy();
   });

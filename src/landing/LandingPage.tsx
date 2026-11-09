@@ -16,6 +16,7 @@ import {
   Copy,
   Download,
   FileText,
+  History,
   Laptop,
   Lock,
   LogIn,
@@ -69,7 +70,7 @@ const FEATURES = [
   { icon: Clock, title: 'Pomodoro y avisos', text: 'Pomodoro configurable, aviso antes de que termine el tiempo y opción de extender la sesión.' },
   { icon: BarChart2, title: 'Historial y estadísticas', text: 'Minutos estudiados por día, sesiones completadas e interrumpidas, y exportación a PDF.' },
   { icon: Type, title: 'Accesible', text: 'Tamaño del texto, alto contraste, tipografía para dislexia, menos animaciones y modo claro u oscuro.' },
-  { icon: FileText, title: 'Tus archivos, en tu equipo', text: 'Los documentos originales nunca se suben: en la sesión se trabaja con el texto extraído.' },
+  { icon: History, title: 'Sesiones guardadas', text: 'Tus sesiones quedan en tu cuenta: vuelve a descargarlas cuando quieras, cada archivo vale 24 horas y se usa una vez.' },
 ];
 
 const FAQ = [
@@ -83,7 +84,7 @@ const FAQ = [
   },
   {
     q: '¿Tengo que preparar la sesión acá?',
-    a: 'No es obligatorio. Prepararla acá te deja subir tus apuntes desde cualquier computadora y llevarlos en el archivo .yaleh, pero en la aplicación también podés empezar una sesión con "Iniciar", con o sin conexión.',
+    a: 'Depende de lo que necesites. Con internet, la sesión completa (Gemini y las herramientas de Google con tu cuenta) se prepara aquí y se abre con el archivo .yaleh; además, tus sesiones quedan guardadas para volver a descargarlas. Sin internet o sin cuenta, en la aplicación puedes tocar Iniciar para una sesión rápida con tus archivos, notas, Pomodoro y el asistente sin conexión.',
   },
   {
     q: '¿Qué pasa con mis documentos?',
@@ -327,7 +328,7 @@ function HowItWorks() {
           <DownloadButton large />
         </div>
         <p className="mt-5 text-center text-sm text-ink-muted">
-          ¿Sin internet? En la aplicación tocá <b className="text-ink font-medium">Iniciar</b>, cargá tus archivos y elegí el tiempo.
+          ¿Sin internet? En la aplicación toca <b className="text-ink font-medium">Iniciar</b> para una sesión rápida: carga tus archivos y elige el tiempo.
         </p>
       </div>
     </section>
