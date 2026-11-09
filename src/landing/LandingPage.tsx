@@ -1,13 +1,14 @@
 /**
  * @file LandingPage.tsx
  * @description Landing page: el inicio de la web (fase 'landing', brief revisión 1.10). Presenta el producto
- * y tiene dos caminos: "Preparar mi sesión" (login con Google → Material → Duración → .yaleh) y
- * "Descargar para Windows" (el instalador, en el mismo hosting). Aparte ofrece la IA Local.
- * El escritorio nunca la muestra. Usa los tokens, letras y logo del diseño (ORION #29) y sigue el modo
- * claro/oscuro del sistema.
+ * y tiene dos caminos: "Preparar mi sesión" (Ingresar → Mis sesiones → sesión → .yaleh) y
+ * "Descargar para Windows" (el instalador). Aparte ofrece la IA Local.
+ * El escritorio nunca la muestra. Usa los tokens, letras y logo del diseño (ORION #29), con modo claro u
+ * oscuro (useWebTheme). Animaciones con framer-motion; se respeta "reducir movimiento" del sistema.
  */
 
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import {
   BarChart2,
   Check,
@@ -30,11 +31,25 @@ import {
 } from 'lucide-react';
 import { APP_VERSION, DOWNLOADS, LIMITS, LOCAL_AI } from '@shared/config';
 import Logo from '../components/Logo';
+import WebThemeToggle from '../components/WebThemeToggle';
 import { useApp } from '../context/AppContext';
 
 /** Tamaño del modelo en GB decimales (2,7 GB), como en la documentación. */
 const MODEL_SIZE = `${(LOCAL_AI.sizeBytes / 1e9).toFixed(1).replace('.', ',')} GB`;
 const MODELS_FOLDER = '%APPDATA%\\yaleh\\models';
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+/** Una sola vez, cuando asoma un poco. */
+const VIEWPORT = { once: true, amount: 0.12 };
+
+const heroGroup: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.09 } } };
+const heroItem: Variants = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } };
+const revealGroup: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
+const revealItem: Variants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } };
+
+/** Elevación de las tarjetas. En CSS, para no mezclarse con la entrada al hacer scroll. */
+const cardLift = 'group transition-transform duration-200 hover:-translate-y-1 motion-reduce:hover:translate-y-0';
+const iconGrow = 'transition-transform duration-200 group-hover:scale-[1.08] motion-reduce:group-hover:scale-100';
 
 const NAV = [
   { href: '#como-funciona', label: 'Cómo funciona' },
@@ -47,17 +62,17 @@ const NAV = [
 const STEPS = [
   {
     icon: Upload,
-    title: 'Prepará tu sesión en la web',
-    text: 'Entrá con tu cuenta de Google, subí tus apuntes (PDF, Word o texto) y elegí cuánto tiempo vas a estudiar.',
+    title: 'Prepara tu sesión en la web',
+    text: 'Ingresa con tu cuenta de Google, sube tus apuntes (PDF, Word o texto) y elige cuánto tiempo vas a estudiar.',
   },
   {
     icon: MousePointerClick,
-    title: 'Abrí el archivo con doble clic',
+    title: 'Abre el archivo con doble clic',
     text: 'La web te da un archivo .yaleh. Al abrirlo, YALEH carga tus materiales y empieza la sesión.',
   },
   {
     icon: Lock,
-    title: 'Estudiá sin distracciones',
+    title: 'Estudia sin distracciones',
     text: 'La computadora queda bloqueada en YALEH hasta que el tiempo llegue a cero. Solo se abren los sitios de estudio permitidos.',
   },
 ];
@@ -70,25 +85,25 @@ const FEATURES = [
   { icon: Clock, title: 'Pomodoro y avisos', text: 'Pomodoro configurable, aviso antes de que termine el tiempo y opción de extender la sesión.' },
   { icon: BarChart2, title: 'Historial y estadísticas', text: 'Minutos estudiados por día, sesiones completadas e interrumpidas, y exportación a PDF.' },
   { icon: Type, title: 'Accesible', text: 'Tamaño del texto, alto contraste, tipografía para dislexia, menos animaciones y modo claro u oscuro.' },
-  { icon: History, title: 'Sesiones guardadas', text: 'Tus sesiones quedan en tu cuenta: vuelve a descargarlas cuando quieras, cada archivo vale 24 horas y se usa una vez.' },
+  { icon: History, title: 'Mis sesiones', text: 'Tus sesiones quedan en tu cuenta: ábrelas, cámbialas y vuelve a descargarlas cuando quieras. Cada archivo vale 24 horas y se usa una vez.' },
 ];
 
 const FAQ = [
   {
     q: 'Windows dice "Windows protegió su PC". ¿Es seguro?',
-    a: 'Aparece porque el instalador todavía no tiene firma digital (requiere un certificado pago). Elegí "Más información" → "Ejecutar de todas formas". Se instala solo para tu usuario y no pide permisos de administrador.',
+    a: 'Aparece porque el instalador todavía no tiene firma digital (requiere un certificado pago). Elige "Más información" → "Ejecutar de todas formas". Se instala solo para tu usuario y no pide permisos de administrador.',
   },
   {
     q: '¿Puedo salir antes de que termine la sesión?',
-    a: 'No: es la idea de YALEH. Si se apaga o se reinicia la computadora, la sesión queda como interrumpida y al volver a abrir YALEH podés retomarla con el tiempo que faltaba.',
+    a: 'No: es la idea de YALEH. Si se apaga o se reinicia la computadora, la sesión queda como interrumpida y al volver a abrir YALEH puedes retomarla con el tiempo que faltaba.',
   },
   {
-    q: '¿Tengo que preparar la sesión acá?',
+    q: '¿Tengo que preparar la sesión aquí?',
     a: 'Depende de lo que necesites. Con internet, la sesión completa (Gemini y las herramientas de Google con tu cuenta) se prepara aquí y se abre con el archivo .yaleh; además, tus sesiones quedan guardadas para volver a descargarlas. Sin internet o sin cuenta, en la aplicación puedes tocar Iniciar para usar el módulo IA Local: tus archivos, notas, Pomodoro y la IA que funciona en tu computadora.',
   },
   {
     q: '¿Qué pasa con mis documentos?',
-    a: 'Los archivos originales quedan en tu computadora. Al preparar la sesión acá se guarda el texto extraído en tu cuenta para armar el archivo de sesión. Con conexión, el asistente en línea (Gemini) recibe ese texto para responder; la IA Local trabaja en tu equipo y no envía nada.',
+    a: 'Los archivos originales quedan en tu computadora. Al preparar la sesión aquí se guarda el texto extraído en tu cuenta para armar el archivo de sesión. Con conexión, el asistente en línea (Gemini) recibe ese texto para responder; la IA Local trabaja en tu equipo y no envía nada.',
   },
   {
     q: '¿Cuánto cuesta?',
@@ -141,8 +156,8 @@ function DownloadButton({ large = false, compact = false }: { large?: boolean; c
       <Download size={large ? 20 : 16} />
       {compact ? (
         <>
-          <span className="sm:hidden">Descargar</span>
-          <span className="hidden sm:inline">Descargar para Windows</span>
+          <span className="min-[1400px]:hidden">Descargar</span>
+          <span className="hidden min-[1400px]:inline">Descargar para Windows</span>
         </>
       ) : (
         'Descargar para Windows'
@@ -151,12 +166,12 @@ function DownloadButton({ large = false, compact = false }: { large?: boolean; c
   );
 }
 
-/** "Preparar mi sesión": el login con Google (o Material si la cuenta ya está iniciada). */
+/** "Preparar mi sesión": Ingresar o, si ya ingresó en esta pestaña, "Mis sesiones". */
 function PrepareButton({ large = false, compact = false }: { large?: boolean; compact?: boolean }) {
   const { state, dispatch } = useApp();
   return (
     <button
-      onClick={() => dispatch({ type: 'SET_PHASE', payload: state.session.isAuthenticated ? 'dropzone' : 'login' })}
+      onClick={() => dispatch({ type: 'SET_PHASE', payload: state.session.isAuthenticated ? 'sessions-home' : 'login' })}
       data-testid="prepare-session"
       className={`inline-flex items-center justify-center gap-2 rounded-[18px] border border-line bg-surface text-ink font-medium whitespace-nowrap hover:border-ink-muted ${
         large ? 'h-14 px-6 text-base' : 'h-11 px-4 text-sm'
@@ -165,8 +180,8 @@ function PrepareButton({ large = false, compact = false }: { large?: boolean; co
       <LogIn size={large ? 18 : 16} />
       {compact ? (
         <>
-          <span className="sm:hidden">Preparar</span>
-          <span className="hidden sm:inline">Preparar mi sesión</span>
+          <span className="min-[1400px]:hidden">Preparar</span>
+          <span className="hidden min-[1400px]:inline">Preparar mi sesión</span>
         </>
       ) : (
         'Preparar mi sesión'
@@ -175,10 +190,55 @@ function PrepareButton({ large = false, compact = false }: { large?: boolean; co
   );
 }
 
-function Header() {
+/** "Ingresar" o, con la cuenta ya abierta en esta pestaña, "Mis sesiones" con la foto o las iniciales. */
+function AccountButton() {
+  const { state, dispatch } = useApp();
+  const { isAuthenticated, avatar, initials } = state.session;
+  const base = 'inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[18px] text-sm font-medium whitespace-nowrap text-ink-soft hover:text-ink hover:bg-surface-raised transition-colors';
+  if (!isAuthenticated) {
+    return (
+      <button onClick={() => dispatch({ type: 'SET_PHASE', payload: 'login' })} data-testid="sign-in" className={base}>
+        Ingresar
+      </button>
+    );
+  }
   return (
-    <header className="sticky top-0 z-40 bg-canvas/85 backdrop-blur border-b border-line">
-      <div className="max-w-6xl mx-auto h-[72px] px-4 sm:px-8 flex items-center gap-6">
+    <button onClick={() => dispatch({ type: 'SET_PHASE', payload: 'sessions-home' })} data-testid="my-sessions" className={base}>
+      {avatar ? (
+        <img src={avatar} alt="" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" />
+      ) : (
+        <span className="w-7 h-7 rounded-full bg-ink text-canvas text-xs font-semibold grid place-items-center">{initials ?? '?'}</span>
+      )}
+      Mis sesiones
+    </button>
+  );
+}
+
+function Header() {
+  const ref = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  // La página se desplaza dentro de un contenedor (App.tsx), no en la ventana.
+  useEffect(() => {
+    let node = ref.current?.parentElement ?? null;
+    while (node && !['auto', 'scroll'].includes(getComputedStyle(node).overflowY)) node = node.parentElement;
+    if (!node) return;
+    const scroller = node;
+    const update = () => setScrolled(scroller.scrollTop > 10);
+    update();
+    scroller.addEventListener('scroll', update, { passive: true });
+    return () => scroller.removeEventListener('scroll', update);
+  }, []);
+
+  return (
+    <header
+      ref={ref}
+      data-scrolled={scrolled}
+      className={`sticky top-0 z-40 bg-canvas/85 backdrop-blur border-b transition-[border-color,box-shadow] duration-300 ${
+        scrolled ? 'border-line shadow-[0_8px_24px_rgba(0,0,0,0.12)]' : 'border-transparent'
+      }`}
+    >
+      <div className="max-w-[1360px] mx-auto h-[72px] px-4 sm:px-8 flex items-center gap-4 xl:gap-6">
         <a href="#inicio" className="flex items-center gap-2.5 flex-shrink-0">
           <Logo size={38} />
           <b className="font-display text-[19px] font-extrabold tracking-[0.04em]">YALEH</b>
@@ -191,8 +251,12 @@ function Header() {
           ))}
         </nav>
         <div className="ml-auto xl:ml-0 flex items-center gap-2">
-          {/* En el celular solo cabe uno: preparar la sesión (los dos botones están en la portada). */}
-          <PrepareButton compact />
+          <WebThemeToggle />
+          <AccountButton />
+          {/* En el celular no caben: los dos botones están en la portada. */}
+          <span className="hidden sm:inline-flex">
+            <PrepareButton compact />
+          </span>
           <span className="hidden sm:inline-flex">
             <DownloadButton compact />
           </span>
@@ -203,34 +267,37 @@ function Header() {
 }
 
 function Hero() {
+  const reduceMotion = useReducedMotion();
   return (
     <section id="inicio" className="relative overflow-hidden">
-      <span
+      <motion.span
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-[45%] w-[1100px] h-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{ background: 'radial-gradient(circle, color-mix(in oklab, var(--color-accent) 14%, transparent) 0%, transparent 60%)' }}
+        animate={reduceMotion ? undefined : { opacity: [0.65, 1, 0.65] }}
+        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
       />
       <div className="relative max-w-6xl mx-auto px-4 sm:px-8 pt-16 pb-20 lg:pt-24 lg:pb-28 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
-        <div className="text-center lg:text-left">
-          <span className="inline-flex items-center gap-2 h-8 px-3 rounded-full bg-accent/15 text-accent-soft text-[0.8rem] font-medium">
+        <motion.div className="text-center lg:text-left" variants={heroGroup} initial="hidden" animate="show">
+          <motion.span variants={heroItem} className="inline-flex items-center gap-2 h-8 px-3 rounded-full bg-accent/15 text-accent-soft text-[0.8rem] font-medium">
             <Laptop size={14} /> Para Windows 10 y 11 · gratis
-          </span>
-          <h1 className="mt-5 font-display text-5xl sm:text-[4rem] leading-[0.98] font-extrabold tracking-tight">
-            Estudiá sin distracciones<span className="text-accent">.</span>
-          </h1>
-          <p className="mt-5 text-lg sm:text-[1.2rem] font-light text-ink-soft max-w-xl mx-auto lg:mx-0">
+          </motion.span>
+          <motion.h1 variants={heroItem} className="mt-5 font-display text-5xl sm:text-[4rem] leading-[0.98] font-extrabold tracking-tight">
+            Estudia sin distracciones<span className="text-accent">.</span>
+          </motion.h1>
+          <motion.p variants={heroItem} className="mt-5 text-lg sm:text-[1.2rem] font-light text-ink-soft max-w-xl mx-auto lg:mx-0">
             YALEH bloquea la computadora durante tu sesión de estudio y te acompaña con un asistente de IA que trabaja con tus
             propios apuntes, con o sin internet.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+          </motion.p>
+          <motion.div variants={heroItem} className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
             <PrepareButton large />
             <DownloadButton large />
-          </div>
-          <p className="mt-4 text-[0.8rem] text-ink-muted">
-            ¿Todavía no tenés la aplicación? Descargala para computadoras con Windows: versión {APP_VERSION}, {DOWNLOADS.installerSizeLabel}, 64 bits,
+          </motion.div>
+          <motion.p variants={heroItem} className="mt-4 text-[0.8rem] text-ink-muted">
+            ¿Todavía no tienes la aplicación? Descárgala para computadoras con Windows: versión {APP_VERSION}, {DOWNLOADS.installerSizeLabel}, 64 bits,
             sin permisos de administrador.
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
         <KioskPreview />
       </div>
     </section>
@@ -239,9 +306,21 @@ function Hero() {
 
 /** Vista previa ilustrativa del kiosko (solo HTML, con los tokens del diseño). */
 function KioskPreview() {
+  const reduceMotion = useReducedMotion();
   return (
-    <div aria-hidden="true" className="relative mx-auto w-full max-w-[520px] hidden sm:block">
-      <div className="rounded-[20px] border border-line bg-surface shadow-[0_24px_60px_rgba(0,0,0,0.25)] overflow-hidden">
+    <motion.div
+      aria-hidden="true"
+      className="relative mx-auto w-full max-w-[520px] hidden sm:block"
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.6, delay: 0.25, ease: EASE }}
+    >
+      <motion.div
+        data-testid="kiosk-preview"
+        className="rounded-[20px] border border-line bg-surface shadow-[0_24px_60px_rgba(0,0,0,0.25)] overflow-hidden"
+        animate={reduceMotion ? undefined : { y: [0, -6, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+      >
         <div className="flex">
           <div className="w-[92px] border-r border-line p-3 flex flex-col items-center gap-3">
             <Logo size={34} />
@@ -263,7 +342,7 @@ function KioskPreview() {
             </div>
             <div className="rounded-xl border border-line bg-canvas p-3 flex flex-col gap-2">
               <p className="font-display text-xs font-bold">Chat</p>
-              <span className="self-end max-w-[85%] rounded-[10px_10px_3px_10px] bg-ink text-canvas text-[10px] px-2 py-1.5">Resumime la clase 3</span>
+              <span className="self-end max-w-[85%] rounded-[10px_10px_3px_10px] bg-ink text-canvas text-[10px] px-2 py-1.5">Resúmeme la clase 3</span>
               <div className="flex gap-1.5">
                 <span className="w-5 h-5 rounded-md bg-accent/15 text-accent-soft grid place-items-center flex-shrink-0">
                   <Sparkles size={10} />
@@ -287,18 +366,18 @@ function KioskPreview() {
             <ShieldCheck size={12} className="text-accent" /> Sesión protegida
           </span>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
 function SectionTitle({ eyebrow, title, text }: { eyebrow: string; title: string; text?: string }) {
   return (
-    <div className="text-center max-w-2xl mx-auto mb-10">
+    <motion.div className="text-center max-w-2xl mx-auto mb-10" variants={revealItem} initial="hidden" whileInView="show" viewport={VIEWPORT}>
       <p className="text-[0.72rem] tracking-[0.08em] uppercase text-accent-soft font-semibold">{eyebrow}</p>
       <h2 className="mt-2 font-display text-3xl sm:text-[2.5rem] leading-[1.05] font-extrabold tracking-tight">{title}</h2>
       {text && <p className="mt-3 text-ink-soft">{text}</p>}
-    </div>
+    </motion.div>
   );
 }
 
@@ -309,20 +388,22 @@ function HowItWorks() {
         <SectionTitle
           eyebrow="Cómo funciona"
           title="Tres pasos y a estudiar"
-          text="Si es la primera vez, descargá e instalá la aplicación. Después, cada sesión empieza acá."
+          text="Si es la primera vez, descarga e instala la aplicación. Después, cada sesión empieza aquí."
         />
-        <ol className="grid md:grid-cols-3 gap-4">
+        <motion.ol className="grid md:grid-cols-3 gap-4" variants={revealGroup} initial="hidden" whileInView="show" viewport={VIEWPORT}>
           {STEPS.map(({ icon: Icon, title, text }, i) => (
-            <li key={title} className="rounded-[20px] border border-line bg-surface p-6">
-              <div className="flex items-center gap-3">
-                <span className="w-[26px] h-[26px] rounded-full bg-ink text-canvas grid place-items-center text-xs font-semibold">{i + 1}</span>
-                <Icon size={20} className="text-accent-soft" />
+            <motion.li key={title} variants={revealItem}>
+              <div className={`h-full rounded-[20px] border border-line bg-surface p-6 ${cardLift}`}>
+                <div className="flex items-center gap-3">
+                  <span className="w-[26px] h-[26px] rounded-full bg-ink text-canvas grid place-items-center text-xs font-semibold">{i + 1}</span>
+                  <Icon size={20} className={`text-accent-soft ${iconGrow}`} />
+                </div>
+                <h3 className="mt-4 font-display text-xl font-bold">{title}</h3>
+                <p className="mt-2 text-sm text-ink-soft">{text}</p>
               </div>
-              <h3 className="mt-4 font-display text-xl font-bold">{title}</h3>
-              <p className="mt-2 text-sm text-ink-soft">{text}</p>
-            </li>
+            </motion.li>
           ))}
-        </ol>
+        </motion.ol>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
           <PrepareButton large />
           <DownloadButton large />
@@ -339,18 +420,20 @@ function Features() {
   return (
     <section id="funciones" className="scroll-mt-20 border-t border-line bg-surface">
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-20">
-        <SectionTitle eyebrow="Funciones" title="Todo lo que necesitás, nada más" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SectionTitle eyebrow="Funciones" title="Todo lo que necesitas, nada más" />
+        <motion.div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" variants={revealGroup} initial="hidden" whileInView="show" viewport={VIEWPORT}>
           {FEATURES.map(({ icon: Icon, title, text }) => (
-            <div key={title} data-testid="feature" className="rounded-2xl border border-line bg-canvas p-5">
-              <span className="w-10 h-10 rounded-xl bg-accent/15 text-accent-soft grid place-items-center">
-                <Icon size={20} />
-              </span>
-              <h3 className="mt-4 font-sans text-[0.95rem] font-semibold">{title}</h3>
-              <p className="mt-1.5 text-[0.84rem] text-ink-soft">{text}</p>
-            </div>
+            <motion.div key={title} data-testid="feature" variants={revealItem}>
+              <div className={`h-full rounded-2xl border border-line bg-canvas p-5 ${cardLift}`}>
+                <span className={`w-10 h-10 rounded-xl bg-accent/15 text-accent-soft grid place-items-center ${iconGrow}`}>
+                  <Icon size={20} />
+                </span>
+                <h3 className="mt-4 font-sans text-[0.95rem] font-semibold">{title}</h3>
+                <p className="mt-1.5 text-[0.84rem] text-ink-soft">{text}</p>
+              </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -370,8 +453,8 @@ function OfflineAssistant() {
 
   return (
     <section id="sin-conexion" className="scroll-mt-20 border-t border-line">
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-20 grid lg:grid-cols-2 gap-10 items-start">
-        <div>
+      <motion.div className="max-w-6xl mx-auto px-4 sm:px-8 py-20 grid lg:grid-cols-2 gap-10 items-start" variants={revealGroup} initial="hidden" whileInView="show" viewport={VIEWPORT}>
+        <motion.div variants={revealItem}>
           <p className="text-[0.72rem] tracking-[0.08em] uppercase text-accent-soft font-semibold">Opcional</p>
           <h2 className="mt-2 font-display text-3xl sm:text-[2.5rem] leading-[1.05] font-extrabold tracking-tight">IA Local</h2>
           <p className="mt-4 text-ink-soft">
@@ -391,9 +474,9 @@ function OfflineAssistant() {
               </li>
             ))}
           </ul>
-        </div>
+        </motion.div>
 
-        <div className="space-y-4">
+        <motion.div className="space-y-4" variants={revealItem}>
           <div className="rounded-[20px] border-2 border-accent bg-surface p-6">
             <span className="inline-flex h-6 px-2.5 items-center rounded-full bg-accent/15 text-accent-soft text-xs font-semibold">Recomendado</span>
             <h3 className="mt-3 font-display text-xl font-bold">Desde la aplicación</h3>
@@ -405,18 +488,18 @@ function OfflineAssistant() {
 
           <div className="rounded-[20px] border border-line bg-surface p-6" data-testid="manual-model">
             <h3 className="font-display text-xl font-bold">Descarga directa</h3>
-            <p className="mt-2 text-sm text-ink-soft">Si preferís bajarlo con el navegador (por ejemplo, en otra conexión):</p>
+            <p className="mt-2 text-sm text-ink-soft">Si prefieres bajarlo con el navegador (por ejemplo, en otra conexión):</p>
             <ol className="mt-4 space-y-3 text-sm">
               <li className="flex gap-3">
                 <span className="w-[26px] h-[26px] rounded-full bg-ink text-canvas grid place-items-center text-xs font-semibold flex-shrink-0">1</span>
                 <span className="pt-0.5">
-                  Descargá <span className="font-mono text-[0.8rem]">{LOCAL_AI.fileName}</span> ({MODEL_SIZE}).
+                  Descarga <span className="font-mono text-[0.8rem]">{LOCAL_AI.fileName}</span> ({MODEL_SIZE}).
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="w-[26px] h-[26px] rounded-full bg-ink text-canvas grid place-items-center text-xs font-semibold flex-shrink-0">2</span>
                 <span className="pt-0.5 min-w-0">
-                  Copialo, sin cambiarle el nombre, en esta carpeta (abrí YALEH una vez antes para que exista):
+                  Cópialo, sin cambiarle el nombre, en esta carpeta (abre YALEH una vez antes para que exista):
                   <span className="mt-2 flex items-center gap-2 rounded-xl bg-surface-raised px-3 py-2 font-mono text-[0.8rem] break-all">
                     {MODELS_FOLDER}
                     <button onClick={() => void copyFolder()} className="ml-auto p-1 rounded-md text-ink-muted hover:text-ink" title="Copiar la ruta" aria-label="Copiar la ruta">
@@ -439,8 +522,8 @@ function OfflineAssistant() {
             </a>
             <p className="mt-3 text-[0.72rem] text-ink-muted break-all">SHA-256: <span className="font-mono">{LOCAL_AI.sha256}</span></p>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </section>
   );
 }
@@ -457,16 +540,45 @@ function Requirements() {
     <section id="requisitos" className="scroll-mt-20 border-t border-line bg-surface">
       <div className="max-w-4xl mx-auto px-4 sm:px-8 py-20">
         <SectionTitle eyebrow="Requisitos" title="¿Funciona en mi computadora?" />
-        <dl className="rounded-[20px] border border-line bg-canvas divide-y divide-line">
+        <motion.dl className="rounded-[20px] border border-line bg-canvas divide-y divide-line" variants={revealItem} initial="hidden" whileInView="show" viewport={VIEWPORT}>
           {rows.map(row => (
             <div key={row.label} className="grid sm:grid-cols-[220px_1fr] gap-1 sm:gap-6 px-5 py-4">
               <dt className="text-sm font-medium">{row.label}</dt>
               <dd className="text-sm text-ink-soft">{row.value}</dd>
             </div>
           ))}
-        </dl>
+        </motion.dl>
       </div>
     </section>
+  );
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  return (
+    <motion.div className="rounded-2xl border border-line bg-surface" variants={revealItem}>
+      <button onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={panelId} className="w-full flex items-center gap-3 px-5 py-4 text-left font-medium">
+        <span className="flex-1">{question}</span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }} className="text-ink-muted flex-shrink-0">
+          <ChevronDown size={18} />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={panelId}
+            className="overflow-hidden"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: EASE }}
+          >
+            <p className="px-5 pb-4 text-sm text-ink-soft">{answer}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -475,17 +587,11 @@ function Faq() {
     <section id="preguntas" className="scroll-mt-20 border-t border-line">
       <div className="max-w-3xl mx-auto px-4 sm:px-8 py-20">
         <SectionTitle eyebrow="Preguntas frecuentes" title="Antes de instalar" />
-        <div className="space-y-3">
+        <motion.div className="space-y-3" variants={revealGroup} initial="hidden" whileInView="show" viewport={VIEWPORT}>
           {FAQ.map(item => (
-            <details key={item.q} className="group rounded-2xl border border-line bg-surface px-5 py-4">
-              <summary className="flex items-center gap-3 cursor-pointer list-none font-medium">
-                <span className="flex-1">{item.q}</span>
-                <ChevronDown size={18} className="text-ink-muted transition-transform group-open:rotate-180" />
-              </summary>
-              <p className="mt-3 text-sm text-ink-soft">{item.a}</p>
-            </details>
+            <FaqItem key={item.q} question={item.q} answer={item.a} />
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -494,7 +600,7 @@ function Faq() {
 function FinalCta() {
   return (
     <section className="border-t border-line">
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-20 text-center flex flex-col items-center gap-6">
+      <motion.div className="max-w-6xl mx-auto px-4 sm:px-8 py-20 text-center flex flex-col items-center gap-6" variants={revealItem} initial="hidden" whileInView="show" viewport={VIEWPORT}>
         <Logo size={88} />
         <h2 className="font-display text-3xl sm:text-[2.75rem] leading-[1.05] font-extrabold tracking-tight">
           Tu próxima sesión, sin distracciones<span className="text-accent">.</span>
@@ -504,7 +610,7 @@ function FinalCta() {
           <DownloadButton large />
         </div>
         <p className="text-[0.8rem] text-ink-muted">Gratis · la aplicación es para Windows 10 y 11 · versión {APP_VERSION}</p>
-      </div>
+      </motion.div>
     </section>
   );
 }

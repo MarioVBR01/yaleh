@@ -11,6 +11,7 @@
 import { Fragment, useState } from 'react';
 import { ArrowLeft, LogOut, RefreshCw } from 'lucide-react';
 import Logo from '../components/Logo';
+import WebThemeToggle from '../components/WebThemeToggle';
 import { useApp } from '../context/AppContext';
 import { describeAuthError, signInWithGoogle, signOut } from '../firebase/auth';
 import { useGoToMySessions } from '../lib/useGoToMySessions';
@@ -101,6 +102,7 @@ export default function WebAccountBar({ step = 0, home = false }: { step?: numbe
             <LogOut size={14} /> Salir
           </button>
         </div>
+        <WebThemeToggle />
       </div>
       {error && (
         <p role="alert" className="absolute right-4 top-full mt-1 text-[11px] text-danger text-right">

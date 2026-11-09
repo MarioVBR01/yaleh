@@ -14,10 +14,12 @@ import "@fontsource/opendyslexic/700.css";
 import "./index.css";
 import App from "./App";
 import { isElectron } from "./lib/electron";
+import { applyWebTheme, preferredWebTheme } from "./lib/useWebTheme";
 
 // Escritorio: oscuro hasta que llegue la configuración (Modo nocturno, ORION #29).
-// La web no fija el tema: sigue al sistema.
+// Web: la preferencia guardada o la del sistema, antes de dibujar, para que no parpadee.
 if (isElectron()) document.documentElement.dataset.theme = "dark";
+else applyWebTheme(preferredWebTheme());
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

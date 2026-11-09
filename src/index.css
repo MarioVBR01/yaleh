@@ -85,6 +85,18 @@
 }
 
 /*
+ * Web en modo claro: el texto de apoyo y el naranja de textos no llegaban a 4,5:1 sobre el fondo.
+ * Solo en la web (App.tsx agrega la clase): el escritorio conserva sus colores.
+ */
+:root[data-theme="light"] .web-contrast {
+  --color-ink-muted: #6b6257;
+  --color-ink-subtle: #6b6257;
+  --color-accent-soft: #9a4d05;
+  --color-warning: #9a4d05;
+  --color-danger: #b02a30;
+}
+
+/*
  * Componentes que todavía usan los grises (slate) y el azul de Tailwind del MVP: se apuntan a los
  * tokens, así siguen el modo claro/oscuro y el alto contraste sin tocar cada clase.
  * Los grises van por función (950 = fondo … 300 = texto secundario); el azul pasa a naranja.

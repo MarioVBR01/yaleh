@@ -230,12 +230,11 @@ describe('App en el escritorio', () => {
 describe('App en la web', () => {
   it('empieza en la landing; "Preparar mi sesión" lleva al login con Google y "Volver al inicio" regresa', async () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Estudiá sin distracciones.' })).toBeTruthy();
-    expect(screen.queryByText('Ingresar')).toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Estudia sin distracciones.' })).toBeTruthy();
+    expect(screen.queryByText('Volver al inicio')).toBeNull();
     fireEvent.click(screen.getAllByTestId('prepare-session')[0]);
-    expect(await screen.findByText('Ingresar', {}, { timeout: 5000 })).toBeTruthy();
-    fireEvent.click(screen.getByText('Volver al inicio'));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Estudiá sin distracciones.' })).toBeTruthy();
+    fireEvent.click(await screen.findByText('Volver al inicio', {}, { timeout: 5000 }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Estudia sin distracciones.' })).toBeTruthy();
   });
 });
 

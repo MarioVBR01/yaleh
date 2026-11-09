@@ -245,7 +245,7 @@ function AppContent() {
 
   return (
     <MotionConfig reducedMotion={state.settings?.settings.reduceMotion ? 'always' : 'user'}>
-      <div className="h-screen flex flex-col bg-canvas text-ink">
+      <div className={`h-screen flex flex-col bg-canvas text-ink ${getElectronAPI() ? '' : 'web-contrast'}`}>
         {showAccount && <WebAccountBar step={webStep} home={phase === 'sessions-home'} />}
         <AnimatePresence mode="wait">
           <motion.div

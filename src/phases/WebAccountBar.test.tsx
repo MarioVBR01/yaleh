@@ -162,6 +162,15 @@ describe('Barra superior de la web (ORION #38)', () => {
     expect(discardEmptyDraft).not.toHaveBeenCalled();
   });
 
+  it('tiene el botón de tema', () => {
+    render(
+      <AppProvider initial={{ ...initialState, phase: 'sessions-home', authChecked: true }}>
+        <WebAccountBar home />
+      </AppProvider>
+    );
+    expect(screen.getByRole('button', { name: /Cambiar a modo (claro|oscuro)/ })).toBeTruthy();
+  });
+
   it('marca con ✓ los pasos hechos', () => {
     render(
       <AppProvider initial={{ ...initialState, phase: 'confirm-session', authChecked: true }}>

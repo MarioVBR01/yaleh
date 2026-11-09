@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react';
 import { APP_VERSION, YALEH_WEB_ORIGINS } from '@shared/config';
 import Logo from '../components/Logo';
+import WebThemeToggle from '../components/WebThemeToggle';
 import { useApp } from '../context/AppContext';
 import { isFirebaseConfigured } from '../firebase/app';
 import { describeAuthError, isUnauthorizedDomain, signInWithGoogle } from '../firebase/auth';
@@ -52,6 +53,9 @@ export default function LoginPhase() {
       >
         <ArrowLeft size={16} /> Volver al inicio
       </button>
+      <div className="absolute z-10 top-6 right-6">
+        <WebThemeToggle />
+      </div>
       {/* Misma composición que la bienvenida del escritorio (ORION #37): resplandor suave, sin recuadro. */}
       <span
         aria-hidden="true"

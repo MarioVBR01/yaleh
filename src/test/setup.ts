@@ -35,6 +35,21 @@ if (typeof window !== 'undefined') {
     };
   }
 
+  // framer-motion lo usa para whileInView.
+  if (!window.IntersectionObserver) {
+    window.IntersectionObserver = class {
+      readonly root = null;
+      readonly rootMargin = '';
+      readonly thresholds = [];
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+    };
+  }
+
   if (!Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = () => {};
   }

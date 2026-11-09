@@ -32,6 +32,11 @@ describe('Web: pantalla de entrar (ORION #37)', () => {
     expect(screen.getByText('Ingresa con tu cuenta de Google. Si es tu primera vez, tu cuenta de YALEH se crea automáticamente.')).toBeTruthy();
   });
 
+  it('tiene el botón de tema', () => {
+    renderLogin();
+    expect(screen.getByRole('button', { name: /Cambiar a modo (claro|oscuro)/ })).toBeTruthy();
+  });
+
   it('sin recuadro ni degradé azul', () => {
     const { container } = renderLogin();
     expect(container.innerHTML).not.toMatch(/from-slate|via-blue|bg-gradient|backdrop-blur|Iniciar Sesión/);
