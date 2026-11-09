@@ -45,9 +45,9 @@ afterEach(() => {
   emit = null;
 });
 
-/** La web empieza en la landing (revisión 1.10): "Preparar mi sesión" lleva al login. */
+/** La web empieza en la landing (revisión 1.10): "Iniciar sesión" lleva al login. */
 function goToLogin() {
-  fireEvent.click(screen.getAllByTestId('prepare-session')[0]);
+  fireEvent.click(screen.getAllByTestId('sign-in')[0]);
 }
 
 describe('Ingresar', () => {
@@ -86,7 +86,7 @@ describe('BUG-002: cuenta de Google guardada en el navegador', () => {
     });
     expect(signOut).toHaveBeenCalled();
     // Revisión 1.10: al salir se vuelve al inicio (la landing).
-    expect((await screen.findAllByTestId('prepare-session')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByTestId('sign-in')).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Cuenta de Google')).toBeNull();
   });
 

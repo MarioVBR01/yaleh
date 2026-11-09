@@ -11,6 +11,7 @@
 import { Fragment, useState } from 'react';
 import { ArrowLeft, LogOut, RefreshCw } from 'lucide-react';
 import Logo from '../components/Logo';
+import UserAvatar from '../components/UserAvatar';
 import WebThemeToggle from '../components/WebThemeToggle';
 import { useApp } from '../context/AppContext';
 import { describeAuthError, signInWithGoogle, signOut } from '../firebase/auth';
@@ -83,13 +84,7 @@ export default function WebAccountBar({ step = 0, home = false }: { step?: numbe
         )}
 
         <div className={`ml-auto ${home ? '' : 'lg:ml-0'} flex items-center gap-2.5 p-1.5 rounded-[14px] border border-line min-w-0`}>
-          {avatar ? (
-            <img src={avatar} alt="" className="w-[34px] h-[34px] rounded-full flex-shrink-0" referrerPolicy="no-referrer" />
-          ) : (
-            <span className="w-[34px] h-[34px] rounded-full bg-ink text-canvas text-sm font-semibold grid place-items-center flex-shrink-0">
-              {initials ?? '?'}
-            </span>
-          )}
+          <UserAvatar avatar={avatar} initials={initials} />
           <div className={`min-w-0 leading-tight pr-1 hidden ${home ? 'md:block' : 'xl:block'}`}>
             <p className="text-[13px] text-ink truncate">{displayName}</p>
             {email && <p className="text-[11.5px] text-ink-muted truncate">{email}</p>}

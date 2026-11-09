@@ -1,8 +1,9 @@
 /**
  * @file LandingPage.tsx
  * @description Landing page: el inicio de la web (fase 'landing', brief revisión 1.10). Presenta el producto
- * y tiene dos caminos: "Preparar mi sesión" (Ingresar → Mis sesiones → sesión → .yaleh) y
- * "Descargar para Windows" (el instalador). Aparte ofrece la IA Local.
+ * y tiene dos caminos: "Iniciar sesión" (Registrarse con Google → Mis sesiones → sesión → .yaleh) y
+ * "Descargar para Windows" (el instalador). Aparte ofrece la IA Local. Hay un solo botón para entrar;
+ * con la cuenta abierta, arriba a la derecha está el menú de la cuenta (AccountMenu).
  * El escritorio nunca la muestra. Usa los tokens, letras y logo del diseño (ORION #29), con modo claro u
  * oscuro (useWebTheme). Animaciones con framer-motion; se respeta "reducir movimiento" del sistema.
  */
@@ -33,6 +34,7 @@ import { APP_VERSION, DOWNLOADS, LIMITS, LOCAL_AI } from '@shared/config';
 import Logo from '../components/Logo';
 import WebThemeToggle from '../components/WebThemeToggle';
 import { useApp } from '../context/AppContext';
+import AccountMenu from './AccountMenu';
 
 /** Tamaño del modelo en GB decimales (2,7 GB), como en la documentación. */
 const MODEL_SIZE = `${(LOCAL_AI.sizeBytes / 1e9).toFixed(1).replace('.', ',')} GB`;
@@ -63,7 +65,7 @@ const STEPS = [
   {
     icon: Upload,
     title: 'Prepara tu sesión en la web',
-    text: 'Ingresa con tu cuenta de Google, sube tus apuntes (PDF, Word o texto) y elige cuánto tiempo vas a estudiar.',
+    text: 'Inicia sesión con tu cuenta de Google, sube tus apuntes (PDF, Word o texto) y elige cuánto tiempo vas a estudiar.',
   },
   {
     icon: MousePointerClick,
@@ -96,6 +98,10 @@ const FAQ = [
   {
     q: '¿Puedo salir antes de que termine la sesión?',
     a: 'No: es la idea de YALEH. Si se apaga o se reinicia la computadora, la sesión queda como interrumpida y al volver a abrir YALEH puedes retomarla con el tiempo que faltaba.',
+  },
+  {
+    q: '¿Necesito registrarme?',
+    a: 'Sí, con tu cuenta de Google: al iniciar sesión por primera vez, YALEH crea tu cuenta y guarda tus sesiones en ella. En esta versión el registro es solo con Google.',
   },
   {
     q: '¿Tengo que preparar la sesión aquí?',
@@ -143,7 +149,7 @@ export default function LandingPage() {
   );
 }
 
-function DownloadButton({ large = false, compact = false }: { large?: boolean; compact?: boolean }) {
+function DownloadButton({ large = false }: { large?: boolean }) {
   return (
     <a
       href={DOWNLOADS.installerUrl}
@@ -154,67 +160,31 @@ function DownloadButton({ large = false, compact = false }: { large?: boolean; c
       }`}
     >
       <Download size={large ? 20 : 16} />
-      {compact ? (
-        <>
-          <span className="min-[1400px]:hidden">Descargar</span>
-          <span className="hidden min-[1400px]:inline">Descargar para Windows</span>
-        </>
-      ) : (
-        'Descargar para Windows'
-      )}
+      Descargar para Windows
     </a>
   );
 }
 
-/** "Preparar mi sesión": Ingresar o, si ya ingresó en esta pestaña, "Mis sesiones". */
-function PrepareButton({ large = false, compact = false }: { large?: boolean; compact?: boolean }) {
+/** El único botón para entrar: "Iniciar sesión" o, con la cuenta abierta, "Ir a Mis sesiones". */
+function SignInButton({ large = false }: { large?: boolean }) {
   const { state, dispatch } = useApp();
+  const signedIn = state.session.isAuthenticated;
   return (
     <button
-      onClick={() => dispatch({ type: 'SET_PHASE', payload: state.session.isAuthenticated ? 'sessions-home' : 'login' })}
-      data-testid="prepare-session"
+      onClick={() => dispatch({ type: 'SET_PHASE', payload: signedIn ? 'sessions-home' : 'login' })}
+      data-testid="sign-in"
       className={`inline-flex items-center justify-center gap-2 rounded-[18px] border border-line bg-surface text-ink font-medium whitespace-nowrap hover:border-ink-muted ${
         large ? 'h-14 px-6 text-base' : 'h-11 px-4 text-sm'
       }`}
     >
       <LogIn size={large ? 18 : 16} />
-      {compact ? (
-        <>
-          <span className="min-[1400px]:hidden">Preparar</span>
-          <span className="hidden min-[1400px]:inline">Preparar mi sesión</span>
-        </>
-      ) : (
-        'Preparar mi sesión'
-      )}
-    </button>
-  );
-}
-
-/** "Ingresar" o, con la cuenta ya abierta en esta pestaña, "Mis sesiones" con la foto o las iniciales. */
-function AccountButton() {
-  const { state, dispatch } = useApp();
-  const { isAuthenticated, avatar, initials } = state.session;
-  const base = 'inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[18px] text-sm font-medium whitespace-nowrap text-ink-soft hover:text-ink hover:bg-surface-raised transition-colors';
-  if (!isAuthenticated) {
-    return (
-      <button onClick={() => dispatch({ type: 'SET_PHASE', payload: 'login' })} data-testid="sign-in" className={base}>
-        Ingresar
-      </button>
-    );
-  }
-  return (
-    <button onClick={() => dispatch({ type: 'SET_PHASE', payload: 'sessions-home' })} data-testid="my-sessions" className={base}>
-      {avatar ? (
-        <img src={avatar} alt="" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" />
-      ) : (
-        <span className="w-7 h-7 rounded-full bg-ink text-canvas text-xs font-semibold grid place-items-center">{initials ?? '?'}</span>
-      )}
-      Mis sesiones
+      {signedIn ? 'Ir a Mis sesiones' : 'Iniciar sesión'}
     </button>
   );
 }
 
 function Header() {
+  const { state } = useApp();
   const ref = useRef<HTMLElement>(null);
   const [scrolled, setScrolled] = useState(false);
 
@@ -238,7 +208,7 @@ function Header() {
         scrolled ? 'border-line shadow-[0_8px_24px_rgba(0,0,0,0.12)]' : 'border-transparent'
       }`}
     >
-      <div className="max-w-[1360px] mx-auto h-[72px] px-4 sm:px-8 flex items-center gap-4 xl:gap-6">
+      <div className="max-w-6xl mx-auto h-[72px] px-4 sm:px-8 flex items-center gap-4 xl:gap-6">
         <a href="#inicio" className="flex items-center gap-2.5 flex-shrink-0">
           <Logo size={38} />
           <b className="font-display text-[19px] font-extrabold tracking-[0.04em]">YALEH</b>
@@ -252,13 +222,10 @@ function Header() {
         </nav>
         <div className="ml-auto xl:ml-0 flex items-center gap-2">
           <WebThemeToggle />
-          <AccountButton />
-          {/* En el celular no caben: los dos botones están en la portada. */}
+          {state.session.isAuthenticated ? <AccountMenu /> : <SignInButton />}
+          {/* En el celular no cabe: está en la portada. */}
           <span className="hidden sm:inline-flex">
-            <PrepareButton compact />
-          </span>
-          <span className="hidden sm:inline-flex">
-            <DownloadButton compact />
+            <DownloadButton />
           </span>
         </div>
       </div>
@@ -290,7 +257,7 @@ function Hero() {
             propios apuntes, con o sin internet.
           </motion.p>
           <motion.div variants={heroItem} className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-            <PrepareButton large />
+            <SignInButton large />
             <DownloadButton large />
           </motion.div>
           <motion.p variants={heroItem} className="mt-4 text-[0.8rem] text-ink-muted">
@@ -405,7 +372,7 @@ function HowItWorks() {
           ))}
         </motion.ol>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <PrepareButton large />
+          <SignInButton large />
           <DownloadButton large />
         </div>
         <p className="mt-5 text-center text-sm text-ink-muted">
@@ -606,7 +573,7 @@ function FinalCta() {
           Tu próxima sesión, sin distracciones<span className="text-accent">.</span>
         </h2>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <PrepareButton large />
+          <SignInButton large />
           <DownloadButton large />
         </div>
         <p className="text-[0.8rem] text-ink-muted">Gratis · la aplicación es para Windows 10 y 11 · versión {APP_VERSION}</p>
