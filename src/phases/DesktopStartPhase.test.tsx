@@ -56,9 +56,9 @@ describe('Bienvenida del escritorio', () => {
     expect(screen.getByTestId('yaleh-logo')).toBeTruthy();
     expect(screen.getByText('Iniciar')).toBeTruthy();
     expect(screen.queryByText(/Inicia tu sesión desde la web/)).toBeNull();
-    // ORION #30: sin "Con conexión" ni la sección del asistente sin conexión.
+    // ORION #30: sin "Con conexión" ni la sección de la IA Local.
     expect(screen.queryByText(/Con conexión/)).toBeNull();
-    expect(screen.queryByText(/Descargar asistente|Eliminar asistente/)).toBeNull();
+    expect(screen.queryByText(/Descargar IA Local|Eliminar IA Local/)).toBeNull();
     // Configuración es un engranaje con su texto al pasar el mouse.
     expect(screen.getByRole('button', { name: 'Configuración' })).toBeTruthy();
   });
@@ -70,10 +70,10 @@ describe('Bienvenida del escritorio', () => {
         <DesktopStartPhase />
       </AppProvider>
     );
-    expect(screen.getByTestId('offline-note').textContent).toMatch(/^Estás sin conexión. Vas a estudiar con el asistente sin conexión/);
+    expect(screen.getByTestId('offline-note').textContent).toMatch(/^Estás sin conexión. Vas a estudiar con la IA Local/);
     unmount();
     renderWelcome('offline');
-    expect(screen.getByTestId('offline-note').textContent).toMatch(/no está instalado: se descarga desde la página de YALEH/);
+    expect(screen.getByTestId('offline-note').textContent).toMatch(/no está instalada: se descarga desde la página de YALEH/);
   });
 
   it('con conexión explica cómo tener la sesión completa, solo con texto, sin el aviso de sin conexión', () => {
@@ -93,10 +93,19 @@ describe('Bienvenida del escritorio', () => {
     expect(screen.queryByTestId('online-note')).toBeNull();
   });
 
-  it.each<ConnectionMode>(['online', 'offline'])('debajo de Iniciar dice qué es la sesión rápida (%s)', connection => {
-    createElectronMock({ connection }).install();
-    renderWelcome(connection);
-    expect(screen.getByText('Sesión rápida: tus archivos, notas, Pomodoro y asistente sin conexión.')).toBeTruthy();
+  it.each([
+    ['installed', 'Módulo IA Local: tus archivos, notas, Pomodoro y la IA que funciona en tu computadora, sin internet.'],
+    ['not-installed', 'Módulo IA Local: descarga el modelo en Configuración para usar la IA sin internet.'],
+    ['paused', 'Módulo IA Local: descarga el modelo en Configuración para usar la IA sin internet.'],
+    ['unsupported', 'Módulo IA Local: este equipo no cumple los requisitos de la IA; puedes estudiar con tus archivos, notas y Pomodoro.'],
+  ] as const)('debajo de Iniciar dice qué es el módulo IA Local, según el modelo (%s)', (state, text) => {
+    createElectronMock({ connection: 'online', localAi: { state } }).install();
+    render(
+      <AppProvider initial={{ ...initialState, phase: 'desktop-start', connection: 'online', localAi: makeLocalAiStatus({ state }) }}>
+        <DesktopStartPhase />
+      </AppProvider>
+    );
+    expect(screen.getByTestId('local-module-note').textContent).toBe(text);
   });
 
   it('en producción no aparecen "Abrir archivo de sesión" ni el arrastre (solo en desarrollo)', () => {

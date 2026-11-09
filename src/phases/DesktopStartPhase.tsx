@@ -3,14 +3,14 @@
  * @description Bienvenida de la app de escritorio (brief, revisión 1.5; diseño ORION #30,
  * docs/diseno/maquetas/bienvenida.html): logo, título, subtítulo e "Iniciar" sobre el fondo, sin recuadro.
  * El escritorio no inicia sesión con Google:
- * - "Iniciar": flujo local (dropzone → tiempo → confirmación → kiosko). Es la sesión rápida sin cuenta:
+ * - "Iniciar": flujo local (dropzone → tiempo → confirmación → kiosko). Es el módulo IA Local, sin cuenta:
  *   siempre sin conexión, aunque haya internet. La sesión en línea solo se abre con un .yaleh.
  * - El .yaleh se abre con doble clic (asociación en el instalador, fase 11), por los argumentos de
  *   arranque o una segunda instancia. "Abrir archivo de sesión" y el arrastre solo existen en
  *   desarrollo (import.meta.env.DEV) hasta que la fase 11 asocie la extensión.
  * - Con conexión, una nota explica cómo tener Gemini y las herramientas de Google (solo texto: la app
- *   no abre el navegador). Sin conexión, un aviso dice con qué se va a estudiar (asistente sin conexión o no instalado).
- *   Instalar o eliminar el asistente está en Configuración → IA sin conexión.
+ *   no abre el navegador). Sin conexión, un aviso dice con qué se va a estudiar (IA Local o no instalada).
+ *   Instalar o eliminar el asistente está en Configuración → IA Local.
  * - Configuración (ORION #7): engranaje arriba a la derecha. Saludo con el nombre, arriba a la izquierda.
  */
 
@@ -154,7 +154,13 @@ export default function DesktopStartPhase() {
           >
             <Play size={20} fill="currentColor" /> Iniciar
           </button>
-          <p className="text-[13.5px] text-ink-soft text-center">Sesión rápida: tus archivos, notas, Pomodoro y asistente sin conexión.</p>
+          <p data-testid="local-module-note" className="text-[13.5px] text-ink-soft text-center">
+            {aiState === 'unsupported'
+              ? 'Módulo IA Local: este equipo no cumple los requisitos de la IA; puedes estudiar con tus archivos, notas y Pomodoro.'
+              : aiState && aiState !== 'installed'
+                ? 'Módulo IA Local: descarga el modelo en Configuración para usar la IA sin internet.'
+                : 'Módulo IA Local: tus archivos, notas, Pomodoro y la IA que funciona en tu computadora, sin internet.'}
+          </p>
         </div>
 
         {state.connection === 'online' && (
@@ -172,17 +178,17 @@ export default function DesktopStartPhase() {
             <WifiOff size={18} className="text-accent-soft flex-shrink-0" />
             {aiState === 'installed' ? (
               <span>
-                <b className="text-ink font-medium">Estás sin conexión.</b> Vas a estudiar con el asistente sin conexión: chat, resumen, tarjetas
+                <b className="text-ink font-medium">Estás sin conexión.</b> Vas a estudiar con la IA Local: chat, resumen, tarjetas
                 y cuestionario con tus documentos.
               </span>
             ) : aiState === 'unsupported' ? (
               <span>
-                <b className="text-ink font-medium">Estás sin conexión.</b> Este equipo no cumple los requisitos del asistente sin conexión:
+                <b className="text-ink font-medium">Estás sin conexión.</b> Este equipo no cumple los requisitos de la IA Local:
                 vas a estudiar con tus documentos y las notas.
               </span>
             ) : (
               <span>
-                <b className="text-ink font-medium">Estás sin conexión.</b> El asistente sin conexión no está instalado: se descarga desde la página
+                <b className="text-ink font-medium">Estás sin conexión.</b> La IA Local no está instalada: se descarga desde la página
                 de YALEH. Mientras tanto, vas a estudiar con tus documentos y las notas.
               </span>
             )}

@@ -15,7 +15,7 @@ export interface ModeFlags {
   isDesktop: boolean;
   /** Herramientas online (Google Workspace y Classroom). */
   onlineTools: boolean;
-  /** Qué asistente de IA responde (revisión 1.8): en línea, sin conexión o ninguno. */
+  /** Qué asistente de IA responde (revisión 1.8): en línea, IA Local o ninguno. */
   assistant: AssistantChoice;
   /** Aviso de conexión perdida durante una sesión online. */
   offlineNotice: boolean;
@@ -24,7 +24,7 @@ export interface ModeFlags {
 /**
  * - Web: sin cambios en esta fase (todo visible).
  * - Escritorio: las herramientas online solo aparecen en una sesión online (abierta con un .yaleh) con
- * conexión; el asistente lo elige selectAssistant (en línea, sin conexión o ninguno). La sesión rápida
+ * conexión; el asistente lo elige selectAssistant (en línea, IA Local o ninguno). El módulo IA Local
  * ("Iniciar") es siempre 'offline', aunque haya internet.
  */
 export function getModeFlags(state: AppState, isDesktop: boolean): ModeFlags {

@@ -42,7 +42,7 @@ describe('Barra lateral (ORION #31)', () => {
     renderSideBar(false);
     const foot = screen.getByTestId('sidebar-foot');
     expect(foot.textContent).toContain('Sesión protegida');
-    expect(foot.textContent).toContain('Solo se abren los sitios de estudio permitidos. Si se corta internet, el asistente sin conexión sigue funcionando.');
+    expect(foot.textContent).toContain('Solo se abren los sitios de estudio permitidos. Si se corta internet, la IA Local sigue funcionando.');
     expect(screen.queryByText('Modo Kiosko Activo')).toBeNull();
   });
 

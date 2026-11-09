@@ -31,7 +31,7 @@ export function buildHistoryHtml(entries: SessionHistoryEntry[], generatedAt: Da
         <td>${escapeHtml(formatDate(s.startedAt))}</td>
         <td>${escapeHtml(formatDuration(s.durationSeconds))}</td>
         <td>${escapeHtml(formatDuration(s.studiedSeconds))}</td>
-        <td>${s.mode === 'online' ? 'Con conexión' : 'Sin conexión'}</td>
+        <td>${s.mode === 'online' ? 'En línea' : 'IA Local'}</td>
         <td class="status-${s.status}">${escapeHtml(sessionStatusText(s))}</td>
         <td>${s.files.length ? escapeHtml(s.files.join(', ')) : '—'}</td>
         <td class="num">${s.focusLost}</td>

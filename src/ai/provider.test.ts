@@ -34,7 +34,7 @@ describe('selectAssistant', () => {
     expect(choose(true, 'offline', 'offline', null)).toEqual({ kind: 'none', reason: 'needs-download' });
   });
 
-  it('sesión rápida con internet: nunca en línea; el local si está instalado y, si no, un motivo que no habla de conexión', () => {
+  it('módulo IA Local con internet: nunca en línea; el local si está instalado y, si no, un motivo que no habla de conexión', () => {
     expect(choose(true, 'offline', 'online', 'installed')).toEqual({ kind: 'local' });
     expect(choose(true, 'offline', 'online', 'not-installed')).toEqual({ kind: 'none', reason: 'quick-needs-download' });
     expect(choose(true, 'offline', 'online', 'unsupported')).toEqual({ kind: 'none', reason: 'quick-unsupported' });
@@ -52,7 +52,7 @@ describe('funciones de cada proveedor', () => {
     expect([...study, 'chat', 'presentation', 'wikipedia'].every(f => geminiProvider.supports(f as never))).toBe(true);
     expect(['chat', ...study].every(f => local.supports(f as never))).toBe(true);
     expect(['presentation', 'wikipedia'].some(f => local.supports(f as never))).toBe(false);
-    expect(local.label).toBe('Asistente sin conexión');
+    expect(local.label).toBe('IA Local');
     expect(geminiProvider.label).toBe('Asistente en línea');
   });
 });
@@ -81,7 +81,7 @@ describe('proveedor local', () => {
   });
 
   it('un error del modelo llega como AssistantError con su mensaje', async () => {
-    const mock = createElectronMock({ localAiResult: { ok: false, message: 'El asistente sin conexión no está instalado.' } });
+    const mock = createElectronMock({ localAiResult: { ok: false, message: 'La IA Local no está instalada.' } });
     await expect(createLocalProvider(mock.api).study('summary', context)).rejects.toThrow(AssistantError);
   });
 

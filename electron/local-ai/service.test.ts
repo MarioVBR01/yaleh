@@ -155,7 +155,7 @@ describe('generación', () => {
     const { service } = setup();
     expect(await service.generate({ requestId: 'r1', task: 'chat', workspaceId: 'ws', question: 'hola' })).toEqual({
       ok: false,
-      message: 'El asistente sin conexión no está instalado.',
+      message: 'La IA Local no está instalada.',
     });
   });
 

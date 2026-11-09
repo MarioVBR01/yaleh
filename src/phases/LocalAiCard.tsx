@@ -1,6 +1,6 @@
 /**
  * @file LocalAiCard.tsx
- * @description Asistente sin conexión en Configuración → IA sin conexión (revisión 1.8; salió de la
+ * @description IA Local en Configuración → IA Local (revisión 1.8; salió de la
  * bienvenida en ORION #30, la descarga desde la página de YALEH queda para la etapa final):
  * requisitos del equipo, descarga con progreso (reanudable, verificada con SHA-256) y licencia.
  * Solo se descarga con conexión y fuera de la sesión; el proceso principal lo vuelve a comprobar.
@@ -74,7 +74,7 @@ export default function LocalAiCard() {
         <div role="alert" className="text-xs text-ink-soft flex gap-2 text-left">
           <AlertTriangle size={16} className="text-warning shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-ink mb-1">Este equipo no puede usar el asistente sin conexión.</p>
+            <p className="font-medium text-ink mb-1">Este equipo no puede usar la IA Local.</p>
             {status.requirements.problems.map(p => (
               <p key={p}>{p}</p>
             ))}
@@ -87,10 +87,10 @@ export default function LocalAiCard() {
       body = (
         <>
           <p className="text-xs text-ink-soft flex items-center justify-center gap-2">
-            <CheckCircle2 size={14} className="text-success" /> Asistente sin conexión instalado
+            <CheckCircle2 size={14} className="text-success" /> IA Local instalada
           </p>
           <button onClick={() => void run(() => api.localAi.removeModel())} disabled={busy} className={`${button} mt-2`}>
-            <Trash2 size={13} /> Eliminar asistente sin conexión ({formatGb(status.model.sizeBytes)})
+            <Trash2 size={13} /> Eliminar IA Local ({formatGb(status.model.sizeBytes)})
           </button>
           <License status={status} />
         </>
@@ -129,10 +129,10 @@ export default function LocalAiCard() {
           {online ? (
             <button onClick={() => void run(() => api.localAi.startDownload())} disabled={busy} className={`${button} mt-2`}>
               {busy ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-              {paused ? 'Reanudar descarga' : `Descargar asistente sin conexión (${formatGb(status.model.sizeBytes)})`}
+              {paused ? 'Reanudar descarga' : `Descargar IA Local (${formatGb(status.model.sizeBytes)})`}
             </button>
           ) : (
-            <p className="text-xs text-ink-muted mt-2">Conéctate a internet para descargar el asistente sin conexión.</p>
+            <p className="text-xs text-ink-muted mt-2">Conéctate a internet para descargar la IA Local.</p>
           )}
           {paused && (
             <button onClick={() => void run(() => api.localAi.removeModel())} disabled={busy} className={`${button} mt-2`}>
@@ -146,9 +146,9 @@ export default function LocalAiCard() {
   }
 
   return (
-    <section className="mt-6 pt-4 border-t border-line text-center" aria-label="Asistente sin conexión">
+    <section className="mt-6 pt-4 border-t border-line text-center" aria-label="Modelo de IA Local">
       <h2 className="text-sm font-semibold text-ink flex items-center justify-center gap-2 mb-1">
-        <Sparkles size={14} className="text-accent" /> Asistente sin conexión
+        <Sparkles size={14} className="text-accent" /> Modelo de IA Local
       </h2>
       <p className="text-[11px] text-ink-muted mb-2">Chat, resumen y tarjetas de estudio con tus documentos, sin internet.</p>
       {body}

@@ -3,13 +3,13 @@ import type { NoAssistantReason } from '../ai/provider';
 
 const DETAILS: Record<NoAssistantReason, string> = {
   'needs-download':
-    'Sin conexión, el asistente funciona solo si descargaste el asistente sin conexión. Se descarga desde la página de YALEH (por ahora, en Configuración → IA sin conexión, con internet y antes de empezar la sesión). Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
+    'Sin conexión, solo responde la IA Local, y hay que descargarla primero. Se descarga desde la página de YALEH (por ahora, en Configuración → IA Local, con internet y antes de empezar la sesión). Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
   unsupported:
-    'Este equipo no cumple los requisitos del asistente sin conexión (al menos 8 GB de RAM y espacio en disco). Con conexión puedes usar el asistente en línea. Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
+    'Este equipo no cumple los requisitos de la IA Local (al menos 8 GB de RAM y espacio en disco). Con conexión puedes usar el asistente en línea. Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
   'quick-needs-download':
-    'En la sesión rápida responde el asistente sin conexión. Descárgalo desde Configuración antes de empezar, o prepara tu sesión en la web para usar Gemini. Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
+    'En el módulo IA Local responde la IA de tu computadora. Descárgala desde Configuración antes de empezar, o prepara tu sesión en la web para usar Gemini. Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
   'quick-unsupported':
-    'Este equipo no cumple los requisitos del asistente sin conexión (al menos 8 GB de RAM y espacio en disco). Prepara tu sesión en la web para usar Gemini. Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
+    'Este equipo no cumple los requisitos de la IA Local (al menos 8 GB de RAM y espacio en disco). Prepara tu sesión en la web para usar Gemini. Mientras tanto puedes seguir con tus fuentes, las notas y el Pomodoro.',
 };
 
 /** Aviso cuando no hay asistente de IA (sin conexión y sin el modelo local; revisión 1.8). */
@@ -27,8 +27,8 @@ export default function AIUnavailable({ compact = false, reason = 'needs-downloa
   );
 }
 
-/** Aviso fijo del asistente sin conexión (revisión 1.8). */
-export const LOCAL_SLOW_NOTICE = 'El asistente sin conexión es más lento; puede tardar hasta un minuto.';
+/** Aviso fijo de la IA Local (revisión 1.8). */
+export const LOCAL_SLOW_NOTICE = 'La IA Local es más lenta; puede tardar hasta un minuto.';
 
 export function LocalSlowNotice() {
   return (
@@ -38,7 +38,7 @@ export function LocalSlowNotice() {
   );
 }
 
-/** Etiqueta con el asistente que responde ("Asistente en línea" / "Asistente sin conexión"). */
+/** Etiqueta con el asistente que responde ("Asistente en línea" / "IA Local"). */
 export function AssistantBadge({ label, local }: { label: string; local: boolean }) {
   return (
     <span

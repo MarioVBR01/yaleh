@@ -29,7 +29,7 @@ function renderCard(connection: ConnectionMode, localAi: Partial<LocalAiStatus>)
 describe('LocalAiCard', () => {
   it('con conexión y sin modelo: ofrece la descarga con su tamaño y la licencia Apache 2.0', async () => {
     const mock = renderCard('online', { state: 'not-installed' });
-    const button = screen.getByText('Descargar asistente sin conexión (2,6 GB)');
+    const button = screen.getByText('Descargar IA Local (2,6 GB)');
     expect(screen.getByText(/licencia Apache 2\.0/)).toBeTruthy();
     fireEvent.click(button);
     await waitFor(() => expect(mock.api.localAi.startDownload).toHaveBeenCalled());
@@ -37,18 +37,18 @@ describe('LocalAiCard', () => {
 
   it('sin conexión: no ofrece la descarga y explica por qué', () => {
     renderCard('offline', { state: 'not-installed' });
-    expect(screen.queryByText(/Descargar asistente/)).toBeNull();
-    expect(screen.getByText('Conéctate a internet para descargar el asistente sin conexión.')).toBeTruthy();
+    expect(screen.queryByText(/Descargar IA Local/)).toBeNull();
+    expect(screen.getByText('Conéctate a internet para descargar la IA Local.')).toBeTruthy();
   });
 
   it('si el equipo no cumple los requisitos: aviso claro y sin botón de descarga', () => {
     renderCard('online', {
       state: 'unsupported',
-      requirements: { ...makeLocalAiStatus().requirements, ok: false, problems: ['Este equipo tiene 4,0 GB de RAM y el asistente sin conexión necesita al menos 8 GB.'] },
+      requirements: { ...makeLocalAiStatus().requirements, ok: false, problems: ['Este equipo tiene 4,0 GB de RAM y la IA Local necesita al menos 8 GB.'] },
     });
-    expect(screen.getByText('Este equipo no puede usar el asistente sin conexión.')).toBeTruthy();
+    expect(screen.getByText('Este equipo no puede usar la IA Local.')).toBeTruthy();
     expect(screen.getByText(/4,0 GB de RAM/)).toBeTruthy();
-    expect(screen.queryByText(/Descargar asistente/)).toBeNull();
+    expect(screen.queryByText(/Descargar IA Local/)).toBeNull();
   });
 
   it('descargando: barra de progreso y botón para pausar', () => {
@@ -65,12 +65,12 @@ describe('LocalAiCard', () => {
   it('un error (por ejemplo, SHA-256 distinto) se muestra y se puede reintentar', () => {
     renderCard('online', { state: 'error', message: 'El archivo descargado está dañado (SHA-256 distinto). Vuelve a descargarlo.' });
     expect(screen.getByText(/SHA-256 distinto/)).toBeTruthy();
-    expect(screen.getByText(/Descargar asistente sin conexión/)).toBeTruthy();
+    expect(screen.getByText(/Descargar IA Local/)).toBeTruthy();
   });
 
   it('instalado: lo indica', () => {
     renderCard('offline', { state: 'installed' });
-    expect(screen.getByText('Asistente sin conexión instalado')).toBeTruthy();
+    expect(screen.getByText('IA Local instalada')).toBeTruthy();
   });
 
   it('limpia el prefijo que Electron agrega a los errores de IPC', () => {
@@ -94,13 +94,13 @@ describe('chat y estudio sin conexión', () => {
   it('sin modelo: "Disponible próximamente" con la indicación para descargarlo', () => {
     renderWith(offlineState({ state: 'not-installed' }), <ChatColumn />);
     expect(screen.getByText('Disponible próximamente')).toBeTruthy();
-    expect(screen.getByText(/Configuración → IA sin conexión/)).toBeTruthy();
+    expect(screen.getByText(/Configuración → IA Local/)).toBeTruthy();
   });
 
-  it('con el modelo: responde el "Asistente sin conexión" y la respuesta aparece', async () => {
+  it('con el modelo: responde la "IA Local" y la respuesta aparece', async () => {
     renderWith(offlineState({ state: 'installed' }), <ChatColumn />, 'La **fotosíntesis** ocurre en los cloroplastos.');
-    expect(screen.getByTestId('assistant-badge').textContent).toContain('Asistente sin conexión');
-    expect(screen.getByText('El asistente sin conexión es más lento; puede tardar hasta un minuto.')).toBeTruthy();
+    expect(screen.getByTestId('assistant-badge').textContent).toContain('IA Local');
+    expect(screen.getByText('La IA Local es más lenta; puede tardar hasta un minuto.')).toBeTruthy();
     // ORION #45: sin la casilla de Wikipedia ni su aviso.
     expect(screen.queryByText(/Wikipedia/)).toBeNull();
     fireEvent.change(screen.getByPlaceholderText('Escribe tu pregunta…'), { target: { value: '¿Dónde ocurre la fotosíntesis?' } });
@@ -114,7 +114,7 @@ describe('chat y estudio sin conexión', () => {
     expect(screen.queryByText(/puede tardar hasta un minuto/)).toBeNull();
   });
 
-  it('estudio sin conexión: solo las herramientas del asistente sin conexión, sin la presentación (ORION #17 y #35)', () => {
+  it('estudio sin conexión: solo las herramientas de la IA Local, sin la presentación (ORION #17 y #35)', () => {
     renderWith(
       { ...offlineState({ state: 'installed' }), uploadedFiles: [{ id: 'f1', name: 'a.txt', size: 1, type: 'text/plain', status: 'ready' } as never] },
       <StudioColumn />
@@ -123,7 +123,7 @@ describe('chat y estudio sin conexión', () => {
       expect((screen.getByText(label).closest('button') as HTMLButtonElement).disabled).toBe(false);
     }
     expect(screen.queryByText('Presentación')).toBeNull();
-    expect(screen.getByText('El asistente sin conexión es más lento; puede tardar hasta un minuto.')).toBeTruthy();
+    expect(screen.getByText('La IA Local es más lenta; puede tardar hasta un minuto.')).toBeTruthy();
   });
 
   it('estudio sin conexión: el mapa mental del modelo local se ve como en línea', async () => {

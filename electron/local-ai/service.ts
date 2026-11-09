@@ -124,7 +124,7 @@ export class LocalAiService {
   startDownload(): LocalAiStatus {
     if (this.download) return this.status();
     if (this.deps.isSessionActive()) throw new LocalAiError('No se puede descargar durante una sesión de concentración.');
-    if (!this.deps.isOnline()) throw new LocalAiError('Necesitas conexión a internet para descargar el asistente.');
+    if (!this.deps.isOnline()) throw new LocalAiError('Necesitas conexión a internet para descargar la IA Local.');
     const current = this.status();
     if (current.state === 'installed') return current;
     if (!current.requirements.ok) throw new LocalAiError(current.requirements.problems.join(' '));
@@ -178,7 +178,7 @@ export class LocalAiService {
   }
 
   removeModel(): LocalAiStatus {
-    if (this.deps.isSessionActive()) throw new LocalAiError('No se puede borrar el asistente durante una sesión.');
+    if (this.deps.isSessionActive()) throw new LocalAiError('No se puede borrar la IA Local durante una sesión.');
     this.pauseDownload();
     this.releaseModel();
     fs.rmSync(this.modelFile, { force: true });
@@ -199,7 +199,7 @@ export class LocalAiService {
     const worker = this.worker;
     this.worker = null;
     worker?.kill();
-    this.failPending('El asistente sin conexión se cerró.');
+    this.failPending('La IA Local se cerró.');
   }
 
   shutdown(): void {
@@ -222,7 +222,7 @@ export class LocalAiService {
       this.worker = null;
       console.error(`[local-ai] El proceso del modelo terminó (código ${code}). El próximo intento usará solo la CPU.`);
       this.cpuOnly = true;
-      this.failPending('El asistente sin conexión se detuvo inesperadamente. Vuelve a intentarlo.');
+      this.failPending('La IA Local se detuvo inesperadamente. Vuelve a intentarlo.');
     });
     this.worker = worker;
     return worker;
@@ -241,7 +241,7 @@ export class LocalAiService {
     if (!pending || !message.id) return;
     this.pending.delete(message.id);
     if (message.type === 'error') {
-      pending.resolve({ ok: false, message: message.aborted ? message.message : `El asistente sin conexión falló: ${message.message}`, aborted: message.aborted });
+      pending.resolve({ ok: false, message: message.aborted ? message.message : `La IA Local falló: ${message.message}`, aborted: message.aborted });
       return;
     }
     const generationMs = Math.max(1, message.totalMs - message.firstTokenMs - message.loadMs);
@@ -263,7 +263,7 @@ export class LocalAiService {
   generate(request: LocalAiRequest): Promise<LocalAiResult> {
     const status = this.status();
     if (status.state !== 'installed') {
-      return Promise.resolve({ ok: false, message: 'El asistente sin conexión no está instalado.' });
+      return Promise.resolve({ ok: false, message: 'La IA Local no está instalada.' });
     }
     const passages =
       request.task === 'chat'

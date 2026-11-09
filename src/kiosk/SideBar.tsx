@@ -285,7 +285,7 @@ export default function SideBar({ collapsed }: SideBarProps) {
             <b className="flex items-center gap-1.5 text-ink font-medium">
               <ShieldCheck size={16} className="text-accent" /> Sesión protegida
             </b>
-            Solo se abren los sitios de estudio permitidos. Si se corta internet, el asistente sin conexión sigue funcionando.
+            Solo se abren los sitios de estudio permitidos. Si se corta internet, la IA Local sigue funcionando.
           </div>
         ))}
     </div>

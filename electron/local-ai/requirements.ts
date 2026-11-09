@@ -27,7 +27,7 @@ export function evaluateRequirements(input: RequirementsInput): LocalAiRequireme
   const problems: string[] = [];
   if (input.ramBytes < LOCAL_AI.minRamBytes) {
     problems.push(
-      `Este equipo tiene ${formatGb(input.ramBytes)} de RAM y el asistente sin conexión necesita al menos ${LOCAL_AI.minRamLabel}.`
+      `Este equipo tiene ${formatGb(input.ramBytes)} de RAM y la IA Local necesita al menos ${LOCAL_AI.minRamLabel}.`
     );
   }
   if (input.freeDiskBytes !== null && input.freeDiskBytes < requiredDiskBytes) {

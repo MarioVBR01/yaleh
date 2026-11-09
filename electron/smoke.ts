@@ -120,18 +120,18 @@ export function runSmokeTest(win: BrowserWindow, db: DatabaseSync, finish: (ok: 
             history: window.electronAPI ? Array.isArray(await window.electronAPI.listSessionHistory()) : false,
             localAi: window.electronAPI ? (await window.electronAPI.localAi.getStatus()).state : null,
             settings: window.electronAPI ? (await window.electronAPI.settings.get()).settings.endWarningMinutes : null,
-            // ORION #30: el asistente sin conexión ya no está en la bienvenida, sino en Configuración.
-            localAiCardOnWelcome: Boolean(document.querySelector('[aria-label="Asistente sin conexión"]')),
+            // ORION #30: la IA Local ya no está en la bienvenida, sino en Configuración.
+            localAiCardOnWelcome: Boolean(document.querySelector('[aria-label="Modelo de IA Local"]')),
             localAiCard: await (async () => {
               const wait = ms => new Promise(r => setTimeout(r, ms));
               document.querySelector('button[aria-label="Configuración"]')?.click();
               let card = null;
               for (let i = 0; i < 20 && !card; i++) {
                 await wait(250);
-                card = document.querySelector('[aria-label="Asistente sin conexión"]');
+                card = document.querySelector('[aria-label="Modelo de IA Local"]');
               }
               const t = card?.textContent ?? '';
-              const kind = !card ? null : t.includes('Descargar asistente sin conexión') ? 'download' : t.includes('Conéctate a internet') ? 'connect' : t.includes('no puede usar el asistente') ? 'unsupported' : 'other';
+              const kind = !card ? null : t.includes('Descargar IA Local') ? 'download' : t.includes('Conéctate a internet') ? 'connect' : t.includes('no puede usar la IA Local') ? 'unsupported' : 'other';
               [...document.querySelectorAll('button')].find(b => b.textContent.includes('Volver al inicio'))?.click();
               await wait(800);
               return kind;

@@ -1,6 +1,6 @@
 /**
  * @file SettingsView.tsx
- * @description Configuración del escritorio (ORION #7): Sesión, Modo nocturno, IA sin conexión,
+ * @description Configuración del escritorio (ORION #7): Sesión, Modo nocturno, IA Local,
  * Datos, Apariencia y accesibilidad, Perfil y Acerca de.
  * Regla: nunca afloja el kiosko. Con `inSession`, lo que afecta a la sesión se muestra
  * deshabilitado (se cambia desde la pantalla de inicio); el proceso principal lo vuelve a comprobar.
@@ -223,7 +223,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
           </Row>
         </Section>
 
-        <Section icon={<Sparkles size={16} />} title="IA sin conexión" locked={inSession}>
+        <Section icon={<Sparkles size={16} />} title="IA Local" locked={inSession}>
           {inSession ? (
             <p className="text-ink-soft text-sm">
               Estado: {state.localAi?.state === 'installed' ? 'instalado' : state.localAi?.state === 'unsupported' ? 'este equipo no cumple los requisitos' : 'no instalado'}
@@ -237,7 +237,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
             <select
               value={settings.localAiGpu}
               disabled={inSession}
-              aria-label="Procesamiento del asistente sin conexión"
+              aria-label="Procesamiento de la IA Local"
               onChange={e => void update({ localAiGpu: e.target.value as 'auto' | 'cpu' })}
               className="bg-canvas border border-line rounded-lg px-2 py-1 text-sm text-ink disabled:opacity-50"
             >
@@ -443,7 +443,7 @@ export default function SettingsView({ inSession }: { inSession: boolean }) {
               <p className="text-ink-soft font-medium mb-1">Licencias</p>
               <ul className="list-disc pl-5 space-y-0.5">
                 <li>
-                  Asistente sin conexión: {LOCAL_AI.displayName}, del {LOCAL_AI.author}, licencia {LOCAL_AI.license} ({LOCAL_AI.licenseUrl}).
+                  IA Local: {LOCAL_AI.displayName}, del {LOCAL_AI.author}, licencia {LOCAL_AI.license} ({LOCAL_AI.licenseUrl}).
                 </li>
                 <li>llama.cpp y node-llama-cpp (MIT) · Electron, React y Vite (MIT) · Firebase SDK (Apache 2.0).</li>
                 <li>PptxGenJS (MIT) · pdf.js (Apache 2.0) · mammoth (BSD-2) · Recharts (MIT).</li>

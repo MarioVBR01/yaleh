@@ -1,6 +1,6 @@
 /**
  * Landing page, el inicio de la web (revisión 1.10): presenta YALEH, lleva a preparar la sesión y ofrece
- * el instalador y, aparte, el asistente sin conexión.
+ * el instalador y, aparte, la IA Local.
  */
 
 import { readFileSync } from 'node:fs';
@@ -68,7 +68,7 @@ describe('Landing page', () => {
     expect(screen.getByText(/Windows protegió su PC/)).toBeTruthy();
   });
 
-  it('el asistente sin conexión: recomendado desde la app; descarga directa con carpeta, nombre y SHA-256', () => {
+  it('la IA Local: recomendado desde la app; descarga directa con carpeta, nombre y SHA-256', () => {
     renderLanding();
     expect(screen.getByText('Recomendado')).toBeTruthy();
     const manual = screen.getByTestId('manual-model');

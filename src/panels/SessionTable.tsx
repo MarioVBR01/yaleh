@@ -78,7 +78,7 @@ export default function SessionTable({ entries }: { entries: SessionHistoryEntry
                   <div className="h-full rounded-full bg-accent" style={{ width: `${ratio * 100}%` }} />
                 </div>
               </td>
-              <td className="py-2 pr-3">{s.mode === 'online' ? 'Con conexión' : 'Sin conexión'}</td>
+              <td className="py-2 pr-3">{s.mode === 'online' ? 'En línea' : 'IA Local'}</td>
               <td className="py-2 pr-3">
                 <span className={`inline-block px-2 py-0.5 rounded-full border text-[11px] ${status.className}`}>
                   {status.text}

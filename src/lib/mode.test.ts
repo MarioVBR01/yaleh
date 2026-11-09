@@ -12,7 +12,7 @@ const flags = (sessionMode: SessionMode, connection: ConnectionMode, local: Loca
   getModeFlags({ ...initialState, sessionMode, connection, localAi: makeLocalAiStatus({ state: local }) }, true);
 
 describe('getModeFlags en el escritorio', () => {
-  it('sesión rápida con internet: sin herramientas ni Gemini y sin el aviso de sin conexión', () => {
+  it('módulo IA Local con internet: sin herramientas ni Gemini y sin el aviso de sin conexión', () => {
     expect(flags('offline', 'online')).toEqual({
       isDesktop: true,
       onlineTools: false,
@@ -21,7 +21,7 @@ describe('getModeFlags en el escritorio', () => {
     });
   });
 
-  it('sesión rápida con internet y el modelo instalado: responde el asistente sin conexión', () => {
+  it('módulo IA Local con internet y el modelo instalado: responde la IA Local', () => {
     expect(flags('offline', 'online', 'installed')).toMatchObject({ onlineTools: false, assistant: { kind: 'local' }, offlineNotice: false });
   });
 

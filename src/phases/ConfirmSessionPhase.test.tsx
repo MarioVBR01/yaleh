@@ -64,15 +64,15 @@ describe('Web: la descarga queda en "Tus sesiones pasadas"', () => {
 });
 
 describe('Escritorio: Confirmar en el flujo local', () => {
-  it('avisa que es una sesión rápida', () => {
+  it('avisa que es el módulo IA Local', () => {
     createElectronMock().install();
     renderConfirm();
-    expect(screen.getByText('Sesión rápida: sin Gemini ni herramientas de Google.')).toBeTruthy();
+    expect(screen.getByText('Módulo IA Local: sin Gemini ni herramientas de Google.')).toBeTruthy();
   });
 
   it('en la web no aparece', () => {
     renderConfirm();
-    expect(screen.queryByText(/Sesión rápida/)).toBeNull();
+    expect(screen.queryByText(/Módulo IA Local/)).toBeNull();
   });
 });
 
@@ -113,8 +113,8 @@ describe('Web: Confirmar y Descargado (ORION #39)', () => {
     expect(screen.getByText('Descargar otra vez')).toBeTruthy();
     // "Preparar otra sesión" es el botón oscuro de la maqueta.
     expect(screen.getByText('Preparar otra sesión').className).toContain('bg-ink');
-    // La web no ofrece el asistente sin conexión.
-    expect(screen.queryByText(/sin conexión|Qwen/i)).toBeNull();
+    // La web no ofrece la IA Local.
+    expect(screen.queryByText(/IA Local|sin conexión|Qwen/i)).toBeNull();
 
     fireEvent.click(screen.getByText('Preparar otra sesión'));
     expect(screen.getByTestId('phase').textContent).toBe('dropzone');

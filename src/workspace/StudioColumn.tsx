@@ -138,7 +138,7 @@ function StudyTools({ provider }: { provider: AssistantProvider }) {
       {provider.kind === 'local' && (
         <>
           <LocalSlowNotice />
-          <p className="text-ink-subtle text-[11px]">Sin conexión, en versión corta: resumen, 5 tarjetas, 5 preguntas, informe de una página, mapa mental, tabla e infografía. La presentación necesita conexión.</p>
+          <p className="text-ink-subtle text-[11px]">Con IA Local, en versión corta: resumen, 5 tarjetas, 5 preguntas, informe de una página, mapa mental, tabla e infografía. La presentación solo está en la sesión en línea.</p>
         </>
       )}
       {busy && provider.kind === 'local' && (

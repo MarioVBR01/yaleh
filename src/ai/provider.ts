@@ -1,7 +1,7 @@
 /**
  * @file provider.ts
  * @description Proveedor común del asistente (revisión 1.8), como SearchProvider:
- * Gemini ("Asistente en línea") y el modelo local ("Asistente sin conexión") con la misma interfaz.
+ * Gemini ("Asistente en línea") y el modelo local ("IA Local") con la misma interfaz.
  * - Con conexión (web, o sesión online del escritorio con conexión): Gemini.
  * - Sin conexión y con el modelo instalado: el local.
  * - Sin modelo: no hay asistente ("Disponible próximamente" con la indicación para descargarlo).
@@ -18,7 +18,7 @@ export type AssistantFeature = 'chat' | 'wikipedia' | StudyKind;
 
 export const ASSISTANT_LABELS: Record<AssistantKind, string> = {
   online: 'Asistente en línea',
-  local: 'Asistente sin conexión',
+  local: 'IA Local',
 };
 
 /** Lo que cada proveedor necesita del espacio de trabajo. */
@@ -135,7 +135,7 @@ export function selectAssistant(input: AssistantSelectionInput): AssistantChoice
   if (input.sessionMode === 'online' && input.connection === 'online') return { kind: 'online' };
   if (input.localAi?.state === 'installed') return { kind: 'local' };
   const unsupported = input.localAi?.state === 'unsupported';
-  // Sesión rápida con internet: el aviso no puede decir que no hay conexión.
+  // Módulo IA Local con internet: el aviso no puede decir que no hay conexión.
   if (input.connection === 'online') return { kind: 'none', reason: unsupported ? 'quick-unsupported' : 'quick-needs-download' };
   return { kind: 'none', reason: unsupported ? 'unsupported' : 'needs-download' };
 }

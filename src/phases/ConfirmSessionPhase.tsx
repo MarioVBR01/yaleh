@@ -189,7 +189,7 @@ export default function ConfirmSessionPhase() {
           </section>
         </div>
 
-        {api && <p className="text-[0.84rem] text-ink-soft">Sesión rápida: sin Gemini ni herramientas de Google.</p>}
+        {api && <p className="text-[0.84rem] text-ink-soft">Módulo IA Local: sin Gemini ni herramientas de Google.</p>}
 
         {/* Aviso con candado */}
         <div className="flex gap-3 items-start px-4 py-3.5 rounded-[14px] bg-accent/15 text-ink text-[0.84rem]">

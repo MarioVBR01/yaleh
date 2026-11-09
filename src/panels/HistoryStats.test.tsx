@@ -37,7 +37,7 @@ describe('HistoryPanel', () => {
     expect(within(table).getByText('Tiempo estudiado')).toBeTruthy();
     expect(within(table).getByText('20 de 90 min')).toBeTruthy();
     expect(within(table).getByText('25 de 25 min')).toBeTruthy();
-    expect(within(table).getByText('Con conexión')).toBeTruthy();
+    expect(within(table).getByText('En línea')).toBeTruthy();
     // Columna Archivos (ORION #20 y #36): los primeros y +N; si no hay, "Sin archivos".
     expect(within(table).getByText('Archivos')).toBeTruthy();
     expect(within(table).getByText('clase1.pdf, clase2.pdf +1').getAttribute('title')).toBe('clase1.pdf\nclase2.pdf\nresumen.docx');

@@ -155,8 +155,8 @@ export default function HistoryPanel() {
                 aria-label="Modo"
               >
                 <option value="">Todos los modos</option>
-                <option value="online">Con conexión</option>
-                <option value="offline">Sin conexión</option>
+                <option value="online">En línea</option>
+                <option value="offline">IA Local</option>
               </select>
               <label className="flex items-center gap-1.5 text-ink-muted">
                 Mostrar

@@ -2,7 +2,7 @@
  * @file LandingPage.tsx
  * @description Landing page: el inicio de la web (fase 'landing', brief revisión 1.10). Presenta el producto
  * y tiene dos caminos: "Preparar mi sesión" (login con Google → Material → Duración → .yaleh) y
- * "Descargar para Windows" (el instalador, en el mismo hosting). Aparte ofrece el asistente sin conexión.
+ * "Descargar para Windows" (el instalador, en el mismo hosting). Aparte ofrece la IA Local.
  * El escritorio nunca la muestra. Usa los tokens, letras y logo del diseño (ORION #29) y sigue el modo
  * claro/oscuro del sistema.
  */
@@ -39,7 +39,7 @@ const MODELS_FOLDER = '%APPDATA%\\yaleh\\models';
 const NAV = [
   { href: '#como-funciona', label: 'Cómo funciona' },
   { href: '#funciones', label: 'Funciones' },
-  { href: '#sin-conexion', label: 'Sin conexión' },
+  { href: '#sin-conexion', label: 'IA Local' },
   { href: '#requisitos', label: 'Requisitos' },
   { href: '#preguntas', label: 'Preguntas' },
 ];
@@ -65,7 +65,7 @@ const STEPS = [
 const FEATURES = [
   { icon: ShieldCheck, title: 'Sesión protegida', text: 'Pantalla completa, sin atajos para salir y con registro de cada vez que la ventana pierde el foco.' },
   { icon: Sparkles, title: 'Asistente de IA con tus apuntes', text: 'Chat, resumen, tarjetas, cuestionario, informe, mapa mental, tabla, infografía y presentación.' },
-  { icon: WifiOff, title: 'Funciona sin internet', text: 'El kiosko, las notas y el Pomodoro siguen igual; con el asistente sin conexión, también la IA.' },
+  { icon: WifiOff, title: 'Funciona sin internet', text: 'El kiosko, las notas y el Pomodoro siguen igual, y la IA Local responde en tu equipo.' },
   { icon: Wrench, title: 'Herramientas de Google', text: 'Docs, Hojas, Presentaciones, Drive y Classroom dentro de la sesión, con tu cuenta.' },
   { icon: Clock, title: 'Pomodoro y avisos', text: 'Pomodoro configurable, aviso antes de que termine el tiempo y opción de extender la sesión.' },
   { icon: BarChart2, title: 'Historial y estadísticas', text: 'Minutos estudiados por día, sesiones completadas e interrumpidas, y exportación a PDF.' },
@@ -84,11 +84,11 @@ const FAQ = [
   },
   {
     q: '¿Tengo que preparar la sesión acá?',
-    a: 'Depende de lo que necesites. Con internet, la sesión completa (Gemini y las herramientas de Google con tu cuenta) se prepara aquí y se abre con el archivo .yaleh; además, tus sesiones quedan guardadas para volver a descargarlas. Sin internet o sin cuenta, en la aplicación puedes tocar Iniciar para una sesión rápida con tus archivos, notas, Pomodoro y el asistente sin conexión.',
+    a: 'Depende de lo que necesites. Con internet, la sesión completa (Gemini y las herramientas de Google con tu cuenta) se prepara aquí y se abre con el archivo .yaleh; además, tus sesiones quedan guardadas para volver a descargarlas. Sin internet o sin cuenta, en la aplicación puedes tocar Iniciar para usar el módulo IA Local: tus archivos, notas, Pomodoro y la IA que funciona en tu computadora.',
   },
   {
     q: '¿Qué pasa con mis documentos?',
-    a: 'Los archivos originales quedan en tu computadora. Al preparar la sesión acá se guarda el texto extraído en tu cuenta para armar el archivo de sesión. Con conexión, el asistente en línea (Gemini) recibe ese texto para responder; el asistente sin conexión trabaja en tu equipo y no envía nada.',
+    a: 'Los archivos originales quedan en tu computadora. Al preparar la sesión acá se guarda el texto extraído en tu cuenta para armar el archivo de sesión. Con conexión, el asistente en línea (Gemini) recibe ese texto para responder; la IA Local trabaja en tu equipo y no envía nada.',
   },
   {
     q: '¿Cuánto cuesta?',
@@ -96,7 +96,7 @@ const FAQ = [
   },
   {
     q: '¿Cómo lo desinstalo?',
-    a: 'Desde Configuración de Windows → Aplicaciones → YALEH. Tu historial, la configuración y el asistente sin conexión quedan en %APPDATA%\\yaleh por si lo volvés a instalar; podés borrar esa carpeta si no los querés.',
+    a: 'Desde Configuración de Windows → Aplicaciones → YALEH. Tu historial, la configuración y la IA Local quedan en %APPDATA%\\yaleh por si vuelves a instalar YALEH; puedes borrar esa carpeta si no los quieres.',
   },
 ];
 
@@ -328,7 +328,7 @@ function HowItWorks() {
           <DownloadButton large />
         </div>
         <p className="mt-5 text-center text-sm text-ink-muted">
-          ¿Sin internet? En la aplicación toca <b className="text-ink font-medium">Iniciar</b> para una sesión rápida: carga tus archivos y elige el tiempo.
+          ¿Sin internet? En la aplicación toca <b className="text-ink font-medium">Iniciar</b> para usar el módulo IA Local: carga tus archivos y elige el tiempo.
         </p>
       </div>
     </section>
@@ -373,7 +373,7 @@ function OfflineAssistant() {
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-20 grid lg:grid-cols-2 gap-10 items-start">
         <div>
           <p className="text-[0.72rem] tracking-[0.08em] uppercase text-accent-soft font-semibold">Opcional</p>
-          <h2 className="mt-2 font-display text-3xl sm:text-[2.5rem] leading-[1.05] font-extrabold tracking-tight">Asistente sin conexión</h2>
+          <h2 className="mt-2 font-display text-3xl sm:text-[2.5rem] leading-[1.05] font-extrabold tracking-tight">IA Local</h2>
           <p className="mt-4 text-ink-soft">
             Un modelo de IA que funciona en tu computadora, sin internet: chat con tus apuntes, resumen, tarjetas, cuestionario y más.
             Tus documentos no salen del equipo.
@@ -383,7 +383,7 @@ function OfflineAssistant() {
               `${LOCAL_AI.displayName} del ${LOCAL_AI.author}, licencia ${LOCAL_AI.license}.`,
               `Descarga aparte de ${MODEL_SIZE}; no viene en el instalador.`,
               `Necesita al menos ${LOCAL_AI.minRamLabel} de RAM y unos 3 GB libres.`,
-              'Es más lento que el asistente en línea: puede tardar hasta un minuto en responder.',
+              'Es más lenta que el asistente en línea: puede tardar hasta un minuto en responder.',
             ].map(item => (
               <li key={item} className="flex gap-2.5">
                 <Check size={16} className="text-success mt-0.5 flex-shrink-0" />
@@ -398,8 +398,8 @@ function OfflineAssistant() {
             <span className="inline-flex h-6 px-2.5 items-center rounded-full bg-accent/15 text-accent-soft text-xs font-semibold">Recomendado</span>
             <h3 className="mt-3 font-display text-xl font-bold">Desde la aplicación</h3>
             <p className="mt-2 text-sm text-ink-soft">
-              Con internet, en YALEH andá a <b className="text-ink font-medium">Configuración → IA sin conexión</b> y tocá{' '}
-              <b className="text-ink font-medium">Descargar asistente sin conexión</b>. Se puede pausar y retomar, y YALEH comprueba el archivo al terminar.
+              Con internet, en YALEH ve a <b className="text-ink font-medium">Configuración → IA Local</b> y toca{' '}
+              <b className="text-ink font-medium">Descargar IA Local</b>. Se puede pausar y retomar, y YALEH comprueba el archivo al terminar.
             </p>
           </div>
 
@@ -427,7 +427,7 @@ function OfflineAssistant() {
               </li>
               <li className="flex gap-3">
                 <span className="w-[26px] h-[26px] rounded-full bg-ink text-canvas grid place-items-center text-xs font-semibold flex-shrink-0">3</span>
-                <span className="pt-0.5">Abrí YALEH: en Configuración → IA sin conexión aparece como instalado.</span>
+                <span className="pt-0.5">Abre YALEH: en Configuración → IA Local aparece como instalada.</span>
               </li>
             </ol>
             <a
@@ -449,8 +449,8 @@ function Requirements() {
   const rows = [
     { label: 'Sistema', value: 'Windows 10 u 11 de 64 bits' },
     { label: 'Espacio', value: 'Unos 500 MB para la aplicación' },
-    { label: 'Internet', value: 'Para la web, el asistente en línea y las herramientas de Google. Sin internet funcionan el kiosko, las notas, el Pomodoro y el asistente sin conexión.' },
-    { label: 'Asistente sin conexión', value: `${LOCAL_AI.minRamLabel} de RAM o más y ${MODEL_SIZE} para el modelo` },
+    { label: 'Internet', value: 'Para la web, el asistente en línea y las herramientas de Google. Sin internet funcionan el kiosko, las notas, el Pomodoro y la IA Local.' },
+    { label: 'IA Local', value: `${LOCAL_AI.minRamLabel} de RAM o más y ${MODEL_SIZE} para el modelo` },
     { label: 'Sesiones', value: `De ${LIMITS.minSessionMinutes} a ${LIMITS.maxSessionMinutes} minutos; el archivo .yaleh vale 24 horas y se usa una sola vez` },
   ];
   return (

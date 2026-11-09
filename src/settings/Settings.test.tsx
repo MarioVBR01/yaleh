@@ -45,7 +45,7 @@ const section = (name: string) => screen.getByRole('region', { name });
 describe('SettingsView', () => {
   it('muestra todas las secciones; el modo oscuro se cambia (ORION #29)', async () => {
     renderSettings(false);
-    for (const name of ['Sesión', 'Modo nocturno', 'IA sin conexión', 'Datos', 'Apariencia y accesibilidad', 'Perfil', 'Acerca de']) {
+    for (const name of ['Sesión', 'Modo nocturno', 'IA Local', 'Datos', 'Apariencia y accesibilidad', 'Perfil', 'Acerca de']) {
       expect(await screen.findByRole('region', { name })).toBeTruthy();
     }
     const dark = screen.getByRole('switch', { name: 'Modo oscuro' }) as HTMLButtonElement;

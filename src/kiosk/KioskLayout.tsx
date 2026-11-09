@@ -253,7 +253,7 @@ export default function KioskLayout() {
 
                 {!onlineTools && (
                   <p className="text-slate-400 text-sm">
-                    Sin conexión: las herramientas online no están disponibles. Usa el menú lateral para abrir los
+                    {state.sessionMode === 'offline' ? 'Módulo IA Local' : 'Sin conexión'}: las herramientas online no están disponibles. Usa el menú lateral para abrir los
                     módulos locales.
                   </p>
                 )}

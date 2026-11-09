@@ -28,7 +28,7 @@ describe('buildHistoryHtml', () => {
     expect(html.match(/<tr>/g)).toHaveLength(3); // encabezado + 2 filas
     expect(html).toContain('Completada');
     expect(html).toContain('Interrumpida');
-    expect(html).toContain('Con conexión');
+    expect(html).toContain('En línea');
     expect(html).toContain('25 min');
     expect(html).toContain('<th>Archivos</th>');
     expect(html).toContain('apuntes.pdf');
