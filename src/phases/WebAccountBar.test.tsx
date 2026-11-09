@@ -25,7 +25,8 @@ vi.mock('../firebase/auth', () => ({
   describeAuthError: () => 'error',
 }));
 const ensureUserProfile = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock('../firebase/sessions', () => ({ createDraftSession: vi.fn(async () => 'draft1'), ensureUserProfile, listPastSessions: vi.fn(async () => []), listMySessions: vi.fn(async () => []) }));
+const createDraftSession = vi.hoisted(() => vi.fn(async () => 'draft1'));
+vi.mock('../firebase/sessions', () => ({ createDraftSession, ensureUserProfile, listPastSessions: vi.fn(async () => []), listMySessions: vi.fn(async () => []) }));
 
 const { default: App } = await import('../App');
 const { default: WebAccountBar } = await import('./WebAccountBar');
@@ -56,6 +57,8 @@ describe('Ingresar', () => {
     act(() => emit?.(ana));
     expect(await screen.findByRole('heading', { name: 'Mis sesiones' }, { timeout: 4000 })).toBeTruthy();
     expect(ensureUserProfile).toHaveBeenCalledWith(ana);
+    // El borrador se crea con "Nueva sesión", no al ingresar.
+    expect(createDraftSession).not.toHaveBeenCalled();
   });
 });
 

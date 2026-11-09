@@ -8,6 +8,7 @@
  * - Sin cuenta (pruebas): en memoria.
  */
 
+import { refreshSessionSummary } from '../firebase/sessions';
 import { getElectronAPI, isElectron } from '../lib/electron';
 import type { AppState, UploadedFile } from '../store/appStore';
 import {
@@ -48,11 +49,14 @@ const textCache = new Map<string, string>();
 const cacheKey = (workspaceId: string, sourceId: string) => `${workspaceId}/${sourceId}`;
 
 function firestoreStore(uid: string, workspaceId: string): WorkspaceStore {
+  /** La fuente ya quedó guardada: si falla el resumen de "Mis sesiones", no se informa como error de carga. */
+  const refreshSummary = () => refreshSessionSummary(uid, workspaceId).catch(error => console.error('No se pudo actualizar la sesión:', error));
   return {
     kind: 'firestore',
     addSource: async (source, text) => {
       await saveRemoteSource(uid, workspaceId, source, text);
       textCache.set(cacheKey(workspaceId, source.id), text);
+      await refreshSummary();
     },
     listSources: () => loadRemoteSources(uid, workspaceId),
     getSourceText: async sourceId => {
@@ -63,6 +67,7 @@ function firestoreStore(uid: string, workspaceId: string): WorkspaceStore {
     removeSource: async sourceId => {
       await removeRemoteSource(uid, workspaceId, sourceId);
       textCache.delete(cacheKey(workspaceId, sourceId));
+      await refreshSummary();
     },
     listNotes: () => listRemoteNotes(uid, workspaceId),
     saveNote: async note => {

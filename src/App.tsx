@@ -15,7 +15,7 @@ import { TEXT_SCALES } from '@shared/settings';
 import { AppProvider, useApp } from './context/AppContext';
 import { getElectronAPI, isElectron } from './lib/electron';
 import { watchUser } from './firebase/auth';
-import { createDraftSession, ensureUserProfile } from './firebase/sessions';
+import { ensureUserProfile } from './firebase/sessions';
 import { startPhase } from './lib/mode';
 import { applyOpenedSessionFile } from './lib/session-file';
 import { initialState, type AppPhase, type AppState } from './store/appStore';
@@ -162,6 +162,8 @@ function useAuthSync() {
         dispatch({ type: 'SET_FILES', payload: [] });
         dispatch({ type: 'SET_WORKSPACE', payload: null });
         dispatch({ type: 'SET_SESSION_DURATION', payload: 0 });
+        // Con otra cuenta ya no hay sesión abierta: se vuelve a su lista.
+        if (lastUid.current && uid) dispatch({ type: 'SET_PHASE', payload: 'sessions-home' });
       }
       lastUid.current = uid;
       if (user) {
@@ -199,26 +201,6 @@ function useAuthSync() {
   }, [signedIn, phase, dispatch]);
 }
 
-/** Web: crea la sesión en borrador en Firestore (agrupa fuentes, notas y resultados). */
-function useWebWorkspace() {
-  const { state, dispatch } = useApp();
-  const uid = state.session.uid;
-  const workspaceId = state.workspaceId;
-
-  useEffect(() => {
-    if (isElectron() || !uid || workspaceId) return;
-    let cancelled = false;
-    createDraftSession(uid)
-      .then(id => {
-        if (!cancelled) dispatch({ type: 'SET_WORKSPACE', payload: id });
-      })
-      .catch(error => console.error('No se pudo crear la sesión en Firestore:', error));
-    return () => {
-      cancelled = true;
-    };
-  }, [uid, workspaceId, dispatch]);
-}
-
 /**
  * Escritorio: un .yaleh abierto desde fuera de la app (argumentos de arranque o
  * segunda instancia). Si es válido, la sesión ya empezó; si no, se muestra el
@@ -251,7 +233,6 @@ function AppContent() {
   useLocalAiStatus();
   useDesktopSettings();
   useAuthSync();
-  useWebWorkspace();
   useSessionFileResults();
 
   // El escritorio nunca muestra las pantallas de la web: landing, ingreso ni "Mis sesiones".

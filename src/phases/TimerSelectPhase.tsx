@@ -12,6 +12,8 @@ import { motion } from 'framer-motion';
 import { Lock } from 'lucide-react';
 import { LIMITS } from '@shared/config';
 import { useApp } from '../context/AppContext';
+import { saveSessionDuration } from '../firebase/sessions';
+import { isElectron } from '../lib/electron';
 
 /** Opciones rápidas de tiempo de sesión en minutos, con su explicación. */
 const QUICK_OPTIONS = [
@@ -39,6 +41,10 @@ export default function TimerSelectPhase() {
   const handleContinue = () => {
     if (!isValid) return;
     dispatch({ type: 'SET_SESSION_DURATION', payload: effectiveMinutes * 60 });
+    // Web: la duración queda en la sesión de "Mis sesiones". Si falla, se guarda al descargar.
+    if (!isElectron() && state.session.uid && state.workspaceId) {
+      saveSessionDuration(state.session.uid, state.workspaceId, effectiveMinutes * 60).catch(error => console.error('No se pudo guardar la duración:', error));
+    }
     dispatch({ type: 'SET_PHASE', payload: 'confirm-session' });
   };
 

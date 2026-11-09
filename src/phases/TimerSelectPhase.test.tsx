@@ -3,19 +3,24 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProvider, useApp } from '../context/AppContext';
 import { initialState } from '../store/appStore';
 import TimerSelectPhase from './TimerSelectPhase';
+
+const saveSessionDuration = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../firebase/sessions', () => ({ saveSessionDuration }));
+
+beforeEach(() => saveSessionDuration.mockClear());
 
 function Probe() {
   const { state } = useApp();
   return <output data-testid="probe">{`${state.phase}|${state.sessionDuration}`}</output>;
 }
 
-function renderTimer() {
+function renderTimer(overrides: Partial<typeof initialState> = {}) {
   return render(
-    <AppProvider initial={{ ...initialState, phase: 'timer-select' }}>
+    <AppProvider initial={{ ...initialState, phase: 'timer-select', ...overrides }}>
       <TimerSelectPhase />
       <Probe />
     </AppProvider>
@@ -48,6 +53,14 @@ describe('TimerSelectPhase (ORION #38)', () => {
     expect(card(25).getAttribute('aria-pressed')).toBe('false');
     fireEvent.click(screen.getByText('Continuar con 50 min'));
     expect(screen.getByTestId('probe').textContent).toBe('confirm-session|3000');
+    expect(saveSessionDuration).not.toHaveBeenCalled();
+  });
+
+  it('en la web guarda la duración en la sesión', () => {
+    renderTimer({ workspaceId: 'w1', session: { ...initialState.session, uid: 'u1' } });
+    fireEvent.click(card(50));
+    fireEvent.click(screen.getByText('Continuar con 50 min'));
+    expect(saveSessionDuration).toHaveBeenCalledWith('u1', 'w1', 3000);
   });
 
   it('los minutos propios (1 a 180) reemplazan la tarjeta elegida', () => {
