@@ -201,7 +201,7 @@ export const WIKIPEDIA = {
 // ─── Landing page: descargas ────────────────────────────────────────────────
 
 /** Versión del escritorio que se descarga (igual a la de package.json; lo comprueba una prueba). */
-export const APP_VERSION = '1.0.1';
+export const APP_VERSION = '1.0.2';
 
 /**
  * Descarga de la landing page (el inicio de la web). Firebase Hosting gratis no admite archivos ejecutables,
